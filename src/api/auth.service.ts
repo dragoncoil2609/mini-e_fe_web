@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -85,13 +85,20 @@ export interface LoginResponse {
   refresh_token: string;
 }
 
+function extractErrMessage(error: any): string {
+  const data = error?.response?.data;
+  const msg = data?.message ?? data?.error ?? error?.message;
+  if (Array.isArray(msg)) return msg.join('\n');
+  return msg || 'Đã xảy ra lỗi, vui lòng thử lại';
+}
+
 export const authService = {
   async register(data: RegisterData): Promise<ApiResponse<User>> {
     try {
       const response = await api.post('/auth/register', data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi đăng ký');
+      throw new Error(extractErrMessage(error) || 'Lỗi đăng ký');
     }
   },
 
@@ -100,7 +107,7 @@ export const authService = {
       const response = await api.post('/auth/login', data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi đăng nhập');
+      throw new Error(extractErrMessage(error) || 'Lỗi đăng nhập');
     }
   },
 
@@ -109,7 +116,7 @@ export const authService = {
       const response = await api.post('/auth/request-verify');
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi gửi mã xác minh');
+      throw new Error(extractErrMessage(error) || 'Lỗi gửi mã xác minh');
     }
   },
 
@@ -118,7 +125,7 @@ export const authService = {
       const response = await api.post('/auth/verify-account', data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi xác minh tài khoản');
+      throw new Error(extractErrMessage(error) || 'Lỗi xác minh tài khoản');
     }
   },
 
@@ -127,7 +134,7 @@ export const authService = {
       const response = await api.post('/auth/refresh');
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi làm mới token');
+      throw new Error(extractErrMessage(error) || 'Lỗi làm mới token');
     }
   },
 
@@ -136,7 +143,7 @@ export const authService = {
       const response = await api.post('/auth/logout');
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi đăng xuất');
+      throw new Error(extractErrMessage(error) || 'Lỗi đăng xuất');
     }
   },
 
@@ -145,16 +152,16 @@ export const authService = {
       const response = await api.post('/auth/forgot-password', { email });
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi gửi email reset mật khẩu');
+      throw new Error(extractErrMessage(error) || 'Lỗi gửi email reset mật khẩu');
     }
   },
 
-  async resetPassword(data: { email: string; otp: string; newPassword: string; confirmPassword: string }): Promise<ApiResponse<{ message: string }>> {
+  async resetPassword(data: { email: string; otp: string; password: string; confirmPassword: string }): Promise<ApiResponse<{ message: string }>> {
     try {
       const response = await api.post('/auth/reset-password', data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi reset mật khẩu');
+      throw new Error(extractErrMessage(error) || 'Lỗi reset mật khẩu');
     }
   },
 
@@ -163,7 +170,7 @@ export const authService = {
       const response = await api.post('/auth/change-password', data);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Lỗi thay đổi mật khẩu');
+      throw new Error(extractErrMessage(error) || 'Lỗi thay đổi mật khẩu');
     }
   },
 };

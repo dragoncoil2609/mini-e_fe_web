@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -14,7 +14,7 @@ const schema = yup.object({
     .string()
     .required('Mã OTP không được để trống')
     .length(6, 'Mã OTP phải có 6 ký tự'),
-  newPassword: yup
+  password: yup
     .string()
     .required('Mật khẩu mới không được để trống')
     .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
@@ -25,7 +25,7 @@ const schema = yup.object({
   confirmPassword: yup
     .string()
     .required('Xác nhận mật khẩu không được để trống')
-    .oneOf([yup.ref('newPassword')], 'Mật khẩu xác nhận không khớp'),
+    .oneOf([yup.ref('password')], 'Mật khẩu xác nhận không khớp'),
 });
 
 interface ResetPasswordFormProps {
@@ -39,6 +39,7 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
 
   const {
     register,
@@ -47,7 +48,7 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
   } = useForm<{
     email: string;
     otp: string;
-    newPassword: string;
+    password: string;
     confirmPassword: string;
   }>({
     resolver: yupResolver(schema),
@@ -55,6 +56,12 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
       email: userEmail || '',
     },
   });
+
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = setInterval(() => setResendCountdown((s) => s - 1), 1000);
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
@@ -72,6 +79,25 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
       onError(error.message || 'Có lỗi xảy ra khi reset mật khẩu');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0) return;
+    try {
+      const emailToUse = userEmail;
+      if (!emailToUse) {
+        onError('Thiếu email để gửi lại mã. Vui lòng quay lại bước trước.');
+        return;
+      }
+      const res = await authService.forgotPassword(emailToUse);
+      if (res.success) {
+        setResendCountdown(60);
+      } else {
+        onError(res.message || 'Gửi lại mã thất bại');
+      }
+    } catch (e: any) {
+      onError(e.message || 'Có lỗi xảy ra khi gửi lại mã');
     }
   };
 
@@ -95,8 +121,8 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
           <input
             {...register('email')}
             type="email"
-            disabled
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-500"
+            disabled={Boolean(userEmail)}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-xl ${userEmail ? 'bg-gray-100 text-gray-500' : 'bg-gray-50'}`}
             placeholder="Email của bạn"
           />
         </div>
@@ -115,6 +141,17 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
           {errors.otp && (
             <p className="text-red-500 text-sm mt-1">{errors.otp.message}</p>
           )}
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-sm text-gray-500">Đã gửi tới: <span className="font-medium">{userEmail || 'chưa có email'}</span></p>
+            <button
+              type="button"
+              onClick={handleResendOtp}
+              disabled={resendCountdown > 0}
+              className="text-sm text-purple-600 hover:text-purple-500 disabled:opacity-50"
+            >
+              {resendCountdown > 0 ? `Gửi lại (${resendCountdown}s)` : 'Gửi lại mã'}
+            </button>
+          </div>
         </div>
 
         <div>
@@ -124,7 +161,7 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
-              {...register('newPassword')}
+              {...register('password')}
               type={showPassword ? 'text' : 'password'}
               className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50"
               placeholder="Nhập mật khẩu mới"
@@ -137,8 +174,8 @@ export default function ResetPasswordForm({ onSuccess, onError, onBackToLogin, u
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
-          {errors.newPassword && (
-            <p className="text-red-500 text-sm mt-1">{errors.newPassword.message}</p>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
           )}
         </div>
 

@@ -4,6 +4,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Home from './components/Home';
+import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,11 +33,20 @@ function AppContent() {
       <div className="App">
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/" element={<HomePage />} />
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 {user && <Home user={user} onLogout={logout} />}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
               </ProtectedRoute>
             }
           />
