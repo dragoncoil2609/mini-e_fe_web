@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usersApi, type UserItem } from '../api/users/users.service';
-import { Mail, Shield, Calendar, User as UserIcon } from 'lucide-react';
+import { Mail, Shield, Calendar, User as UserIcon, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -59,6 +60,17 @@ export default function ProfilePage() {
               <h1 className="text-2xl font-bold">{profile.name}</h1>
               <p className="text-gray-600">Hồ sơ người dùng</p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <Link
+              to="/shop-onboarding"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
+              title="Đăng bán sản phẩm"
+            >
+              <Store className="w-4 h-4" />
+              Bán sản phẩm
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

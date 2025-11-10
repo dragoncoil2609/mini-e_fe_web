@@ -6,6 +6,8 @@ import AuthPage from './pages/AuthPage';
 import Home from './components/Home';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
+import ShopOnboardingPage from './pages/ShopOnboardingPage';
+import SellerDashboardPage from './pages/SellerDashboardPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -47,6 +49,22 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shop-onboarding"
+            element={
+              <ProtectedRoute>
+                <ShopOnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seller"
+            element={
+              <ProtectedRoute>
+                <SellerDashboardPage />
               </ProtectedRoute>
             }
           />

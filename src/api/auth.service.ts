@@ -137,6 +137,7 @@ export const authService = {
       throw new Error(extractErrMessage(error) || 'Lỗi làm mới token');
     }
   },
+// Đăng xuất người dùng
 
   async logout(): Promise<ApiResponse<{ loggedOut: boolean }>> {
     try {
