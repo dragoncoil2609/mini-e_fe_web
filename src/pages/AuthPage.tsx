@@ -7,7 +7,7 @@ import VerifyAccountForm from '../components/forms/VerifyAccountForm';
 import ForgotPasswordForm from '../components/forms/ForgotPasswordForm';
 import ResetPasswordForm from '../components/forms/ResetPasswordForm';
 import { useAuth } from '../contexts/AuthContext';
-import { type User, authService } from '../api/auth.service';
+import { type User, authService } from '../api/auth/auth.service';
 
 type AuthStep = 'register' | 'login' | 'request-verify' | 'verify-account' | 'forgot-password' | 'reset-password';
 

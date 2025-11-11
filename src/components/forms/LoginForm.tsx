@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { authService, type LoginData } from '../../api/auth.service';
+import { authService, type LoginData } from '../../api/auth/auth.service';
 
 const schema = yup.object({
   email: yup

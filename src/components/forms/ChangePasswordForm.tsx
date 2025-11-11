@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { authService } from '../../api/auth.service';
+import { authService } from '../../api/auth/auth.service';
 
 const schema = yup.object({
   currentPassword: yup

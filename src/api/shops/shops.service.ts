@@ -22,8 +22,16 @@ export const shopsApi = {
     const res = await api.post('/shops/register', data);
     return res.data.data;
   },
+  async getMine(): Promise<ShopItem | null> {
+    const res = await api.get('/shops/me');
+    return res.data.data || null;
+  },
   async getById(id: number): Promise<ShopItem> {
     const res = await api.get(`/shops/${id}`);
+    return res.data.data;
+  },
+  async checkName(name: string): Promise<{ exists: boolean }> {
+    const res = await api.get('/shops/check-name', { params: { name } });
     return res.data.data;
   },
 };

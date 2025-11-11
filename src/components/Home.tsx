@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LogOut, User, Mail, Shield, Calendar } from 'lucide-react';
-import { authService } from '../api/auth.service';
+import { authService } from '../api/auth/auth.service';
 
 interface User {
   id: number;

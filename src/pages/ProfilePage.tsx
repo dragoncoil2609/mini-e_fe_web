@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usersApi, type UserItem } from '../api/users/users.service';
 import { Mail, Shield, Calendar, User as UserIcon, Store } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { shopsApi } from '../api/shops/shops.service';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -63,14 +65,26 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 mb-6">
-            <Link
-              to="/shop-onboarding"
+            <button
+              onClick={async () => {
+                try {
+                  const myShop = await shopsApi.getMine();
+                  if (myShop) {
+                    // TODO: xác nhận route đích quản lý shop
+                    navigate(`/shop/${myShop.id}`);
+                  } else {
+                    navigate('/shop-onboarding');
+                  }
+                } catch (e) {
+                  navigate('/shop-onboarding');
+                }
+              }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
               title="Đăng bán sản phẩm"
             >
               <Store className="w-4 h-4" />
               Bán sản phẩm
-            </Link>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

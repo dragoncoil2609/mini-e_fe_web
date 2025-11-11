@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Shield, ArrowRight } from 'lucide-react';
-import { authService, type VerifyAccountData } from '../../api/auth.service';
+import { authService, type VerifyAccountData } from '../../api/auth/auth.service';
 
 const schema = yup.object({
   otp: yup

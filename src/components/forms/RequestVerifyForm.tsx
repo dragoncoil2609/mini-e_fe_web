@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Mail, ArrowRight } from 'lucide-react';
-import { authService } from '../../api/auth.service';
+import { authService } from '../../api/auth/auth.service';
 
 interface RequestVerifyFormProps {
   onSuccess: (message: string) => void;
