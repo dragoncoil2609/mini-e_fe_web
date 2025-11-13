@@ -12,6 +12,10 @@ export interface UserItem {
   role: string;
   isVerified: boolean;
   createdAt?: string;
+  phone?: string | null;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
+  birthday?: string | null;
+  avatarUrl?: string | null;
 }
 
 export const usersApi = {
@@ -21,6 +25,10 @@ export const usersApi = {
   },
   async getById(id: number): Promise<UserItem> {
     const res = await api.get(`/users/${id}`);
+    return res.data.data;
+  },
+  async updateMe(data: Partial<Omit<UserItem, 'id' | 'role' | 'isVerified' | 'createdAt'>>): Promise<UserItem> {
+    const res = await api.patch('/users/me', data);
     return res.data.data;
   },
   async getAll(params?: { page?: number; limit?: number; q?: string }): Promise<Paginated<UserItem>> {

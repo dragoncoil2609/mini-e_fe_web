@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import ShopOnboardingPage from './pages/ShopOnboardingPage';
 import SellerDashboardPage from './pages/SellerDashboardPage';
+import ShopManagementPage from './pages/ShopManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -65,6 +66,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <SellerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shop/manage"
+            element={
+              <ProtectedRoute>
+                <ShopManagementPage />
               </ProtectedRoute>
             }
           />

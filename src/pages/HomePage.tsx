@@ -1,11 +1,29 @@
-import { useState } from 'react';
-import { Search, ShoppingBag, User, Heart, Star, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, ShoppingBag, User, Heart, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { productsApi, type ProductItem } from '../api/products/products.service';
 
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const { isAuthenticated } = useAuth();
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const data = await productsApi.getAll(1, 12);
+        setProducts(data.items || []);
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
 
   const categories = [
     'Điện thoại',
@@ -19,14 +37,6 @@ export default function HomePage() {
     'Thể thao',
     'Mẹ & Bé',
   ];
-
-  const products = Array.from({ length: 12 }).map((_, i) => ({
-    id: i + 1,
-    name: `Sản phẩm nổi bật ${i + 1}`,
-    price: (Math.random() * 900 + 100).toFixed(0),
-    rating: (Math.random() * 1 + 4).toFixed(1),
-    image: `https://picsum.photos/seed/minie-${i}/400/400`,
-  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -45,12 +55,13 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/auth" className="flex items-center gap-2 text-gray-700 hover:text-orange-500">
-              <User size={20} />
-              <span>Tài khoản</span>
-            </Link>
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <Link to="/profile" className="flex items-center gap-2 text-gray-700 hover:text-orange-500">
+                <User size={20} />
+                <span>Hồ sơ</span>
+              </Link>
+            ) : (
+              <Link to="/auth" className="flex items-center gap-2 text-gray-700 hover:text-orange-500">
                 <User size={20} />
                 <span>Hồ sơ</span>
               </Link>
@@ -113,23 +124,40 @@ export default function HomePage() {
             <h3 className="text-lg font-semibold">Gợi ý hôm nay</h3>
             <button className="text-sm text-orange-600 flex items-center gap-1">Xem tất cả <ChevronRight size={16} /></button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {products.map((p) => (
-              <div key={p.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition p-3">
-                <div className="aspect-square w-full overflow-hidden rounded-md bg-gray-100">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="mt-2">
-                  <h4 className="text-sm line-clamp-2 min-h-[40px]">{p.name}</h4>
-                  <div className="flex items-center gap-1 text-yellow-500 text-sm mt-1">
-                    <Star size={14} />
-                    <span className="text-gray-700">{p.rating}</span>
+          {loading ? (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+            </div>
+          ) : products.length === 0 ? (
+            <div className="bg-white rounded-lg p-8 text-center text-gray-500">
+              <p>Chưa có sản phẩm nào</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {products.map((p) => (
+                <Link key={p.id} to={`/products/${p.id}`} className="bg-white rounded-lg shadow-sm hover:shadow-md transition p-3">
+                  <div className="aspect-square w-full overflow-hidden rounded-md bg-gray-100">
+                    {p.images && p.images.length > 0 ? (
+                      <img src={p.images[0].url} alt={p.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <ShoppingBag className="w-12 h-12" />
+                      </div>
+                    )}
                   </div>
-                  <div className="text-orange-600 font-semibold mt-1">{Number(p.price).toLocaleString('vi-VN')} đ</div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <div className="mt-2">
+                    <h4 className="text-sm line-clamp-2 min-h-[40px]">{p.title}</h4>
+                    <div className="text-orange-600 font-semibold mt-1">
+                      {Number(p.price).toLocaleString('vi-VN')} đ
+                    </div>
+                    {p.shop && (
+                      <p className="text-xs text-gray-500 mt-1">{p.shop.name}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </main>
 
