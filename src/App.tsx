@@ -1,108 +1,35 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AuthPage from './pages/AuthPage';
-import Home from './components/Home';
-import HomePage from './pages/HomePage';
-import ProfilePage from './pages/ProfilePage';
-import ShopOnboardingPage from './pages/ShopOnboardingPage';
-import SellerDashboardPage from './pages/SellerDashboardPage';
-import ShopManagementPage from './pages/ShopManagementPage';
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-function AppContent() {
-  const { user, logout } = useAuth();
-
-  return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="App">
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                {user && <Home user={user} onLogout={logout} />}
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/shop-onboarding"
-            element={
-              <ProtectedRoute>
-                <ShopOnboardingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/seller"
-            element={
-              <ProtectedRoute>
-                <SellerDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/shop/manage"
-            element={
-              <ProtectedRoute>
-                <ShopManagementPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-      </div>
-    </Router>
-  );
-}
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
 
 function App() {
+  const [count, setCount] = useState(0)
+
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+    <>
+      <div>
+        <a href="https://vite.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </>
+  )
 }
 
-export default App;
+export default App
