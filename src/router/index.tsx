@@ -1,21 +1,28 @@
+// src/router/index.tsx
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { VerifyAccountPage } from '../pages/auth/VerifyAccountPage';
+import { HomePage } from '../pages/HomePage';
+import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Mặc định điều hướng về /login */}
+      {/* Mở root "/" sẽ về login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verify-account" element={<VerifyAccountPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Route không tồn tại → đưa về /login */}
+      {/* Home sau khi login & verify xong */}
+      <Route path="/home" element={<HomePage />} />
+
+      {/* Route không tồn tại → quay về /login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

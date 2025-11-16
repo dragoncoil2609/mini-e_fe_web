@@ -1,15 +1,23 @@
-// src/pages/auth/RegisterPage.tsx
 import { useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 
-export function RegisterPage() {
-  const navigate = useNavigate();
+interface ResetLocationState {
+  email?: string;
+}
 
-  const [name, setName] = useState('Quoc Hiep');
-  const [email, setEmail] = useState('quochiep1610@gmail.com');
-  const [password, setPassword] = useState('Aa123456!');
-  const [confirmPassword, setConfirmPassword] = useState('Aa123456!');
+export function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as ResetLocationState | null;
+
+  // Lấy email từ state (truyền từ ForgotPasswordPage)
+  const initialEmail = state?.email || '';
+
+  const [email] = useState(initialEmail); // không cho sửa
+  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('@Ngulon123');
+  const [confirmPassword, setConfirmPassword] = useState('@Ngulon123');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +29,12 @@ export function RegisterPage() {
     setSuccess(null);
     setLoading(true);
 
+    if (!email) {
+      setError('Thiếu email. Vui lòng quay lại bước Quên mật khẩu.');
+      setLoading(false);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Mật khẩu và xác nhận mật khẩu không khớp.');
       setLoading(false);
@@ -28,21 +42,25 @@ export function RegisterPage() {
     }
 
     try {
-      await AuthApi.register({
-        name,
+      const data = await AuthApi.resetPassword({
         email,
+        otp,
         password,
         confirmPassword,
       });
 
-      setSuccess('Đăng ký thành công! Bạn có thể đăng nhập.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 1000);
+      if (data.reset) {
+        setSuccess('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập.');
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      } else {
+        setError('Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
-        'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.';
+        'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -51,33 +69,40 @@ export function RegisterPage() {
 
   return (
     <div style={{ maxWidth: 400, margin: '40px auto' }}>
-      <h2>Đăng ký tài khoản</h2>
+      <h2>Đặt lại mật khẩu</h2>
+      <p style={{ marginBottom: 12 }}>
+        Nhập mã OTP và mật khẩu mới cho tài khoản.
+      </p>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label>Họ và tên</label>
-          <input
-            style={{ width: '100%' }}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-
         <div style={{ marginBottom: 8 }}>
           <label>Email</label>
           <input
             style={{ width: '100%' }}
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            readOnly
+          />
+          {!email && (
+            <small style={{ color: 'red' }}>
+              Không có email. Vui lòng quay lại bước Quên mật khẩu.
+            </small>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 8 }}>
+          <label>Mã OTP</label>
+          <input
+            style={{ width: '100%' }}
+            type="text"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
             required
           />
         </div>
 
         <div style={{ marginBottom: 8 }}>
-          <label>Mật khẩu</label>
+          <label>Mật khẩu mới</label>
           <input
             style={{ width: '100%' }}
             type="password"
@@ -88,7 +113,7 @@ export function RegisterPage() {
         </div>
 
         <div style={{ marginBottom: 8 }}>
-          <label>Nhập lại mật khẩu</label>
+          <label>Nhập lại mật khẩu mới</label>
           <input
             style={{ width: '100%' }}
             type="password"
@@ -111,18 +136,18 @@ export function RegisterPage() {
           style={{ marginTop: 12, width: '100%' }}
           disabled={loading}
         >
-          {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+          {loading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
         </button>
       </form>
 
       <div style={{ marginTop: 16 }}>
         <p>
-          Đã có tài khoản?{' '}
+          Đã đặt lại xong?{' '}
           <Link to="/login">Đăng nhập</Link>
         </p>
         <p>
-          Quên mật khẩu?{' '}
-          <Link to="/forgot-password">Quên mật khẩu</Link>
+          Chưa có OTP?{' '}
+          <Link to="/forgot-password">Quên mật khẩu (yêu cầu OTP)</Link>
         </p>
       </div>
     </div>

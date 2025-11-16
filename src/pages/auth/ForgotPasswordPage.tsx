@@ -1,25 +1,28 @@
-// src/pages/auth/ForgotPasswordPage.tsx
-import type { FormEvent } from 'react';
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import type { ForgotPasswordResponse } from '../../api/types';
 
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('you@example.com');
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState('quochiep1610@gmail.com');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ForgotPasswordResponse | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setResult(null);
     setLoading(true);
 
     try {
-      const data = await AuthApi.forgotPassword(email);
-      setResult(data);
+      // Gửi yêu cầu OTP
+      await AuthApi.forgotPassword(email);
+
+      // 👉 Sau khi gửi OTP thành công, chuyển sang /reset-password
+      // và truyền kèm email đã nhập
+      navigate('/reset-password', {
+        state: { email },
+      });
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -60,26 +63,9 @@ export function ForgotPasswordPage() {
         </button>
       </form>
 
-      {result && (
-        <div style={{ marginTop: 16, padding: 10, border: '1px solid #ddd' }}>
-          <p>Đã gửi OTP tới: <b>{result.email}</b></p>
-          {/* Dev có thể thấy OTP trong response */}
-          {result.otp && (
-            <p>OTP (dev): <code>{result.otp}</code></p>
-          )}
-          {result.expiresAt && (
-            <p>Hết hạn lúc: {result.expiresAt}</p>
-          )}
-          <p style={{ marginTop: 8 }}>
-            Sau khi có OTP, bạn cần tạo thêm trang
-            <b> ResetPasswordPage </b> để gọi API
-            <code> /auth/reset-password </code>.
-          </p>
-        </div>
-      )}
-
       <p style={{ marginTop: 16 }}>
-        <Link to="/login">Quay lại đăng nhập</Link>
+        Đã nhớ mật khẩu?{' '}
+        <Link to="/login">Đăng nhập</Link>
       </p>
     </div>
   );

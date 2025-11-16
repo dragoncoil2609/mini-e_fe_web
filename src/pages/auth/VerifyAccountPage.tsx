@@ -1,11 +1,12 @@
 // src/pages/auth/VerifyAccountPage.tsx
-import type { FormEvent } from 'react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 import type { RequestVerifyResponse } from '../../api/types';
 
 export function VerifyAccountPage() {
+  const navigate = useNavigate();
+
   const [otp, setOtp] = useState('');
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [loadingRequest, setLoadingRequest] = useState(false);
@@ -21,8 +22,11 @@ export function VerifyAccountPage() {
     try {
       const data = await AuthApi.requestVerify();
       setInfo(data);
+
+      // Nếu BE báo đã verified rồi ⇒ cho vào Home luôn
       if (data.isVerified) {
         setVerified(true);
+        navigate('/home');
       }
     } catch (err: any) {
       const msg =
@@ -43,6 +47,11 @@ export function VerifyAccountPage() {
     try {
       const data = await AuthApi.verifyAccount(otp);
       setVerified(data.verified);
+
+      if (data.verified) {
+        // ✅ verify thành công → vào Home
+        navigate('/home');
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -57,8 +66,8 @@ export function VerifyAccountPage() {
     <div style={{ maxWidth: 450, margin: '40px auto' }}>
       <h2>Xác minh tài khoản</h2>
       <p>
-        Trang này dùng để nhập mã OTP xác minh tài khoản
-        (yêu cầu bạn đã đăng nhập có access_token).
+        Vui lòng gửi OTP và nhập mã OTP để xác minh tài khoản
+        (yêu cầu bạn đã đăng nhập).
       </p>
 
       <button
@@ -103,7 +112,7 @@ export function VerifyAccountPage() {
 
         {verified === true && (
           <p style={{ color: 'green', marginTop: 4 }}>
-            Xác minh thành công! Tài khoản đã được xác minh.
+            Xác minh thành công! Đang chuyển vào Home...
           </p>
         )}
 
