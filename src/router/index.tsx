@@ -8,6 +8,10 @@ import { HomePage } from '../pages/HomePage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { RecoverConfirmPage } from '../pages/auth/RecoverConfirmPage';
 import { RecoverRequestPage } from '../pages/auth/RecoverRequestPage';
+import { HomePageAdmin } from '../pages/admin/HomePageAdmin';
+import MeProfilePage from '../pages/me/MeProfilePage';
+import UsersListPage from '../pages/admin/users/UsersListPage';
+import DeletedUsersPage from '../pages/admin/users/DeletedUsersPage';
 
 export function AppRoutes() {
   return (
@@ -21,14 +25,14 @@ export function AppRoutes() {
       <Route path="/verify-account" element={<VerifyAccountPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-            <Route
-        path="/auth/account/recover/request"
-        element={<RecoverRequestPage />}
-      />
-      <Route
-        path="/auth/account/recover/confirm"
-        element={<RecoverConfirmPage />}
-      />
+      <Route path="/auth/account/recover/request" element={<RecoverRequestPage />}/>
+      <Route path="/auth/account/recover/confirm" element={<RecoverConfirmPage />}/>
+
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/admin" element={<HomePageAdmin />} />
+      <Route path="/me" element={<MeProfilePage />} />
+      <Route path="/admin/users" element={<UsersListPage />} />
+      <Route path="/admin/users/deleted" element={<DeletedUsersPage/>} />
 
       {/* Home sau khi login & verify xong */}
       <Route path="/home" element={<HomePage />} />

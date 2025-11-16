@@ -53,3 +53,45 @@ export interface ResetPasswordResponse {
 export interface LogoutResponse {
   loggedOut: boolean;
 }
+
+
+// ====== USER TYPE ======
+export type UserRole = 'USER' | 'SELLER' | 'ADMIN';
+
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  birthday: string | null; // YYYY-MM-DD
+  gender: Gender | null;
+  otp: string | null;
+  timeOtp: string | null;
+  isVerified: boolean;
+  role: UserRole;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  statusCode: number;
+  data: T;
+  message?: string;
+}
+
+export interface UserListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: UserRole;
+  gender?: Gender;
+  isVerified?: boolean;
+  sortBy?: 'createdAt' | 'name' | 'lastLoginAt' | 'deletedAt';
+  sortOrder?: 'ASC' | 'DESC';
+}

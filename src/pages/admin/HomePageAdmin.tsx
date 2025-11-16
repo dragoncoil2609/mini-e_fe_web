@@ -1,9 +1,9 @@
-// src/pages/HomePage.tsx
+// src/pages/admin/HomePageAdmin.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User } from '../api/types';
+import type { User } from '../../api/types';
 
-export function HomePage() {
+export function HomePageAdmin() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
 
@@ -20,6 +20,10 @@ export function HomePage() {
 
   const handleGoProfile = () => {
     navigate('/me');
+  };
+
+  const handleGoUserManage = () => {
+    navigate('/admin/users');
   };
 
   return (
@@ -40,7 +44,7 @@ export function HomePage() {
           justifyContent: 'space-between',
         }}
       >
-        {/* Góc trái: tên tài khoản (click → /me) */}
+        {/* Góc trái: tên admin, click → /me */}
         <div>
           {user ? (
             <button
@@ -55,14 +59,12 @@ export function HomePage() {
                 fontSize: 16,
               }}
             >
-              {user.name || user.email}
+              {user.name || user.email} (Admin)
             </button>
           ) : (
-            <span style={{ fontWeight: 'bold' }}>Mini E</span>
+            <span style={{ fontWeight: 'bold' }}>Mini E Admin</span>
           )}
         </div>
-
-        {/* Chỗ bên phải bạn có thể thêm giỏ hàng, logout,... sau này */}
       </header>
 
       {/* Body */}
@@ -70,13 +72,29 @@ export function HomePage() {
         style={{
           flex: 1,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 32,
-          fontWeight: 'bold',
+          gap: 16,
         }}
       >
-        Home
+        <h1>Trang quản trị</h1>
+
+        <button
+          type="button"
+          onClick={handleGoUserManage}
+          style={{
+            padding: '10px 18px',
+            fontSize: 16,
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            backgroundColor: '#2563eb',
+            color: '#fff',
+          }}
+        >
+          Quản lý user
+        </button>
       </main>
     </div>
   );

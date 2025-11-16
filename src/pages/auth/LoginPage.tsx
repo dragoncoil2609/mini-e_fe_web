@@ -26,11 +26,26 @@ export function LoginPage() {
     try {
       const data = await AuthApi.login({ email, password });
 
-      // Sau khi login, check isVerified
-      if (data.user.isVerified) {
-        navigate('/home');
-      } else {
+      // Nếu chưa verify → đi verify trước
+      if (!data.user.isVerified) {
         navigate('/verify-account');
+        return;
+      }
+
+      // ✅ Đã verify: lưu thông tin user để Home / Admin dùng
+      try {
+        localStorage.setItem('current_user', JSON.stringify(data.user));
+      } catch (e) {
+        console.error('Cannot save user to localStorage', e);
+      }
+
+      // ✅ Điều hướng theo role
+      if (data.user.role === 'ADMIN') {
+        // Trang home admin
+        navigate('/admin');
+      } else {
+        // USER hoặc SELLER
+        navigate('/home');
       }
     } catch (err: any) {
       const status = err?.response?.status;
@@ -43,7 +58,7 @@ export function LoginPage() {
 
         setError(
           payload?.message ||
-            'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.'
+            'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.',
         );
 
         if (identifier) {
