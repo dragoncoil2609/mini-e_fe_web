@@ -1,6 +1,12 @@
+// src/pages/auth/LoginPage.tsx
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
+
+interface RecoverInfo {
+  email: string;
+  via?: string;
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -9,29 +15,62 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Thông tin khôi phục nếu tài khoản bị vô hiệu hoá
+  const [recoverInfo, setRecoverInfo] = useState<RecoverInfo | null>(null);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setRecoverInfo(null);
     setLoading(true);
     try {
       const data = await AuthApi.login({ email, password });
 
-      // 👉 Sau khi login, check isVerified
+      // Sau khi login, check isVerified
       if (data.user.isVerified) {
-        // Đã xác minh → vào Home
         navigate('/home');
       } else {
-        // Chưa xác minh → sang trang verify
         navigate('/verify-account');
       }
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Đăng nhập thất bại, vui lòng kiểm tra lại.';
-      setError(msg);
+      const status = err?.response?.status;
+      const payload = err?.response?.data;
+
+      // 🔒 Trường hợp tài khoản bị vô hiệu hoá (status 423)
+      if (status === 423 && payload?.data?.needRecover) {
+        const identifier = payload.data.identifier as string | undefined;
+        const via = payload.data.via as string | undefined;
+
+        setError(
+          payload?.message ||
+            'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.'
+        );
+
+        if (identifier) {
+          setRecoverInfo({
+            email: identifier,
+            via,
+          });
+        } else {
+          setRecoverInfo(null);
+        }
+      } else {
+        // Lỗi bình thường
+        const msg =
+          payload?.message || 'Đăng nhập thất bại, vui lòng kiểm tra lại.';
+        setError(msg);
+        setRecoverInfo(null);
+      }
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleRecoverAccount() {
+    if (!recoverInfo?.email) return;
+    navigate('/auth/account/recover/request', {
+      state: { email: recoverInfo.email },
+    });
   }
 
   return (
@@ -61,9 +100,20 @@ export function LoginPage() {
         </div>
 
         {error && (
-          <p style={{ color: 'red', marginTop: 8 }}>
-            {error}
-          </p>
+          <p style={{ color: 'red', marginTop: 8 }}>{error}</p>
+        )}
+
+        {/* Nếu cần khôi phục tài khoản thì hiện thêm nút */}
+        {recoverInfo && (
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={handleRecoverAccount}
+              style={{ width: '100%' }}
+            >
+              Khôi phục tài khoản
+            </button>
+          </div>
         )}
 
         <button

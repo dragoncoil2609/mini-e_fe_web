@@ -31,6 +31,13 @@ export interface ResetPasswordPayload {
   confirmPassword: string;
 }
 
+export interface RecoverConfirmPayload {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 // ====== API FUNCTIONS ======
 export const AuthApi = {
   // 1) Đăng ký
@@ -106,5 +113,20 @@ export const AuthApi = {
       { otp }
     );
     return res.data.data;
+  },
+
+    // 9) Yêu cầu khôi phục tài khoản (bị vô hiệu hoá)
+  async recoverRequest(email: string): Promise<void> {
+    await http.post<ApiResponse<any>>('/auth/account/recover/request', {
+      email,
+    });
+  },
+
+    // 10) Xác nhận khôi phục tài khoản (OTP + mật khẩu mới)
+  async recoverConfirm(payload: RecoverConfirmPayload): Promise<void> {
+    await http.post<ApiResponse<any>>(
+      '/auth/account/recover/confirm',
+      payload
+    );
   },
 };
