@@ -26,6 +26,10 @@ export function HomePageAdmin() {
     navigate('/admin/users');
   };
 
+  const handleGoShopManage = () => {
+    navigate('/admin/shops');
+  };
+
   return (
     <div
       style={{
@@ -94,6 +98,22 @@ export function HomePageAdmin() {
           }}
         >
           Quản lý user
+        </button>
+
+        <button
+          type="button"
+          onClick={handleGoShopManage}
+          style={{
+            padding: '10px 18px',
+            fontSize: 16,
+            borderRadius: 6,
+            border: 'none',
+            cursor: 'pointer',
+            backgroundColor: '#16a34a',
+            color: '#fff',
+          }}
+        >
+          Quản lý shop
         </button>
       </main>
     </div>

@@ -12,6 +12,14 @@ import { HomePageAdmin } from '../pages/admin/HomePageAdmin';
 import MeProfilePage from '../pages/me/MeProfilePage';
 import UsersListPage from '../pages/admin/users/UsersListPage';
 import DeletedUsersPage from '../pages/admin/users/DeletedUsersPage';
+import AdminShopsListPage from '../pages/admin/shops/AdminShopsListPage';
+import ShopRegisterPage from '../pages/shops/ShopRegisterPage';
+import MyShopPage from '../pages/shops/MyShopPage';
+import ProductsListPage from '../pages/products/ProductsListPage';
+import ProductDetailPage from '../pages/products/ProductDetailPage';
+import MyProductsPage from '../pages/products/MyProductsPage';
+import ProductEditPage from '../pages/products/ProductEditPage';
+import ProductVariantsPage from '../pages/products/ProductVariantsPage';
 
 export function AppRoutes() {
   return (
@@ -34,8 +42,22 @@ export function AppRoutes() {
       <Route path="/admin/users" element={<UsersListPage />} />
       <Route path="/admin/users/deleted" element={<DeletedUsersPage/>} />
 
-      {/* Home sau khi login & verify xong */}
-      <Route path="/home" element={<HomePage />} />
+      {/* --- SHOP (user/seller) --- */}
+      <Route path="/shops/register" element={<ShopRegisterPage />} />
+      <Route path="/shops/me" element={<MyShopPage />} />
+
+      {/* PUBLIC PRODUCT */}
+      <Route path="/products" element={<ProductsListPage />} />
+      <Route path="/products/:id" element={<ProductDetailPage />} />
+      <Route path="/me/products/:id/variants" element={<ProductVariantsPage />} />
+
+      {/* SELLER / ADMIN PRODUCT (quản lý của mình) */}
+      <Route path="/me/products" element={<MyProductsPage />} />
+      <Route path="/me/products/new" element={<ProductEditPage />} />
+      <Route path="/me/products/:id/edit" element={<ProductEditPage />} />
+
+      {/* --- ADMIN: Quản lý shop --- */}
+      <Route path="/admin/shops" element={<AdminShopsListPage />} />
 
       {/* Route không tồn tại → quay về /login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
