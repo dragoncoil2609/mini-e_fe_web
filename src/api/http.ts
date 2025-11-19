@@ -7,7 +7,7 @@ import { getAccessToken, setAccessToken, clearAccessToken } from './authToken';
 import type { ApiResponse, RefreshResponse } from './types';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://54.66.11.139:3000';
+  import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const http: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
