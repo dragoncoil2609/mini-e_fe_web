@@ -12,6 +12,7 @@ import {
   createProductMultipart,
 } from '../../api/products.api';
 import type { Shop } from '../../api/types';
+import LocationPicker from '../../components/LocationPicker';
 
 import type { ProductListItem } from '../../api/types';
 interface EditFormState {
@@ -352,26 +353,23 @@ const MyShopPage = () => {
 
           <div style={{ marginBottom: 12 }}>
             <label>
-              Mô tả
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={3}
-                style={{ width: '100%', padding: 8 }}
-              />
-            </label>
-          </div>
+              Địa chỉ / Vị trí trên bản đồ
+              <LocationPicker
+                address={form.shopAddress}
+                lat={form.shopLat}
+                lng={form.shopLng}
+                onChange={({ address, lat, lng }) => {
+                  setForm((prev) => {
+                    if (!prev) return prev; // vẫn là null nếu chưa có form
 
-          <div style={{ marginBottom: 12 }}>
-            <label>
-              Địa chỉ
-              <input
-                type="text"
-                name="shopAddress"
-                value={form.shopAddress}
-                onChange={handleChange}
-                style={{ width: '100%', padding: 8 }}
+                    return {
+                      ...prev,
+                      shopAddress: address ?? prev.shopAddress,
+                      shopLat: lat ?? prev.shopLat,
+                      shopLng: lng ?? prev.shopLng,
+                    };
+                  });
+                }}
               />
             </label>
           </div>

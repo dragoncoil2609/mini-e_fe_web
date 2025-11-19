@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerShop, checkShopName } from '../../api/shop.api';
+import LocationPicker from '../../components/LocationPicker';
 
 interface FormState {
   name: string;
@@ -180,16 +181,23 @@ const ShopRegisterPage = () => {
 
         <div style={{ marginBottom: 12 }}>
           <label>
-            Địa chỉ
-            <input
-              type="text"
-              name="shopAddress"
-              value={form.shopAddress}
-              onChange={handleChange}
-              style={{ width: '100%', padding: 8 }}
+            Địa chỉ / Vị trí trên bản đồ
+            <LocationPicker
+              address={form.shopAddress}
+              lat={form.shopLat}
+              lng={form.shopLng}
+              onChange={({ address, lat, lng }) => {
+                setForm((prev) => ({
+                  ...prev,
+                  shopAddress: address ?? prev.shopAddress,
+                  shopLat: lat ?? prev.shopLat,
+                  shopLng: lng ?? prev.shopLng,
+                }));
+              }}
             />
           </label>
         </div>
+
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
