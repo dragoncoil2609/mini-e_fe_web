@@ -1,5 +1,18 @@
+# Bỏ qua thư viện đã cài trên máy local (Thủ phạm chính)
 node_modules
+
+# Bỏ qua thư mục build cũ
 dist
 build
-.git
+
+# Bỏ qua file môi trường local (tránh lộ bí mật hoặc sai config)
 .env
+.env.local
+
+# Bỏ qua file git
+.git
+.gitignore
+
+# Bỏ qua chính file Dockerfile (tuỳ chọn, nhưng tốt cho gọn)
+Dockerfile
+Dockerfile.dockerignore
