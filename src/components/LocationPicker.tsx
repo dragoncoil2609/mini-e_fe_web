@@ -5,7 +5,7 @@ import {
   Marker,
   useMapEvents,
 } from 'react-leaflet';
-import L, { type LatLngExpression } from 'leaflet';
+import L, { type LatLngExpression, type LeafletMouseEvent } from 'leaflet';
 
 const DEFAULT_CENTER: LatLngExpression = [16.047079, 108.20623]; // Đà Nẵng
 const DEFAULT_ZOOM = 5; // Zoom rộng Việt Nam
@@ -37,7 +37,7 @@ const ClickMarker: React.FC<ClickMarkerProps> = ({
   onChangePosition,
 }) => {
   useMapEvents({
-    click(e) {
+    click(e: LeafletMouseEvent) {
       onChangePosition(e.latlng.lat, e.latlng.lng);
     },
   });
