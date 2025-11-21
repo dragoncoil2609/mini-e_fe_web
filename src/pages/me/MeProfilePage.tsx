@@ -162,11 +162,76 @@ const MeProfilePage: React.FC = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: 16 }}>Đang tải hồ sơ...</div>;
-  if (error) return <div style={{ padding: 16, color: 'red' }}>{error}</div>;
-  if (!profile) return <div style={{ padding: 16 }}>Không tìm thấy user.</div>;
+  if (loading)
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontSize: '18px',
+        }}
+      >
+        Đang tải hồ sơ...
+      </div>
+    );
+  if (error)
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+      >
+        <div
+          style={{
+            background: '#f8f9fa',
+            borderRadius: '20px',
+            padding: '40px',
+            maxWidth: '600px',
+            width: '100%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+            color: '#dc2626',
+          }}
+        >
+          {error}
+        </div>
+      </div>
+    );
+  if (!profile)
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+      >
+        <div
+          style={{
+            background: '#f8f9fa',
+            borderRadius: '20px',
+            padding: '40px',
+            maxWidth: '600px',
+            width: '100%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          }}
+        >
+          Không tìm thấy user.
+        </div>
+      </div>
+    );
 
-  // Avatar hiển thị: ưu tiên form.avatarUrl (đang nhập), sau đó profile.avatarUrl
   const avatarSrc = form.avatarUrl || profile.avatarUrl || '';
   const avatarInitial =
     (profile.name && profile.name.charAt(0).toUpperCase()) ||
@@ -176,191 +241,341 @@ const MeProfilePage: React.FC = () => {
   return (
     <div
       style={{
-        maxWidth: 600,
-        margin: '24px auto',
-        padding: 16,
-        border: '1px solid #ddd',
-        borderRadius: 8,
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '40px 20px',
       }}
     >
-      {/* Header + Avatar */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-          marginBottom: 16,
+          maxWidth: '700px',
+          margin: '0 auto',
+          background: '#f8f9fa',
+          borderRadius: '20px',
+          padding: '40px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
         }}
       >
-        {/* Vòng tròn avatar */}
         <div
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            overflow: 'hidden',
-            background: '#e5e7eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 32,
-            fontWeight: 'bold',
-            color: '#4b5563',
-            flexShrink: 0,
+            textAlign: 'center',
+            marginBottom: '30px',
           }}
         >
-          {avatarSrc ? (
-            <img
-              src={avatarSrc}
-              alt="Avatar"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            avatarInitial
-          )}
-        </div>
-
-        <div>
-          <h1 style={{ margin: 0, marginBottom: 4 }}>Hồ sơ cá nhân</h1>
-          <p style={{ margin: 0 }}>
+          <div
+            style={{
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              background: '#e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '48px',
+              fontWeight: 'bold',
+              color: '#4b5563',
+              margin: '0 auto 20px',
+              border: '4px solid #667eea',
+            }}
+          >
+            {avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt="Avatar"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              avatarInitial
+            )}
+          </div>
+          <h1
+            style={{
+              fontSize: '32px',
+              fontWeight: 'bold',
+              color: '#1a1a1a',
+              margin: '0 0 8px 0',
+            }}
+          >
+            Hồ sơ cá nhân
+          </h1>
+          <p style={{ margin: '4px 0', color: '#666', fontSize: '14px' }}>
             <strong>Email:</strong> {profile.email}
           </p>
-          <p style={{ margin: 0 }}>
+          <p style={{ margin: '4px 0', color: '#666', fontSize: '14px' }}>
             <strong>Vai trò:</strong> {profile.role}
           </p>
         </div>
-      </div>
 
-      {/* Nút Shop */}
-      <div style={{ marginBottom: 16 }}>
-        <button
-          type="button"
-          onClick={handleGoShop}
-          disabled={checkingShop}
-          style={{
-            padding: '8px 16px',
-            background: '#16a34a',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 4,
-            cursor: 'pointer',
-          }}
-        >
-          {checkingShop ? 'Đang kiểm tra shop...' : 'Shop của tôi'}
-        </button>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          marginTop: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
-        <label>
-          Tên hiển thị
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <label>
-          Số điện thoại
-          <input
-            type="text"
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <label>
-          Avatar URL
-          <input
-            type="text"
-            name="avatarUrl"
-            value={form.avatarUrl}
-            onChange={handleChange}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <label>
-          Ngày sinh
-          <input
-            type="date"
-            name="birthday"
-            value={form.birthday || ''}
-            onChange={handleChange}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <label>
-          Giới tính
-          <select
-            name="gender"
-            value={form.gender}
-            onChange={handleChange}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
+        <div style={{ marginBottom: '24px' }}>
+          <button
+            type="button"
+            onClick={handleGoShop}
+            disabled={checkingShop}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: checkingShop ? '#9ca3af' : '#16a34a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '25px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: checkingShop ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s',
+            }}
           >
-            <option value="">-- Chọn giới tính --</option>
-            <option value="MALE">Nam</option>
-            <option value="FEMALE">Nữ</option>
-            <option value="OTHER">Khác</option>
-          </select>
-        </label>
+            {checkingShop ? 'Đang kiểm tra shop...' : 'Shop của tôi'}
+          </button>
+        </div>
 
-        <label>
-          Mật khẩu mới (nếu muốn đổi)
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={saving}
+        <form
+          onSubmit={handleSubmit}
           style={{
-            padding: '8px 16px',
-            marginTop: 8,
-            background: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 4,
-            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
           }}
         >
-          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          <div>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Tên hiển thị
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Số điện thoại
+            </label>
+            <input
+              type="text"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Avatar URL
+            </label>
+            <input
+              type="text"
+              name="avatarUrl"
+              value={form.avatarUrl}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Ngày sinh
+            </label>
+            <input
+              type="date"
+              name="birthday"
+              value={form.birthday || ''}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Giới tính
+            </label>
+            <select
+              name="gender"
+              value={form.gender}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+                background: '#fff',
+                cursor: 'pointer',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            >
+              <option value="">-- Chọn giới tính --</option>
+              <option value="MALE">Nam</option>
+              <option value="FEMALE">Nữ</option>
+              <option value="OTHER">Khác</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Mật khẩu mới (nếu muốn đổi)
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: saving ? '#9ca3af' : '#667eea',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '25px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s',
+              marginTop: '8px',
+            }}
+          >
+            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </button>
+        </form>
+
+        <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
+
+        <button
+          onClick={handleDeleteAccount}
+          style={{
+            width: '100%',
+            padding: '14px',
+            background: '#dc2626',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '25px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'background 0.3s',
+          }}
+        >
+          Xoá tài khoản của tôi
         </button>
-      </form>
-
-      <hr style={{ margin: '24px 0' }} />
-
-      <button
-        onClick={handleDeleteAccount}
-        style={{
-          padding: '8px 16px',
-          background: '#dc2626',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 4,
-          cursor: 'pointer',
-        }}
-      >
-        Xoá tài khoản của tôi
-      </button>
+      </div>
     </div>
   );
 };
