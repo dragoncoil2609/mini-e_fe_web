@@ -89,66 +89,213 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '40px auto' }}>
-      <h2>Đăng nhập Mini E</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email</label>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            style={{ width: '100%' }}
-            required
-          />
-        </div>
-
-        <div style={{ marginTop: 8 }}>
-          <label>Mật khẩu</label>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            style={{ width: '100%' }}
-            required
-          />
-        </div>
-
-        {error && (
-          <p style={{ color: 'red', marginTop: 8 }}>{error}</p>
-        )}
-
-        {/* Nếu cần khôi phục tài khoản thì hiện thêm nút */}
-        {recoverInfo && (
-          <div style={{ marginTop: 8 }}>
-            <button
-              type="button"
-              onClick={handleRecoverAccount}
-              style={{ width: '100%' }}
-            >
-              Khôi phục tài khoản
-            </button>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ marginTop: 12, width: '100%' }}
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <div
+        style={{
+          background: '#f8f9fa',
+          borderRadius: '20px',
+          padding: '40px',
+          maxWidth: '450px',
+          width: '100%',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+        }}
+      >
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '30px',
+          }}
         >
-          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-        </button>
-      </form>
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              background: '#667eea',
+              borderRadius: '50%',
+              margin: '0 auto 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '40px',
+            }}
+          >
+            🏪
+          </div>
+        </div>
 
-      <div style={{ marginTop: 16 }}>
-        <p>
-          Chưa có tài khoản?{' '}
-          <Link to="/register">Đăng ký</Link>
-        </p>
-        <p>
-          Quên mật khẩu?{' '}
-          <Link to="/forgot-password">Quên mật khẩu</Link>
-        </p>
+        <h1
+          style={{
+            fontSize: '32px',
+            fontWeight: 'bold',
+            marginBottom: '30px',
+            textAlign: 'center',
+            color: '#1a1a1a',
+          }}
+        >
+          Login
+        </h1>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Email
+            </label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Password
+            </label>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              required
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          {error && (
+            <div
+              style={{
+                color: '#dc2626',
+                marginBottom: '16px',
+                padding: '12px',
+                background: '#fee2e2',
+                borderRadius: '8px',
+                fontSize: '14px',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {recoverInfo && (
+            <div style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={handleRecoverAccount}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#f59e0b',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '25px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                }}
+              >
+                Khôi phục tài khoản
+              </button>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: loading ? '#9ca3af' : '#667eea',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '25px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s',
+              marginBottom: '20px',
+            }}
+          >
+            {loading ? 'Đang đăng nhập...' : 'Login'}
+          </button>
+        </form>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+            marginTop: '20px',
+          }}
+        >
+          <Link
+            to="/register"
+            style={{
+              color: '#667eea',
+              textDecoration: 'none',
+              fontWeight: '500',
+            }}
+          >
+            Create an account
+          </Link>
+          <Link
+            to="/forgot-password"
+            style={{
+              color: '#667eea',
+              textDecoration: 'none',
+              fontWeight: '500',
+            }}
+          >
+            Forget password?
+          </Link>
+        </div>
       </div>
     </div>
   );
