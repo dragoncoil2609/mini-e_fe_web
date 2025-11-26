@@ -70,7 +70,6 @@ export function VerifyAccountPage() {
           <button onClick={() => navigate('/home')} className="home-button">
             🏠 Về trang chủ
           </button>
-          <div className="icon">✓</div>
         </div>
 
         <h1 className="title">Xác minh tài khoản</h1>

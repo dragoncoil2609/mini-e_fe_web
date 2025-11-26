@@ -75,7 +75,6 @@ export function ResetPasswordPage() {
           <button onClick={() => navigate('/home')} className="home-button">
             🏠 Về trang chủ
           </button>
-          <div className="icon">🔑</div>
         </div>
 
         <h1 className="title">Đặt lại mật khẩu</h1>

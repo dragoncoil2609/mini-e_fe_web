@@ -54,7 +54,6 @@ export function RecoverRequestPage() {
           <button onClick={() => navigate('/home')} className="home-button">
             🏠 Về trang chủ
           </button>
-          <div className="icon">🔄</div>
         </div>
 
         <h1 className="title">Khôi phục tài khoản</h1>
