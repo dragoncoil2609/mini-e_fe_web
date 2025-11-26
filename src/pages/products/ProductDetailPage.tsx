@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
 import type { ProductDetail, ProductVariant, ApiResponse } from '../../api/types';
 import { getMainImageUrl, getAllImages } from '../../utils/productImage';
+import './ProductDetailPage.css';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -42,28 +43,8 @@ export default function ProductDetailPage() {
 
   if (!id) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-        }}
-      >
-        <div
-          style={{
-            background: '#f8f9fa',
-            borderRadius: '20px',
-            padding: '40px',
-            maxWidth: '500px',
-            width: '100%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-            textAlign: 'center',
-            color: '#dc2626',
-          }}
-        >
+      <div className="product-detail-state-container">
+        <div className="product-detail-state-card product-detail-state-card--error">
           Thiếu id sản phẩm.
         </div>
       </div>
@@ -72,28 +53,8 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-        }}
-      >
-        <div
-          style={{
-            background: '#f8f9fa',
-            borderRadius: '20px',
-            padding: '40px',
-            maxWidth: '500px',
-            width: '100%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-            textAlign: 'center',
-            color: '#666',
-          }}
-        >
+      <div className="product-detail-state-container">
+        <div className="product-detail-state-card product-detail-state-card--loading">
           Đang tải...
         </div>
       </div>
@@ -102,28 +63,8 @@ export default function ProductDetailPage() {
 
   if (error) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-        }}
-      >
-        <div
-          style={{
-            background: '#f8f9fa',
-            borderRadius: '20px',
-            padding: '40px',
-            maxWidth: '500px',
-            width: '100%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-            textAlign: 'center',
-            color: '#dc2626',
-          }}
-        >
+      <div className="product-detail-state-container">
+        <div className="product-detail-state-card product-detail-state-card--error">
           {error}
         </div>
       </div>
@@ -132,28 +73,8 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-        }}
-      >
-        <div
-          style={{
-            background: '#f8f9fa',
-            borderRadius: '20px',
-            padding: '40px',
-            maxWidth: '500px',
-            width: '100%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-            textAlign: 'center',
-            color: '#666',
-          }}
-        >
+      <div className="product-detail-state-container">
+        <div className="product-detail-state-card product-detail-state-card--loading">
           Không tìm thấy sản phẩm.
         </div>
       </div>
@@ -161,186 +82,55 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '40px 20px',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: '#f8f9fa',
-          borderRadius: '20px',
-          padding: '40px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '30px',
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: '#667eea',
-              borderRadius: '50%',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-            }}
-          >
-            📦
-          </div>
-          <h1
-            style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1a1a1a',
-              margin: 0,
-            }}
-          >
-            {product.title}
-          </h1>
+    <div className="product-detail-container">
+      <div className="product-detail-card">
+        <div className="product-detail-header">
+          <div className="product-detail-icon">📦</div>
+          <h1 className="product-detail-title">{product.title}</h1>
         </div>
 
-        {/* Ảnh chính */}
         {getMainImageUrl(product) && (
-          <div
-            style={{
-              padding: '24px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '15px',
-              marginBottom: '24px',
-              background: '#fff',
-              textAlign: 'center',
-            }}
-          >
-            <img
-              src={getMainImageUrl(product)!}
-              alt={product.title}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '500px',
-                objectFit: 'contain',
-                borderRadius: '12px',
-              }}
-            />
+          <div className="product-detail-main-image">
+            <img src={getMainImageUrl(product)!} alt={product.title} />
           </div>
         )}
 
-        <div
-          style={{
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '15px',
-            marginBottom: '24px',
-            background: '#fff',
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-            }}
-          >
-            <div>
-              <strong style={{ color: '#555', fontSize: '14px' }}>Giá:</strong>
-              <div style={{ color: '#1a1a1a', fontSize: '18px', marginTop: '4px', fontWeight: '600' }}>
+        <div className="product-detail-info-card">
+          <div className="product-detail-info-grid">
+            <div className="product-detail-info-item">
+              <span className="product-detail-info-label">Giá:</span>
+              <span className="product-detail-info-value">
                 {product.price} {product.currency}
-              </div>
+              </span>
             </div>
-            <div>
-              <strong style={{ color: '#555', fontSize: '14px' }}>Trạng thái:</strong>
-              <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
-                {product.status}
-              </div>
+            <div className="product-detail-info-item">
+              <span className="product-detail-info-label">Trạng thái:</span>
+              <span className="product-detail-info-value-small">{product.status}</span>
             </div>
           </div>
 
           {product.description && (
-            <div style={{ marginTop: '20px' }}>
-              <strong style={{ color: '#555', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
-                Mô tả:
-              </strong>
-              <div style={{ color: '#1a1a1a', fontSize: '16px', lineHeight: '1.6' }}>
-                {product.description}
-              </div>
+            <div className="product-detail-description">
+              <span className="product-detail-info-label">Mô tả:</span>
+              <div className="product-detail-description-text">{product.description}</div>
             </div>
           )}
         </div>
 
         {getAllImages(product).length > 0 && (
-          <div
-            style={{
-              padding: '24px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '15px',
-              marginBottom: '24px',
-              background: '#fff',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: '#1a1a1a',
-                marginBottom: '16px',
-              }}
-            >
-              Tất cả hình ảnh
-            </h3>
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                flexWrap: 'wrap',
-              }}
-            >
+          <div className="product-detail-images-section">
+            <h3 className="product-detail-images-title">Tất cả hình ảnh</h3>
+            <div className="product-detail-images-grid">
               {getAllImages(product).map((img) => (
                 <div
                   key={img.id}
-                  style={{
-                    position: 'relative',
-                  }}
+                  className={`product-detail-image-item ${
+                    img.isMain ? 'product-detail-image-item--main' : ''
+                  }`}
                 >
-                  <img
-                    src={img.normalizedUrl}
-                    alt={product.title}
-                    style={{
-                      width: 150,
-                      height: 150,
-                      objectFit: 'cover',
-                      borderRadius: '12px',
-                      border: img.isMain
-                        ? '3px solid #667eea'
-                        : '1px solid #e5e7eb',
-                    }}
-                  />
+                  <img src={img.normalizedUrl} alt={product.title} />
                   {img.isMain && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        background: '#667eea',
-                        color: '#fff',
-                        fontSize: '12px',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontWeight: '600',
-                      }}
-                    >
-                      Chính
-                    </span>
+                    <span className="product-detail-image-badge">Chính</span>
                   )}
                 </div>
               ))}
@@ -349,132 +139,25 @@ export default function ProductDetailPage() {
         )}
 
         {variants.length > 0 && (
-          <div
-            style={{
-              padding: '24px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '15px',
-              background: '#fff',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: '#1a1a1a',
-                marginBottom: '16px',
-              }}
-            >
-              Các biến thể (variants)
-            </h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table
-                style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  background: '#fff',
-                }}
-              >
+          <div className="product-detail-variants-section">
+            <h3 className="product-detail-variants-title">Các biến thể (variants)</h3>
+            <div className="product-detail-variants-table-wrapper">
+              <table className="product-detail-variants-table">
                 <thead>
                   <tr>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      SKU
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Tên
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Giá
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Tồn kho
-                    </th>
+                    <th>SKU</th>
+                    <th>Tên</th>
+                    <th>Giá</th>
+                    <th>Tồn kho</th>
                   </tr>
                 </thead>
                 <tbody>
                   {variants.map((v) => (
-                    <tr
-                      key={v.id}
-                      style={{
-                        borderBottom: '1px solid #e5e7eb',
-                      }}
-                    >
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {v.sku}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {v.name}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {v.price}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {v.stock}
-                      </td>
+                    <tr key={v.id}>
+                      <td>{v.sku}</td>
+                      <td>{v.name}</td>
+                      <td>{v.price}</td>
+                      <td>{v.stock}</td>
                     </tr>
                   ))}
                 </tbody>
