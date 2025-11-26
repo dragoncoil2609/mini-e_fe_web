@@ -1,3 +1,4 @@
+// src/components/LocationPicker.tsx
 import React, { useEffect, useState } from 'react';
 import {
   MapContainer,
@@ -5,12 +6,12 @@ import {
   Marker,
   useMapEvents,
 } from 'react-leaflet';
-import L, { type LatLngExpression, type LeafletMouseEvent } from 'leaflet';
+import L, { type LatLngExpression } from 'leaflet';
 
 const DEFAULT_CENTER: LatLngExpression = [16.047079, 108.20623]; // Đà Nẵng
-const DEFAULT_ZOOM = 5; // Zoom rộng Việt Nam
+const DEFAULT_ZOOM = 5;
 
-// Fix icon bị lỗi khi dùng với Vite/React
+// icon mặc định cho marker
 const defaultIcon = new L.Icon({
   iconUrl:
     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -21,14 +22,15 @@ const defaultIcon = new L.Icon({
 });
 
 interface LocationPickerProps {
-  address: string;
+  address: string; // địa chỉ đầy đủ (shopAddress)
   lat: string;
   lng: string;
-  onChange: (value: { address?: string; lat?: string; lng?: string }) => void;
+  /** chỉ cần trả lat/lng, address đã được quản lý ở ngoài */
+  onChange: (value: { lat?: string; lng?: string }) => void;
 }
 
 interface ClickMarkerProps {
-  position: L.LatLngExpression | null;
+  position: LatLngExpression | null;
   onChangePosition: (lat: number, lng: number) => void;
 }
 
@@ -37,14 +39,14 @@ const ClickMarker: React.FC<ClickMarkerProps> = ({
   onChangePosition,
 }) => {
   useMapEvents({
-    click(e: LeafletMouseEvent) {
+    click(e) {
       onChangePosition(e.latlng.lat, e.latlng.lng);
     },
   });
 
   if (!position) return null;
 
-  return <Marker position={position} icon={defaultIcon} draggable />;
+  return <Marker position={position} icon={defaultIcon} draggable={false} />;
 };
 
 const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -53,69 +55,85 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   lng,
   onChange,
 }) => {
-  const [query, setQuery] = useState(address || '');
-  const [position, setPosition] = useState<LatLngExpression | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [position, setPosition] = useState<LatLngExpression | null>(
+    null,
+  );
+  const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync từ props lat/lng lúc mở form
+  // sync lat/lng truyền từ ngoài (VD: đã lưu trước đó)
   useEffect(() => {
     if (lat && lng) {
       const latNum = parseFloat(lat);
       const lngNum = parseFloat(lng);
       if (!isNaN(latNum) && !isNaN(lngNum)) {
         setPosition([latNum, lngNum]);
-      }
-    }
-  }, [lat, lng]);
-
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    setSearching(true);
-    setError(null);
-
-    try {
-      const url = new URL('https://nominatim.openstreetmap.org/search');
-      url.searchParams.set('format', 'json');
-      url.searchParams.set('q', query);
-      url.searchParams.set('countrycodes', 'vn');
-      url.searchParams.set('limit', '1');
-
-      const res = await fetch(url.toString(), {
-        headers: {
-          // Nominatim yêu cầu User-Agent; ở FE thì khó custom,
-          // nhưng ít request test thì vẫn được.
-          'Accept-Language': 'vi',
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error('Geocoding failed');
-      }
-
-      const data = await res.json();
-      if (!data || data.length === 0) {
-        setError('Không tìm thấy địa chỉ, thử cụ thể hơn.');
         return;
       }
-
-      const first = data[0];
-      const latNum = parseFloat(first.lat);
-      const lngNum = parseFloat(first.lon);
-
-      setPosition([latNum, lngNum]);
-      onChange({
-        address: query,
-        lat: String(latNum),
-        lng: String(lngNum),
-      });
-    } catch (err: any) {
-      console.error(err);
-      setError('Không gọi được OpenStreetMap. Thử lại sau.');
-    } finally {
-      setSearching(false);
     }
-  };
+    // nếu chưa có lat/lng thì để null, map sẽ dùng DEFAULT_CENTER
+  }, [lat, lng]);
+
+  // Mỗi khi địa chỉ đầy đủ đổi → tự geocode để định vị trên map
+  useEffect(() => {
+    const trimmed = address?.trim();
+    if (!trimmed) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setGeocoding(true);
+        setError(null);
+
+        const url = new URL(
+          'https://nominatim.openstreetmap.org/search',
+        );
+        url.searchParams.set('format', 'json');
+        url.searchParams.set('q', trimmed);
+        url.searchParams.set('countrycodes', 'vn');
+        url.searchParams.set('limit', '1');
+
+        const res = await fetch(url.toString(), {
+          signal: controller.signal,
+          headers: {
+            'Accept-Language': 'vi',
+          },
+        });
+
+        if (!res.ok) throw new Error('Geocoding failed');
+
+        const data: any[] = await res.json();
+        if (!data || data.length === 0) {
+          setError('Không tìm thấy vị trí trên bản đồ từ địa chỉ.');
+          return;
+        }
+
+        const first = data[0];
+        const latNum = parseFloat(first.lat);
+        const lngNum = parseFloat(first.lon);
+
+        if (!isNaN(latNum) && !isNaN(lngNum)) {
+          setPosition([latNum, lngNum]);
+          onChange({
+            lat: String(latNum),
+            lng: String(lngNum),
+          });
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error(err);
+          setError('Không thể định vị trên bản đồ.');
+        }
+      } finally {
+        setGeocoding(false);
+      }
+    }, 500); // debounce 500ms khi địa chỉ thay đổi
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [address, onChange]);
 
   const handleMapClickChange = (newLat: number, newLng: number) => {
     setPosition([newLat, newLng]);
@@ -126,40 +144,28 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   };
 
   const center = position || DEFAULT_CENTER;
+  const zoom = position ? 15 : DEFAULT_ZOOM;
 
   return (
-    <div style={{ marginTop: 8 }}>
-      {/* Ô nhập địa chỉ + nút tìm trên map */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <input
-          type="text"
-          placeholder="Nhập địa chỉ (ví dụ: 254 Nguyễn Văn Linh, Đà Nẵng)"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ flex: 1, padding: 8 }}
-        />
-        <button type="button" onClick={handleSearch} disabled={searching}>
-          {searching ? 'Đang tìm...' : 'Tìm trên bản đồ'}
-        </button>
-      </div>
-
-      {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
-
-      {/* Lat/Lng hiện tại */}
+    <div>
       <div style={{ fontSize: 13, marginBottom: 4 }}>
         Lat: {lat || '-'} | Lng: {lng || '-'}
       </div>
+      {error && (
+        <div style={{ color: 'red', marginBottom: 4, fontSize: 12 }}>
+          {error}
+        </div>
+      )}
 
-      {/* Map */}
-      <div style={{ height: 300, width: '100%', marginBottom: 8 }}>
+      <div style={{ height: 300, width: '100%' }}>
         <MapContainer
           center={center}
-          zoom={position ? 15 : DEFAULT_ZOOM}
+          zoom={zoom}
           style={{ height: '100%', width: '100%' }}
           scrollWheelZoom
         >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
+            attribution="&copy; OpenStreetMap contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ClickMarker
@@ -169,8 +175,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         </MapContainer>
       </div>
 
-      <div style={{ fontSize: 12, color: '#555' }}>
-        * Tip: bạn có thể click trực tiếp lên bản đồ để chọn vị trí, lat/lng sẽ tự cập nhật.
+      {geocoding && (
+        <div style={{ fontSize: 12, marginTop: 4 }}>
+          Đang định vị trên bản đồ...
+        </div>
+      )}
+
+      <div style={{ fontSize: 12, marginTop: 4, color: '#555' }}>
+        * Bạn có thể click trực tiếp lên bản đồ để điều chỉnh vị trí. Lat/Lng
+        sẽ tự cập nhật.
       </div>
     </div>
   );

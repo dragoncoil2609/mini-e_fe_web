@@ -19,10 +19,14 @@ interface Province {
 }
 
 interface VietnamAddressSelectorProps {
-  /** Chuỗi địa chỉ full hiện tại (để hiển thị read-only / debug nếu muốn) */
+  /** Địa chỉ đầy đủ đang có (shopAddress) */
   fullAddress: string;
-  /** Gọi khi user chọn xong / thay đổi → trả về chuỗi địa chỉ đầy đủ */
+  /** Khi user đổi tỉnh / quận / phường / địa chỉ cụ thể → emit địa chỉ đầy đủ mới */
   onFullAddressChange: (fullAddress: string) => void;
+}
+
+interface SuggestItem {
+  label: string; // display_name từ Nominatim
 }
 
 const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
@@ -37,7 +41,12 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Lấy danh sách tỉnh/thành + quận/huyện + phường/xã
+  // gợi ý địa chỉ cụ thể (số nhà, tên đường...)
+  const [suggestions, setSuggestions] = useState<SuggestItem[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
+
+  // ================== LOAD TỈNH / HUYỆN / XÃ ==================
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -72,7 +81,7 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
 
   const selectedWard = wards.find((w) => String(w.code) === wardCode);
 
-  // Mỗi lần detail/province/district/ward đổi → build full address và báo ra ngoài
+  // =============== GHÉP ĐỊA CHỈ ĐẦY ĐỦ ===============
   useEffect(() => {
     if (!provinceCode && !districtCode && !wardCode && !detail) {
       onFullAddressChange('');
@@ -99,6 +108,67 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
     onFullAddressChange,
   ]);
 
+  // =============== GỢI Ý ĐỊA CHỈ CỤ THỂ (Nominatim) ===============
+  useEffect(() => {
+    // chỉ gợi ý khi có ward + detail dài >= 3 ký tự
+    if (!detail || detail.trim().length < 3) {
+      setSuggestions([]);
+      setShowSuggest(false);
+      return;
+    }
+    if (!selectedProvince || !selectedDistrict || !selectedWard) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setSuggestLoading(true);
+
+        const queryParts = [
+          detail,
+          selectedWard.name,
+          selectedDistrict.name,
+          selectedProvince.name,
+          'Việt Nam',
+        ];
+        const q = queryParts.filter(Boolean).join(', ');
+
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('format', 'json');
+        url.searchParams.set('q', q);
+        url.searchParams.set('countrycodes', 'vn');
+        url.searchParams.set('limit', '5');
+
+        const res = await fetch(url.toString(), {
+          signal: controller.signal,
+          headers: {
+            'Accept-Language': 'vi',
+          },
+        });
+        if (!res.ok) throw new Error('Suggest failed');
+        const data: any[] = await res.json();
+
+        const sugg: SuggestItem[] = data.map((item) => ({
+          label: item.display_name as string,
+        }));
+        setSuggestions(sugg);
+        setShowSuggest(sugg.length > 0);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error(err);
+        }
+      } finally {
+        setSuggestLoading(false);
+      }
+    }, 400); // debounce 400ms
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [detail, selectedProvince, selectedDistrict, selectedWard]);
+
   const handleProvinceChange = (
     e: React.ChangeEvent<HTMLSelectElement>,
   ) => {
@@ -106,6 +176,9 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
     setProvinceCode(value);
     setDistrictCode('');
     setWardCode('');
+    setDetail('');
+    setSuggestions([]);
+    setShowSuggest(false);
   };
 
   const handleDistrictChange = (
@@ -114,10 +187,31 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
     const value = e.target.value;
     setDistrictCode(value);
     setWardCode('');
+    setDetail('');
+    setSuggestions([]);
+    setShowSuggest(false);
   };
 
   const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setWardCode(e.target.value);
+    setDetail('');
+    setSuggestions([]);
+    setShowSuggest(false);
+  };
+
+  const handleDetailChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setDetail(e.target.value);
+    setShowSuggest(true);
+  };
+
+  const handleSelectSuggestion = (item: SuggestItem) => {
+    // lấy phần đầu (thường là "Số nhà xx, Tên đường ...")
+    const firstPart = item.label.split(',')[0].trim();
+    setDetail(firstPart);
+    setSuggestions([]);
+    setShowSuggest(false);
   };
 
   return (
@@ -133,9 +227,7 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
           onChange={handleProvinceChange}
           style={{ width: '100%', padding: 8 }}
         >
-          <option value="">
-            Tỉnh/Thành phố
-          </option>
+          <option value="">Tỉnh/Thành phố</option>
           {provinces.map((p) => (
             <option key={p.code} value={p.code}>
               {p.name}
@@ -152,9 +244,7 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
           style={{ width: '100%', padding: 8 }}
           disabled={!provinceCode}
         >
-          <option value="">
-            Quận/Huyện
-          </option>
+          <option value="">Quận/Huyện</option>
           {districts.map((d) => (
             <option key={d.code} value={d.code}>
               {d.name}
@@ -171,9 +261,7 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
           style={{ width: '100%', padding: 8 }}
           disabled={!districtCode}
         >
-          <option value="">
-            Phường/Xã
-          </option>
+          <option value="">Phường/Xã</option>
           {wards.map((w) => (
             <option key={w.code} value={w.code}>
               {w.name}
@@ -182,22 +270,77 @@ const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
         </select>
       </div>
 
-      {/* Địa chỉ cụ thể */}
-      <div style={{ marginBottom: 8 }}>
+      {/* Địa chỉ cụ thể + gợi ý */}
+      <div style={{ marginBottom: 4, position: 'relative' }}>
         <input
           type="text"
           placeholder="Địa chỉ cụ thể (số nhà, tên đường...)"
           value={detail}
-          onChange={(e) => setDetail(e.target.value)}
-          style={{ width: '100%', padding: 8 }}
+          onChange={handleDetailChange}
+          onFocus={() => {
+            if (suggestions.length > 0) setShowSuggest(true);
+          }}
+          onBlur={() => {
+            // nhỏ delay xíu để click vào suggestion không bị đóng ngay
+            setTimeout(() => setShowSuggest(false), 150);
+          }}
+          style={{
+            width: '100%',
+            padding: 8,
+            boxSizing: 'border-box',
+          }}
         />
+
+        {showSuggest && suggestions.length > 0 && (
+          <ul
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: '100%',
+              maxHeight: 200,
+              overflowY: 'auto',
+              background: '#fff',
+              border: '1px solid #ddd',
+              borderTop: 'none',
+              listStyle: 'none',
+              margin: 0,
+              padding: 0,
+              zIndex: 20,
+              fontSize: 13,
+            }}
+          >
+            {suggestions.map((s, idx) => (
+              <li
+                key={idx}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelectSuggestion(s);
+                }}
+                style={{
+                  padding: '6px 8px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid #eee',
+                }}
+              >
+                {s.label}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      {suggestLoading && (
+        <div style={{ fontSize: 12, color: '#555' }}>
+          Đang gợi ý địa chỉ...
+        </div>
+      )}
 
       {loading && (
         <div style={{ fontSize: 12 }}>Đang tải danh sách địa phương...</div>
       )}
 
-      {/* Nếu muốn debug có thể hiện fullAddress */}
+      {/* Có thể ẩn phần này nếu không cần xem fullAddress */}
       {fullAddress && (
         <div style={{ fontSize: 12, marginTop: 4, color: '#555' }}>
           Địa chỉ đầy đủ: {fullAddress}
