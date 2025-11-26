@@ -1,0 +1,172 @@
+.shop-register-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 20px;
+}
+
+.shop-register-card {
+  max-width: 800px;
+  margin: 0 auto;
+  background: #f8f9fa;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.shop-register-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.shop-register-icon {
+  width: 80px;
+  height: 80px;
+  background: #667eea;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+
+.shop-register-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.shop-register-error {
+  color: #dc2626;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.shop-register-success {
+  color: #16a34a;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #dcfce7;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.shop-register-form-group {
+  margin-bottom: 20px;
+}
+
+.shop-register-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}
+
+.shop-register-input,
+.shop-register-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 25px;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+.shop-register-input:focus,
+.shop-register-textarea:focus {
+  border-color: #667eea;
+}
+
+.shop-register-textarea {
+  border-radius: 15px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.shop-register-name-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.shop-register-name-input {
+  flex: 1;
+}
+
+.shop-register-check-button {
+  padding: 12px 20px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.shop-register-check-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.shop-register-name-error {
+  color: #dc2626;
+  margin-top: 4px;
+  font-size: 14px;
+  padding: 8px;
+  background: #fee2e2;
+  border-radius: 8px;
+}
+
+.shop-register-name-ok {
+  color: #16a34a;
+  margin-top: 4px;
+  font-size: 14px;
+  padding: 8px;
+  background: #dcfce7;
+  border-radius: 8px;
+}
+
+.shop-register-map-wrapper {
+  border-radius: 15px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.shop-register-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.shop-register-row-item {
+  flex: 1;
+}
+
+.shop-register-submit {
+  width: 100%;
+  padding: 14px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.shop-register-submit:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+

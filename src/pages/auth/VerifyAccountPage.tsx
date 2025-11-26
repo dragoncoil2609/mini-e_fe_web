@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 import type { RequestVerifyResponse } from '../../api/types';
+import './VerifyAccountPage.css';
 
 export function VerifyAccountPage() {
   const navigate = useNavigate();
@@ -63,69 +64,15 @@ export function VerifyAccountPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
-    >
-      <div
-        style={{
-          background: '#f8f9fa',
-          borderRadius: '20px',
-          padding: '40px',
-          maxWidth: '450px',
-          width: '100%',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '30px',
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: '#667eea',
-              borderRadius: '50%',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-            }}
-          >
-            ✓
-          </div>
+    <div className="container">
+      <div className="card">
+        <div className="header">
+          <div className="icon">✓</div>
         </div>
 
-        <h1
-          style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            marginBottom: '10px',
-            textAlign: 'center',
-            color: '#1a1a1a',
-          }}
-        >
-          Xác minh tài khoản
-        </h1>
+        <h1 className="title">Xác minh tài khoản</h1>
 
-        <p
-          style={{
-            textAlign: 'center',
-            color: '#666',
-            marginBottom: '30px',
-            fontSize: '14px',
-          }}
-        >
+        <p className="description">
           Vui lòng gửi OTP và nhập mã OTP để xác minh tài khoản
           (yêu cầu bạn đã đăng nhập).
         </p>
@@ -134,48 +81,28 @@ export function VerifyAccountPage() {
           type="button"
           onClick={handleRequestOtp}
           disabled={loadingRequest}
-          style={{
-            width: '100%',
-            padding: '14px',
-            background: loadingRequest ? '#9ca3af' : '#16a34a',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '25px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: loadingRequest ? 'not-allowed' : 'pointer',
-            transition: 'background 0.3s',
-            marginBottom: '20px',
-          }}
+          className="requestButton"
         >
           {loadingRequest ? 'Đang gửi OTP...' : 'Gửi / Gửi lại OTP xác minh'}
         </button>
 
         {info && (
-          <div
-            style={{
-              marginBottom: '20px',
-              padding: '16px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '15px',
-              background: '#fff',
-            }}
-          >
-            <p style={{ margin: '4px 0', fontSize: '14px', color: '#374151' }}>
-              Email: <strong>{info.email}</strong>
+          <div className="infoBox">
+            <p className="infoText">
+              Email: <strong className="infoTextStrong">{info.email}</strong>
             </p>
             {info.isVerified && (
-              <p style={{ color: '#16a34a', margin: '4px 0', fontSize: '14px' }}>
+              <p className="infoTextSuccess">
                 Tài khoản đã được xác minh.
               </p>
             )}
             {info.otp && (
-              <p style={{ margin: '4px 0', fontSize: '14px', color: '#374151' }}>
-                OTP (dev): <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px' }}>{info.otp}</code>
+              <p className="infoText">
+                OTP (dev): <code className="infoCode">{info.otp}</code>
               </p>
             )}
             {info.expiresAt && (
-              <p style={{ margin: '4px 0', fontSize: '14px', color: '#374151' }}>
+              <p className="infoText">
                 Hết hạn lúc: {info.expiresAt}
               </p>
             )}
@@ -183,79 +110,27 @@ export function VerifyAccountPage() {
         )}
 
         <form onSubmit={handleVerify}>
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Nhập mã OTP
-            </label>
+          <div className="formGroup">
+            <label className="label">Nhập mã OTP</label>
             <input
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '25px',
-                border: '1px solid #ddd',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.3s',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+              className="input"
             />
           </div>
 
-          {error && (
-            <div
-              style={{
-                color: '#dc2626',
-                marginBottom: '16px',
-                padding: '12px',
-                background: '#fee2e2',
-                borderRadius: '8px',
-                fontSize: '14px',
-              }}
-            >
-              {error}
-            </div>
-          )}
+          {error && <div className="error">{error}</div>}
 
           {verified === true && (
-            <div
-              style={{
-                color: '#16a34a',
-                marginBottom: '16px',
-                padding: '12px',
-                background: '#dcfce7',
-                borderRadius: '8px',
-                fontSize: '14px',
-              }}
-            >
+            <div className="verified">
               Xác minh thành công! Đang chuyển vào Home...
             </div>
           )}
 
           {verified === false && (
-            <div
-              style={{
-                color: '#dc2626',
-                marginBottom: '16px',
-                padding: '12px',
-                background: '#fee2e2',
-                borderRadius: '8px',
-                fontSize: '14px',
-              }}
-            >
+            <div className="notVerified">
               Xác minh thất bại. Vui lòng kiểm tra lại OTP.
             </div>
           )}
@@ -263,39 +138,14 @@ export function VerifyAccountPage() {
           <button
             type="submit"
             disabled={loadingVerify}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: loadingVerify ? '#9ca3af' : '#667eea',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '25px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loadingVerify ? 'not-allowed' : 'pointer',
-              transition: 'background 0.3s',
-              marginBottom: '20px',
-            }}
+            className="button"
           >
             {loadingVerify ? 'Đang xác minh...' : 'Xác minh tài khoản'}
           </button>
         </form>
 
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: '14px',
-            marginTop: '20px',
-          }}
-        >
-          <Link
-            to="/login"
-            style={{
-              color: '#667eea',
-              textDecoration: 'none',
-              fontWeight: '500',
-            }}
-          >
+        <div className="linkContainer">
+          <Link to="/login" className="link">
             Quay lại đăng nhập
           </Link>
         </div>

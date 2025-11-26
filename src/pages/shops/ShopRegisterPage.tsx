@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { registerShop, checkShopName } from '../../api/shop.api';
 import LocationPicker from '../../components/LocationPicker';
 import VietnamAddressSelector from '../../components/VietnamAddressSelector';
+import './ShopRegisterPage.css';
 
 interface FormState {
   name: string;
@@ -109,105 +110,22 @@ const ShopRegisterPage = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '40px 20px',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '800px',
-          margin: '0 auto',
-          background: '#f8f9fa',
-          borderRadius: '20px',
-          padding: '40px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '30px',
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: '#667eea',
-              borderRadius: '50%',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-            }}
-          >
-            🏬
-          </div>
-          <h1
-            style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1a1a1a',
-              margin: 0,
-            }}
-          >
-            Đăng ký shop
-          </h1>
+    <div className="shop-register-page">
+      <div className="shop-register-card">
+        <div className="shop-register-header">
+          <div className="shop-register-icon">🏬</div>
+          <h1 className="shop-register-title">Đăng ký shop</h1>
         </div>
 
-        {error && (
-          <div
-            style={{
-              color: '#dc2626',
-              marginBottom: '16px',
-              padding: '12px',
-              background: '#fee2e2',
-              borderRadius: '8px',
-              fontSize: '14px',
-            }}
-          >
-            {error}
-          </div>
-        )}
+        {error && <div className="shop-register-error">{error}</div>}
         {successMsg && (
-          <div
-            style={{
-              color: '#16a34a',
-              marginBottom: '16px',
-              padding: '12px',
-              background: '#dcfce7',
-              borderRadius: '8px',
-              fontSize: '14px',
-            }}
-          >
-            {successMsg}
-          </div>
+          <div className="shop-register-success">{successMsg}</div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Tên shop (*)
-            </label>
-            <div
-              style={{
-                display: 'flex',
-                gap: '8px',
-                marginBottom: '8px',
-              }}
-            >
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Tên shop (*)</label>
+            <div className="shop-register-name-row">
               <input
                 type="text"
                 name="name"
@@ -215,165 +133,54 @@ const ShopRegisterPage = () => {
                 onChange={handleChange}
                 required
                 maxLength={150}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: '25px',
-                  border: '1px solid #ddd',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'border-color 0.3s',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) =>
-                  (e.target.style.borderColor = '#667eea')
-                }
-                onBlur={(e) =>
-                  (e.target.style.borderColor = '#ddd')
-                }
+                className="shop-register-input shop-register-name-input"
               />
               <button
                 type="button"
                 onClick={handleCheckName}
                 disabled={checkingName || !form.name.trim()}
-                style={{
-                  padding: '12px 20px',
-                  background:
-                    checkingName || !form.name.trim()
-                      ? '#9ca3af'
-                      : '#667eea',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '25px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor:
-                    checkingName || !form.name.trim()
-                      ? 'not-allowed'
-                      : 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
+                className="shop-register-check-button"
               >
                 {checkingName ? 'Đang kiểm tra...' : 'Kiểm tra tên'}
               </button>
             </div>
             {nameExists === true && (
-              <div
-                style={{
-                  color: '#dc2626',
-                  marginTop: '4px',
-                  fontSize: '14px',
-                  padding: '8px',
-                  background: '#fee2e2',
-                  borderRadius: '8px',
-                }}
-              >
+              <div className="shop-register-name-error">
                 Tên shop đã tồn tại.
               </div>
             )}
             {nameExists === false && (
-              <div
-                style={{
-                  color: '#16a34a',
-                  marginTop: '4px',
-                  fontSize: '14px',
-                  padding: '8px',
-                  background: '#dcfce7',
-                  borderRadius: '8px',
-                }}
-              >
+              <div className="shop-register-name-ok">
                 Tên shop có thể sử dụng.
               </div>
             )}
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Email
-            </label>
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Email</label>
             <input
               type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '25px',
-                border: '1px solid #ddd',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.3s',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) =>
-                (e.target.style.borderColor = '#667eea')
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = '#ddd')
-              }
+              className="shop-register-input"
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Mô tả
-            </label>
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Mô tả</label>
             <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
               rows={3}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '15px',
-                border: '1px solid #ddd',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.3s',
-                boxSizing: 'border-box',
-                resize: 'vertical',
-                fontFamily: 'inherit',
-              }}
-              onFocus={(e) =>
-                (e.target.style.borderColor = '#667eea')
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = '#ddd')
-              }
+              className="shop-register-textarea"
             />
           </div>
 
           {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Địa chỉ shop
-            </label>
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Địa chỉ shop</label>
             <VietnamAddressSelector
               fullAddress={form.shopAddress}
               onFullAddressChange={(full) => {
@@ -386,25 +193,9 @@ const ShopRegisterPage = () => {
           </div>
 
           {/* Map */}
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Vị trí trên bản đồ
-            </label>
-            <div
-              style={{
-                borderRadius: '15px',
-                overflow: 'hidden',
-                border: '1px solid #ddd',
-              }}
-            >
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Vị trí trên bản đồ</label>
+            <div className="shop-register-map-wrapper">
               <LocationPicker
                 address={form.shopAddress}
                 lat={form.shopLat}
@@ -421,174 +212,57 @@ const ShopRegisterPage = () => {
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              marginBottom: '20px',
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  color: '#555',
-                  fontWeight: '500',
-                }}
-              >
-                Vĩ độ (lat)
-              </label>
+          <div className="shop-register-row">
+            <div className="shop-register-row-item">
+              <label className="shop-register-label">Vĩ độ (lat)</label>
               <input
                 type="number"
                 step="0.0000001"
                 name="shopLat"
                 value={form.shopLat}
                 onChange={handleChange}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '25px',
-                  border: '1px solid #ddd',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'border-color 0.3s',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) =>
-                  (e.target.style.borderColor = '#667eea')
-                }
-                onBlur={(e) =>
-                  (e.target.style.borderColor = '#ddd')
-                }
+                className="shop-register-input"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  color: '#555',
-                  fontWeight: '500',
-                }}
-              >
-                Kinh độ (lng)
-              </label>
+            <div className="shop-register-row-item">
+              <label className="shop-register-label">Kinh độ (lng)</label>
               <input
                 type="number"
                 step="0.0000001"
                 name="shopLng"
                 value={form.shopLng}
                 onChange={handleChange}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '25px',
-                  border: '1px solid #ddd',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'border-color 0.3s',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) =>
-                  (e.target.style.borderColor = '#667eea')
-                }
-                onBlur={(e) =>
-                  (e.target.style.borderColor = '#ddd')
-                }
+                className="shop-register-input"
               />
             </div>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Google Place ID
-            </label>
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Google Place ID</label>
             <input
               type="text"
               name="shopPlaceId"
               value={form.shopPlaceId}
               onChange={handleChange}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '25px',
-                border: '1px solid #ddd',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.3s',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) =>
-                (e.target.style.borderColor = '#667eea')
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = '#ddd')
-              }
+              className="shop-register-input"
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                color: '#555',
-                fontWeight: '500',
-              }}
-            >
-              Số điện thoại
-            </label>
+          <div className="shop-register-form-group">
+            <label className="shop-register-label">Số điện thoại</label>
             <input
               type="text"
               name="shopPhone"
               value={form.shopPhone}
               onChange={handleChange}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '25px',
-                border: '1px solid #ddd',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.3s',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) =>
-                (e.target.style.borderColor = '#667eea')
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = '#ddd')
-              }
+              className="shop-register-input"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: loading ? '#9ca3af' : '#667eea',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '25px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background 0.3s',
-            }}
+            className="shop-register-submit"
           >
             {loading ? 'Đang tạo shop...' : 'Tạo shop'}
           </button>

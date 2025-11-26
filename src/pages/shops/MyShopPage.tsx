@@ -16,6 +16,7 @@ import LocationPicker from '../../components/LocationPicker';
 import VietnamAddressSelector from '../../components/VietnamAddressSelector';
 
 import type { ProductListItem } from '../../api/types';
+import './MyShopPage.css';
 
 interface EditFormState {
   name: string;
@@ -258,17 +259,7 @@ const MyShopPage = () => {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#fff',
-          fontSize: '18px',
-        }}
-      >
+      <div className="shop-page-loading">
         Đang tải...
       </div>
     );
@@ -276,79 +267,13 @@ const MyShopPage = () => {
 
   if (!shop) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          padding: '40px 20px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '600px',
-            margin: '0 auto',
-            background: '#f8f9fa',
-            borderRadius: '20px',
-            padding: '40px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: '#667eea',
-              borderRadius: '50%',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-            }}
-          >
-            🏬
-          </div>
-          <h1
-            style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1a1a1a',
-              marginBottom: '20px',
-            }}
-          >
-            Shop của tôi
-          </h1>
-          {error && (
-            <div
-              style={{
-                color: '#dc2626',
-                marginBottom: '16px',
-                padding: '12px',
-                background: '#fee2e2',
-                borderRadius: '8px',
-                fontSize: '14px',
-              }}
-            >
-              {error}
-            </div>
-          )}
-          <p style={{ color: '#666', marginBottom: '20px' }}>
-            Bạn chưa có shop.
-          </p>
-          <Link
-            to="/shops/register"
-            style={{
-              display: 'inline-block',
-              padding: '14px 28px',
-              background: '#667eea',
-              color: '#fff',
-              textDecoration: 'none',
-              borderRadius: '25px',
-              fontSize: '16px',
-              fontWeight: '600',
-            }}
-          >
+      <div className="shop-page-no-shop-container">
+        <div className="shop-page-no-shop-card">
+          <div className="shop-header-icon">🏬</div>
+          <h1 className="shop-header-title">Shop của tôi</h1>
+          {error && <div className="shop-message-error">{error}</div>}
+          <p className="shop-empty-text">Bạn chưa có shop.</p>
+          <Link to="/shops/register" className="shop-link-button">
             Đăng ký shop ngay
           </Link>
         </div>
@@ -357,268 +282,63 @@ const MyShopPage = () => {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '40px 20px',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: '#f8f9fa',
-          borderRadius: '20px',
-          padding: '40px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '30px',
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: '#667eea',
-              borderRadius: '50%',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-            }}
-          >
-            🏬
-          </div>
-          <h1
-            style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1a1a1a',
-              margin: 0,
-            }}
-          >
-            Shop của tôi
-          </h1>
+    <div className="shop-page-container">
+      <div className="shop-page-card">
+        <div className="shop-header">
+          <div className="shop-header-icon">🏬</div>
+          <h1 className="shop-header-title">Shop của tôi</h1>
         </div>
 
-        {error && (
-          <div
-            style={{
-              color: '#dc2626',
-              marginBottom: '16px',
-              padding: '12px',
-              background: '#fee2e2',
-              borderRadius: '8px',
-              fontSize: '14px',
-            }}
-          >
-            {error}
-          </div>
-        )}
-        {successMsg && (
-          <div
-            style={{
-              color: '#16a34a',
-              marginBottom: '16px',
-              padding: '12px',
-              background: '#dcfce7',
-              borderRadius: '8px',
-              fontSize: '14px',
-            }}
-          >
-            {successMsg}
-          </div>
-        )}
+        {error && <div className="shop-message-error">{error}</div>}
+        {successMsg && <div className="shop-message-success">{successMsg}</div>}
 
-        <section
-          style={{
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '15px',
-            marginBottom: '24px',
-            background: '#fff',
-          }}
-        >
+        <section className="shop-section">
           {!editing && (
             <>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    'repeat(auto-fit, minmax(250px, 1fr))',
-                  gap: '16px',
-                  marginBottom: '20px',
-                }}
-              >
+              <div className="shop-grid-info">
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Tên shop:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.name}
-                  </div>
+                  <strong className="shop-info-label">Tên shop:</strong>
+                  <div className="shop-info-value">{shop.name}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Slug:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.slug}
-                  </div>
+                  <strong className="shop-info-label">Slug:</strong>
+                  <div className="shop-info-value">{shop.slug}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Trạng thái:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.status}
-                  </div>
+                  <strong className="shop-info-label">Trạng thái:</strong>
+                  <div className="shop-info-value">{shop.status}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Email:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.email || '-'}
-                  </div>
+                  <strong className="shop-info-label">Email:</strong>
+                  <div className="shop-info-value">{shop.email || '-'}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Mô tả:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.description || '-'}
-                  </div>
+                  <strong className="shop-info-label">Mô tả:</strong>
+                  <div className="shop-info-value">{shop.description || '-'}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Địa chỉ:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.shopAddress || '-'}
-                  </div>
+                  <strong className="shop-info-label">Địa chỉ:</strong>
+                  <div className="shop-info-value">{shop.shopAddress || '-'}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Toạ độ:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
+                  <strong className="shop-info-label">Toạ độ:</strong>
+                  <div className="shop-info-value">
                     {shop.shopLat && shop.shopLng
                       ? `${shop.shopLat}, ${shop.shopLng}`
                       : '-'}
                   </div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    Place ID:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.shopPlaceId || '-'}
-                  </div>
+                  <strong className="shop-info-label">Place ID:</strong>
+                  <div className="shop-info-value">{shop.shopPlaceId || '-'}</div>
                 </div>
                 <div>
-                  <strong
-                    style={{ color: '#555', fontSize: '14px' }}
-                  >
-                    SĐT:
-                  </strong>
-                  <div
-                    style={{
-                      color: '#1a1a1a',
-                      fontSize: '16px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    {shop.shopPhone || '-'}
-                  </div>
+                  <strong className="shop-info-label">SĐT:</strong>
+                  <div className="shop-info-value">{shop.shopPhone || '-'}</div>
                 </div>
               </div>
 
-              <button
-                onClick={() => setEditing(true)}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: '#667eea',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '25px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'background 0.3s',
-                }}
-              >
+              <button onClick={() => setEditing(true)} className="shop-primary-button">
                 Chỉnh sửa
               </button>
             </>
@@ -626,91 +346,31 @@ const MyShopPage = () => {
 
           {editing && form && (
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Tên shop
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Tên shop</label>
                 <input
                   type="text"
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Email
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Email</label>
                 <input
                   type="email"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
 
               {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Địa chỉ shop
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Địa chỉ shop</label>
                 <VietnamAddressSelector
                   fullAddress={form.shopAddress}
                   onFullAddressChange={(full) => {
@@ -726,25 +386,9 @@ const MyShopPage = () => {
               </div>
 
               {/* Map */}
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Vị trí trên bản đồ
-                </label>
-                <div
-                  style={{
-                    borderRadius: '15px',
-                    overflow: 'hidden',
-                    border: '1px solid #ddd',
-                  }}
-                >
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Vị trí trên bản đồ</label>
+                <div className="shop-map-wrapper">
                   <LocationPicker
                     address={form.shopAddress}
                     lat={form.shopLat}
@@ -765,190 +409,61 @@ const MyShopPage = () => {
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  marginBottom: '20px',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontSize: '14px',
-                      color: '#555',
-                      fontWeight: '500',
-                    }}
-                  >
-                    Vĩ độ (lat)
-                  </label>
+              <div className="shop-row">
+                <div className="shop-row-item">
+                  <label className="shop-form-label">Vĩ độ (lat)</label>
                   <input
                     type="number"
                     name="shopLat"
                     step="0.0000001"
                     value={form.shopLat}
                     onChange={handleChange}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: '25px',
-                      border: '1px solid #ddd',
-                      fontSize: '16px',
-                      outline: 'none',
-                      transition: 'border-color 0.3s',
-                      boxSizing: 'border-box',
-                    }}
-                    onFocus={(e) =>
-                      (e.target.style.borderColor = '#667eea')
-                    }
-                    onBlur={(e) =>
-                      (e.target.style.borderColor = '#ddd')
-                    }
+                    className="shop-input"
                   />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontSize: '14px',
-                      color: '#555',
-                      fontWeight: '500',
-                    }}
-                  >
-                    Kinh độ (lng)
-                  </label>
+                <div className="shop-row-item">
+                  <label className="shop-form-label">Kinh độ (lng)</label>
                   <input
                     type="number"
                     name="shopLng"
                     step="0.0000001"
                     value={form.shopLng}
                     onChange={handleChange}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: '25px',
-                      border: '1px solid #ddd',
-                      fontSize: '16px',
-                      outline: 'none',
-                      transition: 'border-color 0.3s',
-                      boxSizing: 'border-box',
-                    }}
-                    onFocus={(e) =>
-                      (e.target.style.borderColor = '#667eea')
-                    }
-                    onBlur={(e) =>
-                      (e.target.style.borderColor = '#ddd')
-                    }
+                    className="shop-input"
                   />
                 </div>
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Google Place ID
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Google Place ID</label>
                 <input
                   type="text"
                   name="shopPlaceId"
                   value={form.shopPlaceId}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #f3ededff',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Số điện thoại
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Số điện thoại</label>
                 <input
                   type="text"
                   name="shopPhone"
                   value={form.shopPhone}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: '#667eea',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '25px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
-                >
+              <div className="shop-row">
+                <button type="submit" className="shop-primary-button shop-row-item">
                   Lưu thay đổi
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditing(false)}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: '#9ca3af',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '25px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
+                  className="shop-secondary-button shop-row-item"
                 >
                   Hủy
                 </button>
@@ -957,33 +472,11 @@ const MyShopPage = () => {
           )}
         </section>
 
-        <hr
-          style={{
-            margin: '32px 0',
-            border: 'none',
-            borderTop: '1px solid #e5e7eb',
-          }}
-        />
+        <hr className="shop-hr" />
 
         {/* SẢN PHẨM CỦA SHOP */}
-        <section
-          style={{
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '15px',
-            background: '#fff',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: '24px',
-              fontWeight: 'bold',
-              color: '#1a1a1a',
-              marginBottom: '20px',
-            }}
-          >
-            Sản phẩm của shop
-          </h2>
+        <section className="shop-section">
+          <h2 className="shop-section-title">Sản phẩm của shop</h2>
 
           <div style={{ marginBottom: '20px' }}>
             <button
@@ -991,19 +484,11 @@ const MyShopPage = () => {
               onClick={() =>
                 setShowCreateProduct((prev) => !prev)
               }
-              style={{
-                padding: '12px 24px',
-                background: showCreateProduct
-                  ? '#9ca3af'
-                  : '#16a34a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '25px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background 0.3s',
-              }}
+              className={
+                showCreateProduct
+                  ? 'shop-toggle-button shop-toggle-button--secondary'
+                  : 'shop-toggle-button'
+              }
             >
               {showCreateProduct
                 ? 'Đóng form thêm sản phẩm'
@@ -1022,160 +507,50 @@ const MyShopPage = () => {
                 background: '#f9fafb',
               }}
             >
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Tên sản phẩm
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Tên sản phẩm</label>
                 <input
                   type="text"
                   name="title"
                   value={createForm.title}
                   onChange={handleCreateInputChange}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Giá (VND)
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Giá (VND)</label>
                 <input
                   type="number"
                   name="price"
                   value={createForm.price}
                   onChange={handleCreateInputChange}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Tồn kho ban đầu
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Tồn kho ban đầu</label>
                 <input
                   type="number"
                   name="stock"
                   value={createForm.stock}
                   onChange={handleCreateInputChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '25px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-input"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
-                  Mô tả
-                </label>
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">Mô tả</label>
                 <textarea
                   name="description"
                   value={createForm.description}
                   onChange={handleCreateInputChange}
                   rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '15px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                    boxSizing: 'border-box',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = '#667eea')
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = '#ddd')
-                  }
+                  className="shop-textarea"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#555',
-                    fontWeight: '500',
-                  }}
-                >
+              <div className="shop-register-form-group">
+                <label className="shop-form-label">
                   Ảnh sản phẩm (tối đa 10 ảnh)
                 </label>
                 <input
@@ -1198,22 +573,7 @@ const MyShopPage = () => {
               <button
                 type="submit"
                 disabled={creatingProduct}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: creatingProduct
-                    ? '#9ca3af'
-                    : '#667eea',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '25px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: creatingProduct
-                    ? 'not-allowed'
-                    : 'pointer',
-                  transition: 'background 0.3s',
-                }}
+                className="shop-primary-button"
               >
                 {creatingProduct ? 'Đang tạo...' : 'Tạo sản phẩm'}
               </button>
@@ -1221,212 +581,58 @@ const MyShopPage = () => {
           )}
 
           {productsLoading && (
-            <div
-              style={{
-                padding: '20px',
-                textAlign: 'center',
-                color: '#666',
-              }}
-            >
+            <div className="shop-empty-text">
               Đang tải sản phẩm...
             </div>
           )}
           {productsError && (
-            <div
-              style={{
-                color: '#dc2626',
-                padding: '12px',
-                background: '#fee2e2',
-                borderRadius: '8px',
-                fontSize: '14px',
-                marginBottom: '16px',
-              }}
-            >
+            <div className="shop-message-error">
               {productsError}
             </div>
           )}
 
           {!productsLoading && products.length === 0 && (
-            <div
-              style={{
-                padding: '20px',
-                textAlign: 'center',
-                color: '#666',
-              }}
-            >
+            <div className="shop-empty-text">
               Chưa có sản phẩm nào.
             </div>
           )}
 
           {products.length > 0 && (
-            <div style={{ overflowX: 'auto' }}>
-              <table
-                style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  background: '#fff',
-                }}
-              >
+            <div className="shop-table-wrapper">
+              <table className="shop-table">
                 <thead>
                   <tr>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      ID
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Tên
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Ảnh
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Giá
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Trạng thái
-                    </th>
-                    <th
-                      style={{
-                        borderBottom: '2px solid #e5e7eb',
-                        padding: '12px',
-                        textAlign: 'left',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
-                        background: '#f9fafb',
-                      }}
-                    >
-                      Hành động
-                    </th>
+                    <th>ID</th>
+                    <th>Tên</th>
+                    <th>Ảnh</th>
+                    <th>Giá</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.map((p) => (
-                    <tr
-                      key={p.id}
-                      style={{
-                        borderBottom: '1px solid #e5e7eb',
-                      }}
-                    >
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {p.id}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {p.title}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                        }}
-                      >
+                    <tr key={p.id}>
+                      <td>{p.id}</td>
+                      <td>{p.title}</td>
+                      <td>
                         {p.thumbnailUrl ? (
                           <img
                             src={p.thumbnailUrl}
                             alt={p.title}
-                            style={{
-                              width: 60,
-                              height: 60,
-                              objectFit: 'cover',
-                              borderRadius: 8,
-                            }}
+                            className="shop-product-thumb"
                           />
                         ) : (
-                          <span
-                            style={{
-                              fontSize: 12,
-                              color: '#999',
-                            }}
-                          >
+                          <span className="shop-product-thumb--empty">
                             Không có ảnh
                           </span>
                         )}
                       </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
+                      <td>
                         {p.price} {p.currency}
                       </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                          color: '#374151',
-                        }}
-                      >
-                        {p.status}
-                      </td>
-                      <td
-                        style={{
-                          padding: '12px',
-                          fontSize: '14px',
-                        }}
-                      >
+                      <td>{p.status}</td>
+                      <td>
                         <button
                           type="button"
                           onClick={() =>
@@ -1434,16 +640,7 @@ const MyShopPage = () => {
                               `/me/products/${p.id}/variants`,
                             )
                           }
-                          style={{
-                            padding: '8px 16px',
-                            background: '#667eea',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '20px',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                          }}
+                          className="shop-variants-button"
                         >
                           Quản lý biến thể
                         </button>
