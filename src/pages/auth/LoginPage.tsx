@@ -93,6 +93,9 @@ export function LoginPage() {
     <div className="container">
       <div className="card">
         <div className="header">
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           <div className="icon">🏪</div>
         </div>
 

@@ -1,6 +1,6 @@
 // src/pages/products/ProductsListPage.tsx
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getPublicProducts } from '../../api/products.api';
 import type { ProductListItem, PaginatedResult, ApiResponse } from '../../api/types';
 import './ProductsListPage.css';
@@ -8,6 +8,7 @@ import './ProductsListPage.css';
 const DEFAULT_LIMIT = 20;
 
 export default function ProductsListPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<ProductListItem[]>([]);
   const [page, setPage] = useState<number>(Number(searchParams.get('page')) || 1);
@@ -49,6 +50,9 @@ export default function ProductsListPage() {
     <div className="products-list-container">
       <div className="products-list-card">
         <div className="products-list-header">
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           <div className="products-list-icon">🛍️</div>
           <h1 className="products-list-title">Danh sách sản phẩm</h1>
         </div>

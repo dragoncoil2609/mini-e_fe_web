@@ -1,10 +1,12 @@
 // src/pages/addresses/AddressesPage.tsx
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AddressesApi } from '../../api/addresses.api';
 import type { Address, CreateAddressDto, UpdateAddressDto, ApiResponse } from '../../api/types';
 import './AddressesPage.css';
 
 export default function AddressesPage() {
+  const navigate = useNavigate();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [updating, setUpdating] = useState<Set<number>>(new Set());

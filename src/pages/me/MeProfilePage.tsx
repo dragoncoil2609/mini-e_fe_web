@@ -254,8 +254,36 @@ const MeProfilePage: React.FC = () => {
           borderRadius: '20px',
           padding: '40px',
           boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          position: 'relative',
         }}
       >
+        <button
+          onClick={() => navigate('/home')}
+          style={{
+            position: 'absolute',
+            top: '40px',
+            left: '40px',
+            padding: '10px 20px',
+            background: '#667eea',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'background 0.3s, transform 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#5568d3';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#667eea';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          🏠 Về trang chủ
+        </button>
         <div
           style={{
             textAlign: 'center',

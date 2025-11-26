@@ -148,9 +148,14 @@ export default function OrderDetailPage() {
     <div className="order-detail-container">
       <div className="order-detail-card">
         <div className="order-detail-header">
-          <button onClick={() => navigate('/orders')} className="order-detail-back-button">
-            ← Quay lại
-          </button>
+          <div className="order-detail-header-buttons">
+            <button onClick={() => navigate('/orders')} className="order-detail-back-button">
+              ← Quay lại
+            </button>
+            <button onClick={() => navigate('/home')} className="home-button">
+              🏠 Về trang chủ
+            </button>
+          </div>
           <h1 className="order-detail-title">Chi tiết đơn hàng</h1>
         </div>
 

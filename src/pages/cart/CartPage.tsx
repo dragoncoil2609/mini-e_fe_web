@@ -1,11 +1,12 @@
 // src/pages/cart/CartPage.tsx
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CartApi } from '../../api/cart.api';
 import type { Cart, CartItem } from '../../api/types';
 import './CartPage.css';
 
 export default function CartPage() {
+  const navigate = useNavigate();
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [updating, setUpdating] = useState<Set<number>>(new Set());
@@ -153,6 +154,9 @@ export default function CartPage() {
     <div className="cart-container">
       <div className="cart-card">
         <div className="cart-header">
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           <div className="cart-icon">🛒</div>
           <h1 className="cart-title">Giỏ hàng của tôi</h1>
         </div>

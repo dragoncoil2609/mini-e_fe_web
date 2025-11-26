@@ -1,6 +1,6 @@
 // src/pages/orders/OrdersPage.tsx
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { OrdersApi } from '../../api/orders.api';
 import type { Order, OrderStatus, PaginatedResult, ApiResponse } from '../../api/types';
 import './OrdersPage.css';
@@ -8,6 +8,7 @@ import './OrdersPage.css';
 const DEFAULT_LIMIT = 20;
 
 export default function OrdersPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [page, setPage] = useState<number>(Number(searchParams.get('page')) || 1);

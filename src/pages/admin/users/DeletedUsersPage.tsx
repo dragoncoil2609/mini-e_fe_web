@@ -1,5 +1,6 @@
 // src/pages/admin/DeletedUsersPage.tsx
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getDeletedUsers,
   restoreUser,
@@ -16,6 +17,7 @@ interface UserListResult {
 }
 
 const DeletedUsersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [list, setList] = useState<UserListResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState<UserListQuery>({ page: 1, limit: 10 });
@@ -75,6 +77,9 @@ const DeletedUsersPage: React.FC = () => {
 
   return (
     <div className="deleted-users-container">
+      <button onClick={() => navigate('/home')} className="home-button">
+        🏠 Về trang chủ
+      </button>
       <h1 className="deleted-users-title">User đã xoá mềm</h1>
 
       <div className="deleted-users-search-wrapper">

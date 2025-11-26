@@ -355,6 +355,9 @@ const UsersListPage: React.FC = () => {
 
   return (
     <div className="users-list-container">
+      <button onClick={() => navigate('/home')} className="home-button">
+        🏠 Về trang chủ
+      </button>
       <h1 className="users-list-title">Quản lý user</h1>
 
       <div className="users-list-toolbar">

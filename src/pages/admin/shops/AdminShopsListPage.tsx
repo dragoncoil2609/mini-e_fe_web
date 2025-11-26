@@ -1,5 +1,6 @@
 // src/pages/admin/shops/AdminShopsListPage.tsx
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { searchShops, updateShop, deleteShop } from '../../../api/shop.api';
 import type { Shop, ShopStatus } from '../../../api/types';
 import './AdminShopsListPage.css';
@@ -10,6 +11,7 @@ interface SearchState {
 }
 
 const AdminShopsListPage = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState<SearchState>({ q: '', status: '' });
   const [shops, setShops] = useState<Shop[]>([]);
   const [page, setPage] = useState(1);
@@ -134,6 +136,9 @@ const AdminShopsListPage = () => {
 
   return (
     <div className="admin-shops-container">
+      <button onClick={() => navigate('/home')} className="home-button">
+        🏠 Về trang chủ
+      </button>
       <h1 className="admin-shops-title">Quản lý shop (ADMIN)</h1>
 
       <form

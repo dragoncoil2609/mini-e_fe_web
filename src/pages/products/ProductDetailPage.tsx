@@ -1,12 +1,13 @@
 // src/pages/products/ProductDetailPage.tsx
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
 import type { ProductDetail, ProductVariant, ApiResponse } from '../../api/types';
 import { getMainImageUrl, getAllImages } from '../../utils/productImage';
 import './ProductDetailPage.css';
 
 export default function ProductDetailPage() {
+  const navigate = useNavigate();
   const params = useParams();
   const id = Number(params.id);
   const [product, setProduct] = useState<ProductDetail | null>(null);
@@ -85,6 +86,9 @@ export default function ProductDetailPage() {
     <div className="product-detail-container">
       <div className="product-detail-card">
         <div className="product-detail-header">
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           <div className="product-detail-icon">📦</div>
           <h1 className="product-detail-title">{product.title}</h1>
         </div>

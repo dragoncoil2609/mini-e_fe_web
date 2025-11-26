@@ -57,6 +57,9 @@ export default function MyProductsPage() {
     <div className="my-products-container">
       <div className="my-products-card">
         <div className="my-products-header">
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           <div className="my-products-icon">📦</div>
           <h1 className="my-products-title">Sản phẩm của shop</h1>
         </div>

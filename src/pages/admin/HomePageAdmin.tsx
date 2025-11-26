@@ -35,6 +35,9 @@ export function HomePageAdmin() {
     <div className="admin-home-container">
       <header className="admin-home-header">
         <div>
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           {user ? (
             <button
               type="button"

@@ -287,6 +287,9 @@ const MyShopPage = () => {
     <div className="shop-page-container">
       <div className="shop-page-card">
         <div className="shop-header">
+          <button onClick={() => navigate('/home')} className="home-button">
+            🏠 Về trang chủ
+          </button>
           <div className="shop-header-icon">🏬</div>
           <h1 className="shop-header-title">Shop của tôi</h1>
         </div>
