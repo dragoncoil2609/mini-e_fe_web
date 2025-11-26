@@ -2,10 +2,25 @@
 import type { ProductImage, ProductListItem, ProductDetail } from '../api/types';
 
 /**
- * Lấy base URL của backend từ environment hoặc từ window location
+ * Lấy base URL của backend từ environment
+ * Ưu tiên dùng VITE_API_BASE_URL, nếu không có thì dùng VITE_BACKEND_BASE_URL
  */
 function getBackendBaseUrl(): string {
-  // Lấy từ env variable (có thể là http://localhost:3000/api)
+  // Ưu tiên dùng VITE_BACKEND_BASE_URL nếu có (dành riêng cho backend base URL)
+  const backendBaseUrl = import.meta.env.VITE_BACKEND_BASE_URL;
+  if (backendBaseUrl) {
+    // Nếu là full URL, giữ nguyên
+    if (backendBaseUrl.startsWith('http://') || backendBaseUrl.startsWith('https://')) {
+      try {
+        const url = new URL(backendBaseUrl);
+        return `${url.protocol}//${url.host}`;
+      } catch {
+        // Nếu parse lỗi, fallback
+      }
+    }
+  }
+  
+  // Nếu không có VITE_BACKEND_BASE_URL, dùng VITE_API_BASE_URL
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
   
   // Nếu là full URL (có protocol), tách lấy base
@@ -14,12 +29,14 @@ function getBackendBaseUrl(): string {
       const url = new URL(apiBaseUrl);
       return `${url.protocol}//${url.host}`;
     } catch {
-      // Nếu parse lỗi, dùng window location
+      // Nếu parse lỗi, fallback về window location (chỉ khi dev local)
+      console.warn('Cannot parse VITE_API_BASE_URL, using window.location.origin');
       return window.location.origin;
     }
   }
   
-  // Nếu là relative path (/api), dùng window location
+  // Nếu là relative path (/api), dùng window location (chỉ khi dev local)
+  console.warn('VITE_API_BASE_URL is relative path, using window.location.origin');
   return window.location.origin;
 }
 
