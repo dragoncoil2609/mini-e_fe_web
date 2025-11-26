@@ -89,8 +89,6 @@ const ShopRegisterPage = () => {
         payload.description = form.description.trim();
       if (form.shopAddress.trim())
         payload.shopAddress = form.shopAddress.trim();
-      if (form.shopPlaceId.trim())
-        payload.shopPlaceId = form.shopPlaceId.trim();
       if (form.shopPhone.trim())
         payload.shopPhone = form.shopPhone.trim();
       if (form.shopLat.trim())
@@ -98,11 +96,12 @@ const ShopRegisterPage = () => {
       if (form.shopLng.trim())
         payload.shopLng = parseFloat(form.shopLng);
 
+      // shopPlaceId hiện chưa dùng: bỏ input nhưng vẫn giữ payload nếu sau này có
+
       const res = await registerShop(payload);
 
       if (res.success) {
         setSuccessMsg('Đăng ký shop thành công!');
-        // Chuyển sang trang xem shop của tôi
         navigate('/shops/me');
       } else {
         setError(res.message || 'Đăng ký shop thất bại.');
@@ -196,7 +195,7 @@ const ShopRegisterPage = () => {
             />
           </div>
 
-          {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
+          {/* Địa chỉ 3 cấp + địa chỉ cụ thể + gợi ý */}
           <div className="shop-register-form-group">
             <label className="shop-register-label">
               Địa chỉ shop
@@ -207,6 +206,13 @@ const ShopRegisterPage = () => {
                 setForm((prev) => ({
                   ...prev,
                   shopAddress: full,
+                }));
+              }}
+              onLatLngChange={(lat, lng) => {
+                setForm((prev) => ({
+                  ...prev,
+                  shopLat: lat,
+                  shopLng: lng,
                 }));
               }}
             />
@@ -233,48 +239,7 @@ const ShopRegisterPage = () => {
             </div>
           </div>
 
-          <div className="shop-register-row">
-            <div className="shop-register-row-item">
-              <label className="shop-register-label">
-                Vĩ độ (lat)
-              </label>
-              <input
-                type="number"
-                step="0.0000001"
-                name="shopLat"
-                value={form.shopLat}
-                onChange={handleChange}
-                className="shop-register-input"
-              />
-            </div>
-            <div className="shop-register-row-item">
-              <label className="shop-register-label">
-                Kinh độ (lng)
-              </label>
-              <input
-                type="number"
-                step="0.0000001"
-                name="shopLng"
-                value={form.shopLng}
-                onChange={handleChange}
-                className="shop-register-input"
-              />
-            </div>
-          </div>
-
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">
-              Google Place ID
-            </label>
-            <input
-              type="text"
-              name="shopPlaceId"
-              value={form.shopPlaceId}
-              onChange={handleChange}
-              className="shop-register-input"
-            />
-          </div>
-
+          {/* Không còn input Lat/Lng/PlaceId, chỉ còn SĐT */}
           <div className="shop-register-form-group">
             <label className="shop-register-label">
               Số điện thoại

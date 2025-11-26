@@ -11,11 +11,9 @@ import {
   getPublicProducts,
   createProductMultipart,
 } from '../../api/products.api';
-import type { Shop } from '../../api/types';
+import type { Shop, ProductListItem } from '../../api/types';
 import LocationPicker from '../../components/LocationPicker';
 import VietnamAddressSelector from '../../components/VietnamAddressSelector';
-
-import type { ProductListItem } from '../../api/types';
 import './MyShopPage.css';
 
 interface EditFormState {
@@ -42,14 +40,20 @@ const MyShopPage = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] =
+    useState<string | null>(null);
   const [form, setForm] = useState<EditFormState | null>(null);
 
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [productsError, setProductsError] = useState<string | null>(null);
+  const [products, setProducts] = useState<ProductListItem[]>(
+    [],
+  );
+  const [productsLoading, setProductsLoading] =
+    useState(false);
+  const [productsError, setProductsError] =
+    useState<string | null>(null);
 
-  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [showCreateProduct, setShowCreateProduct] =
+    useState(false);
   const [createForm, setCreateForm] =
     useState<CreateProductFormState>({
       title: '',
@@ -58,7 +62,8 @@ const MyShopPage = () => {
       description: '',
       images: null,
     });
-  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [creatingProduct, setCreatingProduct] =
+    useState(false);
 
   const navigate = useNavigate();
 
@@ -82,7 +87,6 @@ const MyShopPage = () => {
           shopPhone: res.data.shopPhone || '',
         });
 
-        // sau khi có shop → load products của shop
         void loadProducts(res.data.id);
       } else {
         setError(res.message || 'Không lấy được thông tin shop.');
@@ -125,7 +129,6 @@ const MyShopPage = () => {
       payload.email = form.email.trim() || null;
       payload.description = form.description.trim() || null;
       payload.shopAddress = form.shopAddress.trim() || null;
-      payload.shopPlaceId = form.shopPlaceId.trim() || null;
       payload.shopPhone = form.shopPhone.trim() || null;
 
       payload.shopLat = form.shopLat.trim()
@@ -157,7 +160,6 @@ const MyShopPage = () => {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      // gọi GET /products?page=1&limit=50&shopId=...
       const res = await getPublicProducts({
         page: 1,
         limit: 50,
@@ -229,11 +231,7 @@ const MyShopPage = () => {
       if (res.success) {
         const newProduct = res.data;
         setSuccessMsg('Tạo sản phẩm thành công!');
-
-        // reload list sản phẩm của shop
         void loadProducts(shop.id);
-
-        // reset form
         setCreateForm({
           title: '',
           price: '',
@@ -242,8 +240,6 @@ const MyShopPage = () => {
           images: null,
         });
         setShowCreateProduct(false);
-
-        // CHUYỂN SANG TRANG QUẢN LÝ BIẾN THỂ
         navigate(`/me/products/${newProduct.id}/variants`);
       } else {
         setError(res.message || 'Tạo sản phẩm thất bại.');
@@ -367,14 +363,6 @@ const MyShopPage = () => {
                 </div>
                 <div>
                   <strong className="shop-info-label">
-                    Place ID:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.shopPlaceId || '-'}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
                     SĐT:
                   </strong>
                   <div className="shop-info-value">
@@ -395,7 +383,9 @@ const MyShopPage = () => {
           {editing && form && (
             <form onSubmit={handleSubmit}>
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Tên shop</label>
+                <label className="shop-form-label">
+                  Tên shop
+                </label>
                 <input
                   type="text"
                   name="name"
@@ -406,7 +396,9 @@ const MyShopPage = () => {
               </div>
 
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Email</label>
+                <label className="shop-form-label">
+                  Email
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -416,7 +408,7 @@ const MyShopPage = () => {
                 />
               </div>
 
-              {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
+              {/* Địa chỉ + gợi ý */}
               <div className="shop-register-form-group">
                 <label className="shop-form-label">
                   Địa chỉ shop
@@ -429,6 +421,16 @@ const MyShopPage = () => {
                       return {
                         ...prev,
                         shopAddress: full,
+                      };
+                    });
+                  }}
+                  onLatLngChange={(lat, lng) => {
+                    setForm((prev) => {
+                      if (!prev) return prev;
+                      return {
+                        ...prev,
+                        shopLat: lat,
+                        shopLng: lng,
                       };
                     });
                   }}
@@ -459,48 +461,7 @@ const MyShopPage = () => {
                 </div>
               </div>
 
-              <div className="shop-row">
-                <div className="shop-row-item">
-                  <label className="shop-form-label">
-                    Vĩ độ (lat)
-                  </label>
-                  <input
-                    type="number"
-                    name="shopLat"
-                    step="0.0000001"
-                    value={form.shopLat}
-                    onChange={handleChange}
-                    className="shop-input"
-                  />
-                </div>
-                <div className="shop-row-item">
-                  <label className="shop-form-label">
-                    Kinh độ (lng)
-                  </label>
-                  <input
-                    type="number"
-                    name="shopLng"
-                    step="0.0000001"
-                    value={form.shopLng}
-                    onChange={handleChange}
-                    className="shop-input"
-                  />
-                </div>
-              </div>
-
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Google Place ID
-                </label>
-                <input
-                  type="text"
-                  name="shopPlaceId"
-                  value={form.shopPlaceId}
-                  onChange={handleChange}
-                  className="shop-input"
-                />
-              </div>
-
+              {/* Không còn input Lat/Lng/PlaceId, chỉ giữ SĐT */}
               <div className="shop-register-form-group">
                 <label className="shop-form-label">
                   Số điện thoại
@@ -562,13 +523,7 @@ const MyShopPage = () => {
           {showCreateProduct && (
             <form
               onSubmit={handleCreateProductSubmit}
-              style={{
-                marginBottom: '24px',
-                padding: '24px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '15px',
-                background: '#f9fafb',
-              }}
+              className="shop-create-product-form"
             >
               <div className="shop-register-form-group">
                 <label className="shop-form-label">
@@ -627,15 +582,7 @@ const MyShopPage = () => {
                   multiple
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   onChange={handleCreateImagesChange}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '15px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className="shop-file-input"
                 />
               </div>
 

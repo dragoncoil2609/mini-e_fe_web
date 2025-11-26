@@ -1,5 +1,5 @@
 // src/components/VietnamAddressSelector.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface Ward {
   code: number | string;
@@ -19,333 +19,294 @@ interface Province {
 }
 
 interface VietnamAddressSelectorProps {
-  /** Địa chỉ đầy đủ đang có (shopAddress) */
   fullAddress: string;
-  /** Khi user đổi tỉnh / quận / phường / địa chỉ cụ thể → emit địa chỉ đầy đủ mới */
   onFullAddressChange: (fullAddress: string) => void;
+  /** Callback để bắn toạ độ ra ngoài khi chọn gợi ý */
+  onLatLngChange?: (lat: string, lng: string) => void;
 }
 
 interface SuggestItem {
-  label: string; // display_name từ Nominatim
+  label: string;
+  lat: string;
+  lon: string;
 }
 
 const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
   fullAddress,
   onFullAddressChange,
+  onLatLngChange,
 }) => {
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [provinceCode, setProvinceCode] = useState('');
   const [districtCode, setDistrictCode] = useState('');
   const [wardCode, setWardCode] = useState('');
   const [detail, setDetail] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  // Trạng thái hệ thống
+  const [loadingLoc, setLoadingLoc] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // gợi ý địa chỉ cụ thể (số nhà, tên đường...)
+  // Trạng thái gợi ý (Nominatim)
   const [suggestions, setSuggestions] = useState<SuggestItem[]>([]);
-  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<string>(''); 
 
-  // ================== LOAD TỈNH / HUYỆN / XÃ ==================
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // 1. LOAD TỈNH / HUYỆN / XÃ
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(
-          'https://provinces.open-api.vn/api/?depth=3',
-        );
+        setLoadingLoc(true);
+        const res = await fetch('https://provinces.open-api.vn/api/?depth=3');
         if (!res.ok) throw new Error('Fetch provinces failed');
         const data: Province[] = await res.json();
         setProvinces(data);
       } catch (err) {
         console.error(err);
-        setError('Không lấy được danh sách tỉnh/thành phố.');
+        setError('Lỗi tải danh sách tỉnh thành.');
       } finally {
-        setLoading(false);
+        setLoadingLoc(false);
       }
     };
-
     fetchData();
   }, []);
 
-  const selectedProvince = provinces.find(
-    (p) => String(p.code) === provinceCode,
-  );
+  const selectedProvince = provinces.find((p) => String(p.code) === provinceCode);
   const districts = selectedProvince?.districts ?? [];
-
-  const selectedDistrict = districts.find(
-    (d) => String(d.code) === districtCode,
-  );
+  const selectedDistrict = districts.find((d) => String(d.code) === districtCode);
   const wards = selectedDistrict?.wards ?? [];
-
   const selectedWard = wards.find((w) => String(w.code) === wardCode);
 
-  // =============== GHÉP ĐỊA CHỈ ĐẦY ĐỦ ===============
+  // 2. GHÉP ĐỊA CHỈ ĐẦY ĐỦ
   useEffect(() => {
     if (!provinceCode && !districtCode && !wardCode && !detail) {
       onFullAddressChange('');
       return;
     }
-
     const parts = [
       detail || '',
       selectedWard?.name || '',
       selectedDistrict?.name || '',
       selectedProvince?.name || '',
     ].filter(Boolean);
+    onFullAddressChange(parts.join(', '));
+  }, [detail, provinceCode, districtCode, wardCode, selectedProvince, selectedDistrict, selectedWard, onFullAddressChange]);
 
-    const full = parts.join(', ');
-    onFullAddressChange(full);
-  }, [
-    detail,
-    provinceCode,
-    districtCode,
-    wardCode,
-    selectedProvince,
-    selectedDistrict,
-    selectedWard,
-    onFullAddressChange,
-  ]);
-
-  // =============== GỢI Ý ĐỊA CHỈ CỤ THỂ (Nominatim) ===============
+  // 3. LOGIC TÌM KIẾM NOMINATIM (3 CẤP ĐỘ)
   useEffect(() => {
-    // chỉ gợi ý khi có ward + detail dài >= 3 ký tự
     if (!detail || detail.trim().length < 3) {
       setSuggestions([]);
       setShowSuggest(false);
+      setSearchStatus('');
       return;
     }
-    if (!selectedProvince || !selectedDistrict || !selectedWard) {
+    if (!selectedProvince) {
+      setSearchStatus('Vui lòng chọn Tỉnh/Thành phố trước.');
       return;
     }
 
     const controller = new AbortController();
+
+    const fetchNominatim = async (q: string) => {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('q', q);
+      url.searchParams.set('countrycodes', 'vn');
+      url.searchParams.set('limit', '5');
+      url.searchParams.set('addressdetails', '1');
+      
+      const res = await fetch(url.toString(), { signal: controller.signal });
+      if (!res.ok) return [];
+      return await res.json();
+    };
+
     const timer = setTimeout(async () => {
       try {
-        setSuggestLoading(true);
+        setIsSearching(true);
+        setSearchStatus('Đang tìm kiếm...');
+        setSuggestions([]);
 
-        const queryParts = [
-          detail,
-          selectedWard.name,
-          selectedDistrict.name,
-          selectedProvince.name,
-          'Việt Nam',
-        ];
-        const q = queryParts.filter(Boolean).join(', ');
+        let data: any[] = [];
 
-        const url = new URL('https://nominatim.openstreetmap.org/search');
-        url.searchParams.set('format', 'json');
-        url.searchParams.set('q', q);
-        url.searchParams.set('countrycodes', 'vn');
-        url.searchParams.set('limit', '5');
+        // CẤP 1: Chi tiết + Huyện + Tỉnh
+        if (selectedDistrict) {
+            const q1 = `${detail}, ${selectedDistrict.name}, ${selectedProvince.name}`;
+            data = await fetchNominatim(q1);
+        }
 
-        const res = await fetch(url.toString(), {
-          signal: controller.signal,
-          headers: {
-            'Accept-Language': 'vi',
-          },
-        });
-        if (!res.ok) throw new Error('Suggest failed');
-        const data: any[] = await res.json();
+        // CẤP 2: Chi tiết + Tỉnh
+        if ((!data || data.length === 0)) {
+            const q2 = `${detail}, ${selectedProvince.name}`;
+            data = await fetchNominatim(q2);
+        }
 
-        const sugg: SuggestItem[] = data.map((item) => ({
-          label: item.display_name as string,
-        }));
-        setSuggestions(sugg);
-        setShowSuggest(sugg.length > 0);
+        // CẤP 3: Chỉ tìm "Chi tiết" + Việt Nam
+        if ((!data || data.length === 0) && detail.length > 5) {
+            const q3 = `${detail}, Việt Nam`;
+            data = await fetchNominatim(q3);
+        }
+
+        if (data && data.length > 0) {
+          // LƯU CẢ LAT/LON VÀO ITEM
+          const items: SuggestItem[] = data.map((d: any) => ({ 
+              label: d.display_name,
+              lat: d.lat,
+              lon: d.lon 
+          }));
+          setSuggestions(items);
+          setShowSuggest(true);
+          setSearchStatus(`Tìm thấy ${items.length} kết quả.`);
+        } else {
+          setSuggestions([]);
+          setShowSuggest(false);
+          setSearchStatus('Không tìm thấy gợi ý nào.');
+        }
+
       } catch (err: any) {
-        if (err?.name !== 'AbortError') {
+        if (err.name !== 'AbortError') {
           console.error(err);
+          setSearchStatus('Lỗi kết nối định vị.');
         }
       } finally {
-        setSuggestLoading(false);
+        setIsSearching(false);
       }
-    }, 400); // debounce 400ms
+    }, 600);
 
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [detail, selectedProvince, selectedDistrict, selectedWard]);
+  }, [detail, selectedProvince, selectedDistrict]);
 
-  const handleProvinceChange = (
-    e: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const value = e.target.value;
-    setProvinceCode(value);
-    setDistrictCode('');
-    setWardCode('');
-    setDetail('');
-    setSuggestions([]);
-    setShowSuggest(false);
-  };
-
-  const handleDistrictChange = (
-    e: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const value = e.target.value;
-    setDistrictCode(value);
-    setWardCode('');
-    setDetail('');
-    setSuggestions([]);
-    setShowSuggest(false);
-  };
-
-  const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setWardCode(e.target.value);
-    setDetail('');
-    setSuggestions([]);
-    setShowSuggest(false);
-  };
-
-  const handleDetailChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setDetail(e.target.value);
-    setShowSuggest(true);
-  };
-
+  // Handlers
   const handleSelectSuggestion = (item: SuggestItem) => {
-    // lấy phần đầu (thường là "Số nhà xx, Tên đường ...")
-    const firstPart = item.label.split(',')[0].trim();
-    setDetail(firstPart);
+    // 1. Cắt chuỗi để lấy địa chỉ đẹp điền vào ô input
+    const parts = item.label.split(',').map(p => p.trim());
+    let cutIndex = -1;
+    
+    if (selectedWard) cutIndex = parts.findIndex(p => p.toLowerCase().includes(selectedWard.name.toLowerCase()));
+    if (cutIndex === -1 && selectedDistrict) cutIndex = parts.findIndex(p => p.toLowerCase().includes(selectedDistrict.name.toLowerCase()));
+    if (cutIndex === -1 && selectedProvince) cutIndex = parts.findIndex(p => p.toLowerCase().includes(selectedProvince.name.toLowerCase()));
+
+    let newDetail = '';
+    if (cutIndex > 0) {
+        newDetail = parts.slice(0, cutIndex).join(', ');
+    } else {
+        newDetail = parts.slice(0, 2).join(', ');
+    }
+
+    setDetail(newDetail);
     setSuggestions([]);
     setShowSuggest(false);
+    setSearchStatus(''); 
+
+    // 2. QUAN TRỌNG: Gửi toạ độ ra ngoài để Map cập nhật
+    if (onLatLngChange) {
+        console.log("📍 Cập nhật toạ độ map:", item.lat, item.lon);
+        onLatLngChange(item.lat, item.lon);
+    }
   };
 
   return (
-    <div>
-      {error && (
-        <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>
-      )}
+    <div ref={wrapperRef}>
+      {error && <div style={{ color: 'red', fontSize: 12 }}>{error}</div>}
 
-      {/* Tỉnh/Thành phố */}
-      <div style={{ marginBottom: 8 }}>
-        <select
-          value={provinceCode}
-          onChange={handleProvinceChange}
-          style={{ width: '100%', padding: 8 }}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+        <select 
+            style={{ padding: 8 }} 
+            value={provinceCode} 
+            onChange={(e) => {
+                setProvinceCode(e.target.value);
+                setDistrictCode(''); setWardCode(''); setDetail('');
+            }}
         >
-          <option value="">Tỉnh/Thành phố</option>
-          {provinces.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.name}
-            </option>
-          ))}
+          <option value="">-- Chọn Tỉnh/Thành phố --</option>
+          {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+        </select>
+
+        <select 
+            style={{ padding: 8 }} 
+            value={districtCode} 
+            onChange={(e) => {
+                setDistrictCode(e.target.value);
+                setWardCode(''); setDetail('');
+            }}
+            disabled={!provinceCode}
+        >
+          <option value="">-- Chọn Quận/Huyện --</option>
+          {selectedProvince?.districts.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
+        </select>
+
+        <select 
+            style={{ padding: 8 }} 
+            value={wardCode} 
+            onChange={(e) => setWardCode(e.target.value)}
+            disabled={!districtCode}
+        >
+          <option value="">-- Chọn Phường/Xã --</option>
+          {selectedDistrict?.wards.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
         </select>
       </div>
 
-      {/* Quận/Huyện */}
-      <div style={{ marginBottom: 8 }}>
-        <select
-          value={districtCode}
-          onChange={handleDistrictChange}
-          style={{ width: '100%', padding: 8 }}
-          disabled={!provinceCode}
-        >
-          <option value="">Quận/Huyện</option>
-          {districts.map((d) => (
-            <option key={d.code} value={d.code}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Phường/Xã */}
-      <div style={{ marginBottom: 8 }}>
-        <select
-          value={wardCode}
-          onChange={handleWardChange}
-          style={{ width: '100%', padding: 8 }}
-          disabled={!districtCode}
-        >
-          <option value="">Phường/Xã</option>
-          {wards.map((w) => (
-            <option key={w.code} value={w.code}>
-              {w.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Địa chỉ cụ thể + gợi ý */}
-      <div style={{ marginBottom: 4, position: 'relative' }}>
+      <div style={{ position: 'relative' }}>
         <input
           type="text"
-          placeholder="Địa chỉ cụ thể (số nhà, tên đường...)"
+          placeholder="Số nhà, tên đường (Ví dụ: 2 Nguyễn Huệ)"
           value={detail}
-          onChange={handleDetailChange}
-          onFocus={() => {
-            if (suggestions.length > 0) setShowSuggest(true);
-          }}
-          onBlur={() => {
-            // nhỏ delay xíu để click vào suggestion không bị đóng ngay
-            setTimeout(() => setShowSuggest(false), 150);
-          }}
-          style={{
-            width: '100%',
-            padding: 8,
-            boxSizing: 'border-box',
-          }}
+          onChange={(e) => setDetail(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setShowSuggest(true)}
+          style={{ width: '100%', padding: '10px', boxSizing: 'border-box' }}
         />
+
+        {searchStatus && (
+            <div style={{ fontSize: 11, color: isSearching ? 'blue' : '#666', marginTop: 4, fontStyle: 'italic' }}>
+                {searchStatus}
+            </div>
+        )}
 
         {showSuggest && suggestions.length > 0 && (
           <ul
             style={{
               position: 'absolute',
-              left: 0,
-              right: 0,
-              top: '100%',
-              maxHeight: 200,
+              top: '100%', left: 0, right: 0,
+              backgroundColor: 'white',
+              border: '1px solid #ccc',
+              borderRadius: '0 0 4px 4px',
+              maxHeight: '200px',
               overflowY: 'auto',
-              background: '#fff',
-              border: '1px solid #ddd',
-              borderTop: 'none',
+              zIndex: 9999,
               listStyle: 'none',
-              margin: 0,
               padding: 0,
-              zIndex: 20,
-              fontSize: 13,
+              margin: 0,
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
             }}
           >
-            {suggestions.map((s, idx) => (
+            {suggestions.map((item, idx) => (
               <li
                 key={idx}
                 onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleSelectSuggestion(s);
+                    e.preventDefault();
+                    handleSelectSuggestion(item);
                 }}
                 style={{
-                  padding: '6px 8px',
+                  padding: '10px',
                   cursor: 'pointer',
                   borderBottom: '1px solid #eee',
+                  fontSize: '14px'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
               >
-                {s.label}
+                {item.label}
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      {suggestLoading && (
-        <div style={{ fontSize: 12, color: '#555' }}>
-          Đang gợi ý địa chỉ...
-        </div>
-      )}
-
-      {loading && (
-        <div style={{ fontSize: 12 }}>Đang tải danh sách địa phương...</div>
-      )}
-
-      {/* Có thể ẩn phần này nếu không cần xem fullAddress */}
-      {fullAddress && (
-        <div style={{ fontSize: 12, marginTop: 4, color: '#555' }}>
-          Địa chỉ đầy đủ: {fullAddress}
-        </div>
-      )}
+      {loadingLoc && <div style={{ fontSize: 12 }}>Đang tải dữ liệu hành chính...</div>}
     </div>
   );
 };
