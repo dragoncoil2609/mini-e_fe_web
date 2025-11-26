@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { searchShops, updateShop, deleteShop } from '../../../api/shop.api';
 import type { Shop, ShopStatus } from '../../../api/types';
+import './AdminShopsListPage.css';
 
 interface SearchState {
   q: string;
@@ -132,17 +133,12 @@ const AdminShopsListPage = () => {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Quản lý shop (ADMIN)</h1>
+    <div className="admin-shops-container">
+      <h1 className="admin-shops-title">Quản lý shop (ADMIN)</h1>
 
       <form
         onSubmit={handleSearchSubmit}
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          marginBottom: 16,
-        }}
+        className="admin-shops-search-form"
       >
         <input
           type="text"
@@ -151,7 +147,7 @@ const AdminShopsListPage = () => {
           onChange={(e) =>
             setSearch((prev) => ({ ...prev, q: e.target.value }))
           }
-          style={{ flex: 1, minWidth: 220, padding: 8 }}
+          className="admin-shops-search-input"
         />
 
         <select
@@ -162,7 +158,7 @@ const AdminShopsListPage = () => {
               status: e.target.value as '' | ShopStatus,
             }))
           }
-          style={{ padding: 8 }}
+          className="admin-shops-search-select"
         >
           <option value="">-- Tất cả trạng thái --</option>
           <option value="PENDING">PENDING</option>
@@ -170,51 +166,40 @@ const AdminShopsListPage = () => {
           <option value="SUSPENDED">SUSPENDED</option>
         </select>
 
-        <button type="submit" disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+          className="admin-shops-search-button"
+        >
           {loading ? 'Đang tìm...' : 'Tìm kiếm'}
         </button>
       </form>
 
-      {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
+      {error && <div className="admin-shops-error">{error}</div>}
 
-      <div style={{ marginBottom: 8 }}>
+      <div className="admin-shops-info">
         Tổng: {total} shop. Trang {page}/{totalPages}
       </div>
 
-      <table
-        style={{
-          width: '100%',
-          borderCollapse: 'collapse',
-          marginBottom: 16,
-        }}
-      >
+      <table className="admin-shops-table">
         <thead>
           <tr>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>ID</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Tên shop</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Slug</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>
-              Owner (userId)
-            </th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Email</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>SĐT</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Trạng thái</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Địa chỉ</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Tạo lúc</th>
-            <th style={{ border: '1px solid #ddd', padding: 8 }}>Hành động</th>
+            <th>ID</th>
+            <th>Tên shop</th>
+            <th>Slug</th>
+            <th>Owner (userId)</th>
+            <th>Email</th>
+            <th>SĐT</th>
+            <th>Trạng thái</th>
+            <th>Địa chỉ</th>
+            <th>Tạo lúc</th>
+            <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
           {shops.length === 0 && !loading && (
             <tr>
-              <td
-                colSpan={10}
-                style={{
-                  border: '1px solid #ddd',
-                  padding: 8,
-                  textAlign: 'center',
-                }}
-              >
+              <td colSpan={10} className="admin-shops-table-empty">
                 Không có shop nào.
               </td>
             </tr>
@@ -222,19 +207,13 @@ const AdminShopsListPage = () => {
 
           {shops.map((s) => (
             <tr key={s.id}>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>{s.id}</td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>{s.name}</td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>{s.slug}</td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                {s.userId}
-              </td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                {s.email || '-'}
-              </td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                {s.shopPhone || '-'}
-              </td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
+              <td>{s.id}</td>
+              <td>{s.name}</td>
+              <td>{s.slug}</td>
+              <td>{s.userId}</td>
+              <td>{s.email || '-'}</td>
+              <td>{s.shopPhone || '-'}</td>
+              <td>
                 <select
                   value={statusDrafts[s.id] || s.status}
                   onChange={(e) =>
@@ -243,51 +222,52 @@ const AdminShopsListPage = () => {
                       e.target.value as ShopStatus,
                     )
                   }
+                  className="admin-shops-status-select"
                 >
                   <option value="PENDING">PENDING</option>
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="SUSPENDED">SUSPENDED</option>
                 </select>
               </td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                {s.shopAddress || '-'}
-              </td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                {new Date(s.createdAt).toLocaleString()}
-              </td>
-              <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => handleSaveStatus(s.id)}
-                  disabled={savingId === s.id}
-                  style={{ marginRight: 8 }}
-                >
-                  {savingId === s.id ? 'Đang lưu...' : 'Lưu trạng thái'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteShop(s.id)}
-                  disabled={deletingId === s.id}
-                  style={{ backgroundColor: '#dc2626', color: '#fff' }}
-                >
-                  {deletingId === s.id ? 'Đang xoá...' : 'Xoá shop'}
-                </button>
+              <td>{s.shopAddress || '-'}</td>
+              <td>{new Date(s.createdAt).toLocaleString()}</td>
+              <td>
+                <div className="admin-shops-action-buttons">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveStatus(s.id)}
+                    disabled={savingId === s.id}
+                    className="admin-shops-save-button"
+                  >
+                    {savingId === s.id ? 'Đang lưu...' : 'Lưu trạng thái'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteShop(s.id)}
+                    disabled={deletingId === s.id}
+                    className="admin-shops-delete-button"
+                  >
+                    {deletingId === s.id ? 'Đang xoá...' : 'Xoá shop'}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="admin-shops-pagination">
         <button
           disabled={page <= 1 || loading}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
+          className="admin-shops-pagination-button"
         >
           Trang trước
         </button>
         <button
           disabled={page >= totalPages || loading}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          className="admin-shops-pagination-button"
         >
           Trang sau
         </button>

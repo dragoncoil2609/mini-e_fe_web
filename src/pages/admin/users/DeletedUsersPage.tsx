@@ -6,6 +6,7 @@ import {
   hardDeleteUser,
 } from '../../../api/users.api';
 import type { User, UserListQuery } from '../../../api/types';
+import './DeletedUsersPage.css';
 
 interface UserListResult {
   items: User[];
@@ -73,54 +74,71 @@ const DeletedUsersPage: React.FC = () => {
     list && list.limit > 0 ? Math.ceil(list.total / list.limit) : 1;
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1>User đã xoá mềm</h1>
+    <div className="deleted-users-container">
+      <h1 className="deleted-users-title">User đã xoá mềm</h1>
 
-      <div style={{ margin: '16px 0' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8 }}>
+      <div className="deleted-users-search-wrapper">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="deleted-users-search-form"
+        >
           <input
             placeholder="Tìm theo tên / email / phone..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            style={{ padding: 6, minWidth: 260 }}
+            className="deleted-users-search-input"
           />
-          <button type="submit">Tìm kiếm</button>
+          <button type="submit" className="deleted-users-search-button">
+            Tìm kiếm
+          </button>
         </form>
       </div>
 
-      {loading && <div>Đang tải...</div>}
+      {loading && <div className="deleted-users-loading">Đang tải...</div>}
 
       {!loading && list && (
         <>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="deleted-users-table">
             <thead>
               <tr>
-                <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>ID</th>
-                <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>Tên</th>
-                <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>Email</th>
-                <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>Role</th>
-                <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>DeletedAt</th>
-                <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>Hành động</th>
+                <th>ID</th>
+                <th>Tên</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>DeletedAt</th>
+                <th>Hành động</th>
               </tr>
             </thead>
             <tbody>
               {list.items.map((u) => (
                 <tr key={u.id}>
-                  <td style={{ borderBottom: '1px solid #eee', padding: '4px 0' }}>{u.id}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.name}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.email}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.role}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.deletedAt}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>
-                    <button onClick={() => handleRestore(u.id)}>Khôi phục</button>{' '}
-                    <button onClick={() => handleHardDelete(u.id)}>Xoá vĩnh viễn</button>
+                  <td>{u.id}</td>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{u.role}</td>
+                  <td>{u.deletedAt}</td>
+                  <td>
+                    <div className="deleted-users-action-buttons">
+                      <button
+                        onClick={() => handleRestore(u.id)}
+                        className="deleted-users-restore-button"
+                      >
+                        Khôi phục
+                      </button>
+                      <button
+                        onClick={() => handleHardDelete(u.id)}
+                        className="deleted-users-delete-button"
+                      >
+                        Xoá vĩnh viễn
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
 
               {list.items.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 8 }}>
+                  <td colSpan={6} className="deleted-users-table-empty">
                     Không có user nào trong thùng rác.
                   </td>
                 </tr>
@@ -128,16 +146,17 @@ const DeletedUsersPage: React.FC = () => {
             </tbody>
           </table>
 
-          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
+          <div className="deleted-users-pagination">
+            <div className="deleted-users-pagination-info">
               Trang {list.page} / {totalPages || 1} — Tổng: {list.total} user
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="deleted-users-pagination-buttons">
               <button
                 disabled={list.page <= 1}
                 onClick={() =>
                   setQuery((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
                 }
+                className="deleted-users-pagination-button"
               >
                 &lt; Trước
               </button>
@@ -146,6 +165,7 @@ const DeletedUsersPage: React.FC = () => {
                 onClick={() =>
                   setQuery((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
                 }
+                className="deleted-users-pagination-button"
               >
                 Sau &gt;
               </button>

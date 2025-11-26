@@ -1,0 +1,207 @@
+.admin-shops-container {
+  padding: 24px;
+}
+
+.admin-shops-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #1a1a1a;
+}
+
+.admin-shops-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-shops-search-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.admin-shops-search-input:focus {
+  border-color: #667eea;
+}
+
+.admin-shops-search-select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.admin-shops-search-select:focus {
+  border-color: #667eea;
+}
+
+.admin-shops-search-button {
+  padding: 8px 16px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.admin-shops-search-button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.admin-shops-search-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.admin-shops-error {
+  color: #dc2626;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.admin-shops-info {
+  margin-bottom: 8px;
+  color: #555;
+  font-size: 14px;
+}
+
+.admin-shops-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-shops-table th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  background: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+  font-size: 14px;
+  color: #374151;
+}
+
+.admin-shops-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.admin-shops-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.admin-shops-table-empty {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+  color: #666;
+}
+
+.admin-shops-status-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.admin-shops-status-select:focus {
+  border-color: #667eea;
+}
+
+.admin-shops-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-shops-save-button {
+  padding: 6px 12px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-right: 8px;
+}
+
+.admin-shops-save-button:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.admin-shops-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.admin-shops-delete-button {
+  padding: 6px 12px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.admin-shops-delete-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.admin-shops-delete-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.admin-shops-pagination {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-shops-pagination-button {
+  padding: 8px 16px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.admin-shops-pagination-button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.admin-shops-pagination-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+

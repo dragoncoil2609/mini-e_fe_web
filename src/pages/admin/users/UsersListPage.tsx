@@ -11,6 +11,7 @@ import {
 } from '../../../api/users.api';
 import type { CreateUserPayload, UpdateUserPayload } from '../../../api/users.api';
 import type { User, UserListQuery } from '../../../api/types';
+import './UsersListPage.css';
 
 interface UserListResult {
   items: User[];
@@ -156,108 +157,83 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 50,
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          padding: 16,
-          borderRadius: 8,
-          width: 480,
-          maxHeight: '90vh',
-          overflow: 'auto',
-        }}
-      >
-        <h2>{isEdit ? 'Sửa user' : 'Tạo user mới'}</h2>
+    <div className="user-form-modal-overlay">
+      <div className="user-form-modal-content">
+        <h2 className="user-form-modal-title">
+          {isEdit ? 'Sửa user' : 'Tạo user mới'}
+        </h2>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            marginTop: 8,
-          }}
-        >
-          <label>
+        <form onSubmit={handleSubmit} className="user-form-modal-form">
+          <label className="user-form-modal-label">
             Tên
             <input
               name="name"
               value={form.name}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-input"
             />
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Email
             <input
               name="email"
               type="email"
               value={form.email}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-input"
             />
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Mật khẩu {isEdit && '(bỏ trống nếu không đổi)'}
             <input
               name="password"
               type="password"
               value={form.password}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-input"
             />
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Số điện thoại
             <input
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-input"
             />
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Avatar URL
             <input
               name="avatarUrl"
               value={form.avatarUrl}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-input"
             />
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Ngày sinh
             <input
               name="birthday"
               type="date"
               value={form.birthday}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-input"
             />
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Giới tính
             <select
               name="gender"
               value={form.gender}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-select"
             >
               <option value="">-- Chọn --</option>
               <option value="MALE">Nam</option>
@@ -266,13 +242,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             </select>
           </label>
 
-          <label>
+          <label className="user-form-modal-label">
             Vai trò
             <select
               name="role"
               value={form.role}
               onChange={handleChange}
-              style={{ width: '100%', padding: 6, marginTop: 4 }}
+              className="user-form-modal-select"
             >
               <option value="USER">USER</option>
               <option value="SELLER">SELLER</option>
@@ -280,44 +256,29 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             </select>
           </label>
 
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 4,
-            }}
-          >
+          <label className="user-form-modal-checkbox-label">
             <input
               type="checkbox"
               name="isVerified"
               checked={form.isVerified}
               onChange={handleChange}
+              className="user-form-modal-checkbox"
             />
             Đã xác minh email?
           </label>
 
-          <div
-            style={{
-              marginTop: 12,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 8,
-            }}
-          >
-            <button type="button" onClick={onClose}>
+          <div className="user-form-modal-actions">
+            <button
+              type="button"
+              onClick={onClose}
+              className="user-form-modal-cancel-button"
+            >
               Hủy
             </button>
             <button
               type="submit"
               disabled={saving}
-              style={{
-                background: '#16a34a',
-                color: '#fff',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: 4,
-              }}
+              className="user-form-modal-save-button"
             >
               {saving ? 'Đang lưu...' : 'Lưu'}
             </button>
@@ -393,55 +354,35 @@ const UsersListPage: React.FC = () => {
     list && list.limit > 0 ? Math.ceil(list.total / list.limit) : 1;
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1>Quản lý user</h1>
+    <div className="users-list-container">
+      <h1 className="users-list-title">Quản lý user</h1>
 
-      <div
-        style={{
-          margin: '16px 0',
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-        }}
-      >
+      <div className="users-list-toolbar">
         <form
           onSubmit={handleSearchSubmit}
-          style={{ display: 'flex', gap: 8 }}
+          className="users-list-search-form"
         >
           <input
             placeholder="Tìm theo tên / email / phone..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            style={{ padding: 6, minWidth: 260 }}
+            className="users-list-search-input"
           />
-          <button type="submit">Tìm kiếm</button>
+          <button type="submit" className="users-list-search-button">
+            Tìm kiếm
+          </button>
         </form>
 
-        {/* Nút sang danh sách user đã xoá mềm */}
         <button
           type="button"
           onClick={() => navigate('/admin/users/deleted')}
-          style={{
-            marginLeft: 8,
-            padding: '6px 10px',
-            borderRadius: 4,
-            border: '1px solid #ddd',
-            cursor: 'pointer',
-          }}
+          className="users-list-deleted-button"
         >
           User đã xoá mềm
         </button>
 
         <button
-          style={{
-            marginLeft: 'auto',
-            background: '#2563eb',
-            color: '#fff',
-            borderRadius: 4,
-            padding: '6px 10px',
-            border: 'none',
-            cursor: 'pointer',
-          }}
+          className="users-list-create-button"
           onClick={() => {
             setEditingUser(null);
             setModalOpen(true);
@@ -451,102 +392,60 @@ const UsersListPage: React.FC = () => {
         </button>
       </div>
 
-      {loading && <div>Đang tải...</div>}
+      {loading && <div className="users-list-loading">Đang tải...</div>}
 
       {!loading && list && (
         <>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="users-list-table">
             <thead>
               <tr>
-                <th
-                  style={{
-                    borderBottom: '1px solid #ddd',
-                    textAlign: 'left',
-                  }}
-                >
-                  ID
-                </th>
-                <th
-                  style={{
-                    borderBottom: '1px solid #ddd',
-                    textAlign: 'left',
-                  }}
-                >
-                  Tên
-                </th>
-                <th
-                  style={{
-                    borderBottom: '1px solid #ddd',
-                    textAlign: 'left',
-                  }}
-                >
-                  Email
-                </th>
-                <th
-                  style={{
-                    borderBottom: '1px solid #ddd',
-                    textAlign: 'left',
-                  }}
-                >
-                  Role
-                </th>
-                <th
-                  style={{
-                    borderBottom: '1px solid #ddd',
-                    textAlign: 'left',
-                  }}
-                >
-                  Verified
-                </th>
-                <th
-                  style={{
-                    borderBottom: '1px solid #ddd',
-                    textAlign: 'left',
-                  }}
-                >
-                  Hành động
-                </th>
+                <th>ID</th>
+                <th>Tên</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Verified</th>
+                <th>Hành động</th>
               </tr>
             </thead>
             <tbody>
               {list.items.map((u) => (
                 <tr key={u.id}>
-                  <td
-                    style={{
-                      borderBottom: '1px solid #eee',
-                      padding: '4px 0',
-                    }}
-                  >
-                    {u.id}
-                  </td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.name}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.email}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>{u.role}</td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>
-                    {u.isVerified ? '✔️' : '❌'}
-                  </td>
-                  <td style={{ borderBottom: '1px solid #eee' }}>
-                    <button
-                      onClick={() => {
-                        setEditingUser(u);
-                        setModalOpen(true);
-                      }}
-                    >
-                      Sửa
-                    </button>{' '}
-                    <button onClick={() => handleSoftDelete(u.id)}>
-                      Xoá mềm
-                    </button>{' '}
-                    <button onClick={() => handleHardDelete(u.id)}>
-                      Xoá vĩnh viễn
-                    </button>
+                  <td>{u.id}</td>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{u.role}</td>
+                  <td>{u.isVerified ? '✔️' : '❌'}</td>
+                  <td>
+                    <div className="users-list-action-buttons">
+                      <button
+                        onClick={() => {
+                          setEditingUser(u);
+                          setModalOpen(true);
+                        }}
+                        className="users-list-edit-button"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => handleSoftDelete(u.id)}
+                        className="users-list-soft-delete-button"
+                      >
+                        Xoá mềm
+                      </button>
+                      <button
+                        onClick={() => handleHardDelete(u.id)}
+                        className="users-list-hard-delete-button"
+                      >
+                        Xoá vĩnh viễn
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
 
               {list.items.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 8 }}>
+                  <td colSpan={6} className="users-list-table-empty">
                     Không có user nào.
                   </td>
                 </tr>
@@ -554,18 +453,11 @@ const UsersListPage: React.FC = () => {
             </tbody>
           </table>
 
-          <div
-            style={{
-              marginTop: 12,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div>
+          <div className="users-list-pagination">
+            <div className="users-list-pagination-info">
               Trang {list.page} / {totalPages || 1} — Tổng: {list.total} user
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="users-list-pagination-buttons">
               <button
                 disabled={list.page <= 1}
                 onClick={() =>
@@ -574,6 +466,7 @@ const UsersListPage: React.FC = () => {
                     page: (prev.page || 1) - 1,
                   }))
                 }
+                className="users-list-pagination-button"
               >
                 &lt; Trước
               </button>
@@ -585,6 +478,7 @@ const UsersListPage: React.FC = () => {
                     page: (prev.page || 1) + 1,
                   }))
                 }
+                className="users-list-pagination-button"
               >
                 Sau &gt;
               </button>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../../api/types';
+import './HomePageAdmin.css';
 
 export function HomePageAdmin() {
   const navigate = useNavigate();
@@ -31,71 +32,30 @@ export function HomePageAdmin() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Header */}
-      <header
-        style={{
-          padding: '12px 16px',
-          borderBottom: '1px solid #ddd',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Góc trái: tên admin, click → /me */}
+    <div className="admin-home-container">
+      <header className="admin-home-header">
         <div>
           {user ? (
             <button
               type="button"
               onClick={handleGoProfile}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: 16,
-              }}
+              className="admin-home-user-button"
             >
               {user.name || user.email} (Admin)
             </button>
           ) : (
-            <span style={{ fontWeight: 'bold' }}>Mini E Admin</span>
+            <span className="admin-home-title-text">Mini E Admin</span>
           )}
         </div>
       </header>
 
-      {/* Body */}
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 16,
-        }}
-      >
-        <h1>Trang quản trị</h1>
+      <main className="admin-home-main">
+        <h1 className="admin-home-title">Trang quản trị</h1>
 
         <button
           type="button"
           onClick={handleGoUserManage}
-          style={{
-            padding: '10px 18px',
-            fontSize: 16,
-            borderRadius: 6,
-            border: 'none',
-            cursor: 'pointer',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-          }}
+          className="admin-home-button admin-home-button--user"
         >
           Quản lý user
         </button>
@@ -103,15 +63,7 @@ export function HomePageAdmin() {
         <button
           type="button"
           onClick={handleGoShopManage}
-          style={{
-            padding: '10px 18px',
-            fontSize: 16,
-            borderRadius: 6,
-            border: 'none',
-            cursor: 'pointer',
-            backgroundColor: '#16a34a',
-            color: '#fff',
-          }}
+          className="admin-home-button admin-home-button--shop"
         >
           Quản lý shop
         </button>

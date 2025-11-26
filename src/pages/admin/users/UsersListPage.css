@@ -1,0 +1,333 @@
+.user-form-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.user-form-modal-content {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  width: 480px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.user-form-modal-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+}
+
+.user-form-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.user-form-modal-label {
+  display: block;
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.user-form-modal-input,
+.user-form-modal-select {
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+.user-form-modal-input:focus,
+.user-form-modal-select:focus {
+  border-color: #667eea;
+}
+
+.user-form-modal-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #555;
+}
+
+.user-form-modal-checkbox {
+  cursor: pointer;
+}
+
+.user-form-modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.user-form-modal-cancel-button {
+  padding: 6px 12px;
+  background: #9ca3af;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.user-form-modal-cancel-button:hover {
+  background: #6b7280;
+}
+
+.user-form-modal-save-button {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.user-form-modal-save-button:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.user-form-modal-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.users-list-container {
+  padding: 16px;
+}
+
+.users-list-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #1a1a1a;
+}
+
+.users-list-toolbar {
+  margin: 16px 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.users-list-search-form {
+  display: flex;
+  gap: 8px;
+}
+
+.users-list-search-input {
+  padding: 6px;
+  min-width: 260px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.users-list-search-input:focus {
+  border-color: #667eea;
+}
+
+.users-list-search-button {
+  padding: 6px 12px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.users-list-search-button:hover {
+  background: #5568d3;
+}
+
+.users-list-deleted-button {
+  margin-left: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  background: #fff;
+  color: #374151;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.users-list-deleted-button:hover {
+  background: #f9fafb;
+}
+
+.users-list-create-button {
+  margin-left: auto;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 4px;
+  padding: 6px 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.users-list-create-button:hover {
+  background: #1d4ed8;
+}
+
+.users-list-loading {
+  padding: 12px;
+  color: #666;
+  font-size: 14px;
+}
+
+.users-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.users-list-table th {
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  padding: 8px;
+  background: #f9fafb;
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+}
+
+.users-list-table td {
+  border-bottom: 1px solid #eee;
+  padding: 4px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.users-list-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.users-list-table-empty {
+  padding: 8px;
+  text-align: center;
+  color: #666;
+}
+
+.users-list-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.users-list-edit-button {
+  padding: 6px 12px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.users-list-edit-button:hover {
+  background: #1d4ed8;
+}
+
+.users-list-soft-delete-button {
+  padding: 6px 12px;
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.users-list-soft-delete-button:hover {
+  background: #d97706;
+}
+
+.users-list-hard-delete-button {
+  padding: 6px 12px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.users-list-hard-delete-button:hover {
+  background: #b91c1c;
+}
+
+.users-list-pagination {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.users-list-pagination-info {
+  color: #555;
+  font-size: 14px;
+}
+
+.users-list-pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.users-list-pagination-button {
+  padding: 6px 12px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.users-list-pagination-button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.users-list-pagination-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
