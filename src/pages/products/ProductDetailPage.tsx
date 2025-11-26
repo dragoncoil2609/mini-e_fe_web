@@ -313,7 +313,7 @@ export default function ProductDetailPage() {
                   }}
                 >
                   <img
-                    src={img.url}
+                    src={img.normalizedUrl}
                     alt={product.title}
                     style={{
                       width: 150,
