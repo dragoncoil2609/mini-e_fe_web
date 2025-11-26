@@ -12,6 +12,7 @@ import {
   createProductMultipart,
 } from '../../api/products.api';
 import type { Shop, ProductListItem } from '../../api/types';
+import { getMainImageUrl } from '../../utils/productImage';
 import LocationPicker from '../../components/LocationPicker';
 import VietnamAddressSelector from '../../components/VietnamAddressSelector';
 import './MyShopPage.css';
@@ -632,9 +633,9 @@ const MyShopPage = () => {
                       <td>{p.id}</td>
                       <td>{p.title}</td>
                       <td>
-                        {p.thumbnailUrl ? (
+                        {getMainImageUrl(p) ? (
                           <img
-                            src={p.thumbnailUrl}
+                            src={getMainImageUrl(p)!}
                             alt={p.title}
                             className="shop-product-thumb"
                           />

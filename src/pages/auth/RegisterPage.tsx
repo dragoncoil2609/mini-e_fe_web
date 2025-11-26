@@ -7,10 +7,10 @@ import './RegisterPage.css';
 export function RegisterPage() {
   const navigate = useNavigate();
 
-  const [name, setName] = useState('Quoc Hiep');
-  const [email, setEmail] = useState('quochiep1610@gmail.com');
-  const [password, setPassword] = useState('Aa123456!');
-  const [confirmPassword, setConfirmPassword] = useState('Aa123456!');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -148,7 +148,10 @@ export interface ProductListItem {
   createdAt: string;
   updatedAt?: string;
 
-  // URL ảnh chính/thumbnail của sản phẩm (BE map từ ảnh main)
+  // Danh sách ảnh của sản phẩm (BE trả về từ product_images)
+  images?: ProductImage[];
+  
+  // URL ảnh chính/thumbnail của sản phẩm (deprecated - dùng images với isMain thay thế)
   thumbnailUrl?: string | null;
 }
 // Chi tiết 1 sản phẩm

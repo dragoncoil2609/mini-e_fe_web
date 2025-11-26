@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User, ProductListItem, Shop } from '../api/types';
 import { HomeApi } from '../api/home.api';
+import { getMainImageUrl } from '../utils/productImage';
 import './HomePage.css';
 
 export function HomePage() {
@@ -105,9 +106,9 @@ export function HomePage() {
                         className="home-product-card"
                         onClick={() => handleProductClick(product.id)}
                       >
-                        {product.thumbnailUrl ? (
+                        {getMainImageUrl(product) ? (
                           <img
-                            src={product.thumbnailUrl}
+                            src={getMainImageUrl(product)!}
                             alt={product.title}
                             className="home-product-image"
                           />
@@ -138,9 +139,9 @@ export function HomePage() {
                         className="home-product-card"
                         onClick={() => handleProductClick(product.id)}
                       >
-                        {product.thumbnailUrl ? (
+                        {getMainImageUrl(product) ? (
                           <img
-                            src={product.thumbnailUrl}
+                            src={getMainImageUrl(product)!}
                             alt={product.title}
                             className="home-product-image"
                           />

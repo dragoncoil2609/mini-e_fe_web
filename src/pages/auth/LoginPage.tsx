@@ -11,8 +11,8 @@ interface RecoverInfo {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('quochiep1610@gmail.com');
-  const [password, setPassword] = useState('Aa123456!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

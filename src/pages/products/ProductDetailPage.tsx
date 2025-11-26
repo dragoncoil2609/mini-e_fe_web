@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
 import type { ProductDetail, ProductVariant, ApiResponse } from '../../api/types';
+import { getMainImageUrl, getAllImages } from '../../utils/productImage';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -210,6 +211,31 @@ export default function ProductDetailPage() {
           </h1>
         </div>
 
+        {/* Ảnh chính */}
+        {getMainImageUrl(product) && (
+          <div
+            style={{
+              padding: '24px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '15px',
+              marginBottom: '24px',
+              background: '#fff',
+              textAlign: 'center',
+            }}
+          >
+            <img
+              src={getMainImageUrl(product)!}
+              alt={product.title}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '500px',
+                objectFit: 'contain',
+                borderRadius: '12px',
+              }}
+            />
+          </div>
+        )}
+
         <div
           style={{
             padding: '24px',
@@ -252,7 +278,7 @@ export default function ProductDetailPage() {
           )}
         </div>
 
-        {product.images && product.images.length > 0 && (
+        {getAllImages(product).length > 0 && (
           <div
             style={{
               padding: '24px',
@@ -270,7 +296,7 @@ export default function ProductDetailPage() {
                 marginBottom: '16px',
               }}
             >
-              Hình ảnh
+              Tất cả hình ảnh
             </h3>
             <div
               style={{
@@ -279,19 +305,44 @@ export default function ProductDetailPage() {
                 flexWrap: 'wrap',
               }}
             >
-              {product.images.map((img) => (
-                <img
+              {getAllImages(product).map((img) => (
+                <div
                   key={img.id}
-                  src={img.url}
-                  alt={product.title}
                   style={{
-                    width: 150,
-                    height: 150,
-                    objectFit: 'cover',
-                    borderRadius: '12px',
-                    border: '1px solid #e5e7eb',
+                    position: 'relative',
                   }}
-                />
+                >
+                  <img
+                    src={img.url}
+                    alt={product.title}
+                    style={{
+                      width: 150,
+                      height: 150,
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      border: img.isMain
+                        ? '3px solid #667eea'
+                        : '1px solid #e5e7eb',
+                    }}
+                  />
+                  {img.isMain && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: '#667eea',
+                        color: '#fff',
+                        fontSize: '12px',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontWeight: '600',
+                      }}
+                    >
+                      Chính
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           </div>
