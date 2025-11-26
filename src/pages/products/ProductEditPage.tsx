@@ -200,155 +200,541 @@ export default function ProductEditPage({ isCreate }: ProductEditPageProps) {
     }
   };
 
-  if (loading) return <p>Đang tải...</p>;
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+      >
+        <div
+          style={{
+            background: '#f8f9fa',
+            borderRadius: '20px',
+            padding: '40px',
+            maxWidth: '500px',
+            width: '100%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+            textAlign: 'center',
+            color: '#666',
+          }}
+        >
+          Đang tải...
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1>{realIsCreate ? 'Tạo sản phẩm mới' : `Sửa sản phẩm #${productId}`}</h1>
-
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-
-      <form
-        onSubmit={handleSubmit}
-        style={{ maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 8 }}
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '40px 20px',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1000px',
+          margin: '0 auto',
+          background: '#f8f9fa',
+          borderRadius: '20px',
+          padding: '40px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+        }}
       >
-        <label>
-          Tên sản phẩm
-          <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            required
-            style={{ width: '100%', padding: 8 }}
-          />
-        </label>
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '30px',
+          }}
+        >
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              background: '#667eea',
+              borderRadius: '50%',
+              margin: '0 auto 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '40px',
+            }}
+          >
+            {realIsCreate ? '✨' : '✏️'}
+          </div>
+          <h1
+            style={{
+              fontSize: '32px',
+              fontWeight: 'bold',
+              color: '#1a1a1a',
+              margin: 0,
+            }}
+          >
+            {realIsCreate ? 'Tạo sản phẩm mới' : `Sửa sản phẩm #${productId}`}
+          </h1>
+        </div>
 
-        <label>
-          Mô tả
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={3}
-            style={{ width: '100%', padding: 8 }}
-          />
-        </label>
-
-        <label>
-          Giá
-          <input
-            name="price"
-            type="number"
-            value={form.price}
-            onChange={handleChange}
-            min={0}
-            style={{ width: '100%', padding: 8 }}
-          />
-        </label>
-
-        <label>
-          Tồn kho
-          <input
-            name="stock"
-            type="number"
-            value={form.stock}
-            onChange={handleChange}
-            min={0}
-            style={{ width: '100%', padding: 8 }}
-          />
-        </label>
-
-        {!realIsCreate && (
-          <label>
-            Trạng thái
-            <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              style={{ width: '100%', padding: 8 }}
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-              <option value="DRAFT">DRAFT</option>
-            </select>
-          </label>
+        {error && (
+          <div
+            style={{
+              color: '#dc2626',
+              marginBottom: '16px',
+              padding: '12px',
+              background: '#fee2e2',
+              borderRadius: '8px',
+              fontSize: '14px',
+            }}
+          >
+            {error}
+          </div>
         )}
 
-        <button type="submit" disabled={saving} style={{ marginTop: 8 }}>
-          {realIsCreate ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
-        </button>
-      </form>
+        {message && (
+          <div
+            style={{
+              color: '#16a34a',
+              marginBottom: '16px',
+              padding: '12px',
+              background: '#dcfce7',
+              borderRadius: '8px',
+              fontSize: '14px',
+            }}
+          >
+            {message}
+          </div>
+        )}
 
-      {/* VARIANTS */}
-      {!realIsCreate && (
-        <div style={{ marginTop: 32 }}>
-          <h2>Variants</h2>
-          <button onClick={handleGenerateVariantsDemo} disabled={saving}>
-            Generate variants demo (Màu x Size)
-          </button>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            padding: '24px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '15px',
+            marginBottom: '24px',
+            background: '#fff',
+          }}
+        >
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Tên sản phẩm
+            </label>
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              required
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
 
-          {variants.length === 0 && <p>Chưa có biến thể nào.</p>}
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Mô tả
+            </label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '15px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+                resize: 'vertical',
+                fontFamily: 'inherit',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
 
-          {variants.length > 0 && (
-            <>
-              <table
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Giá
+            </label>
+            <input
+              name="price"
+              type="number"
+              value={form.price}
+              onChange={handleChange}
+              min={0}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Tồn kho
+            </label>
+            <input
+              name="stock"
+              type="number"
+              value={form.stock}
+              onChange={handleChange}
+              min={0}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '25px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+            />
+          </div>
+
+          {!realIsCreate && (
+            <div style={{ marginBottom: '24px' }}>
+              <label
                 style={{
-                  borderCollapse: 'collapse',
-                  width: '100%',
-                  maxWidth: 800,
-                  marginTop: 16,
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  color: '#555',
+                  fontWeight: '500',
                 }}
               >
-                <thead>
-                  <tr>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>SKU</th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Tên</th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Giá</th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Tồn kho</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {variants.map((v) => (
-                    <tr key={v.id}>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>{v.sku}</td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>{v.name}</td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                        <input
-                          type="number"
-                          value={Number(v.price)}
-                          onChange={(e) =>
-                            handleVariantChange(v.id, 'price', Number(e.target.value))
-                          }
-                          style={{ width: '100px' }}
-                        />
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                        <input
-                          type="number"
-                          value={v.stock}
-                          onChange={(e) =>
-                            handleVariantChange(v.id, 'stock', Number(e.target.value))
-                          }
-                          style={{ width: '80px' }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <button
-                onClick={handleSaveVariants}
-                disabled={saving}
-                style={{ marginTop: 8 }}
+                Trạng thái
+              </label>
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '25px',
+                  border: '1px solid #ddd',
+                  fontSize: '16px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s',
+                  boxSizing: 'border-box',
+                  background: '#fff',
+                  cursor: 'pointer',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+                onBlur={(e) => (e.target.style.borderColor = '#ddd')}
               >
-                Lưu variants
-              </button>
-            </>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="INACTIVE">INACTIVE</option>
+                <option value="DRAFT">DRAFT</option>
+              </select>
+            </div>
           )}
-        </div>
-      )}
+
+          <button
+            type="submit"
+            disabled={saving}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: saving ? '#9ca3af' : '#667eea',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '25px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s',
+            }}
+          >
+            {saving
+              ? 'Đang lưu...'
+              : realIsCreate
+                ? 'Tạo sản phẩm'
+                : 'Lưu thay đổi'}
+          </button>
+        </form>
+
+        {!realIsCreate && (
+          <div
+            style={{
+              padding: '24px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '15px',
+              background: '#fff',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: '#1a1a1a',
+                marginBottom: '20px',
+              }}
+            >
+              Variants
+            </h2>
+            <button
+              onClick={handleGenerateVariantsDemo}
+              disabled={saving}
+              style={{
+                marginBottom: '20px',
+                padding: '12px 24px',
+                background: saving ? '#9ca3af' : '#16a34a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '25px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                transition: 'background 0.3s',
+              }}
+            >
+              Generate variants demo (Màu x Size)
+            </button>
+
+            {variants.length === 0 && (
+              <div
+                style={{
+                  padding: '20px',
+                  textAlign: 'center',
+                  color: '#666',
+                }}
+              >
+                Chưa có biến thể nào.
+              </div>
+            )}
+
+            {variants.length > 0 && (
+              <>
+                <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
+                  <table
+                    style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      background: '#fff',
+                    }}
+                  >
+                    <thead>
+                      <tr>
+                        <th
+                          style={{
+                            borderBottom: '2px solid #e5e7eb',
+                            padding: '12px',
+                            textAlign: 'left',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            background: '#f9fafb',
+                          }}
+                        >
+                          SKU
+                        </th>
+                        <th
+                          style={{
+                            borderBottom: '2px solid #e5e7eb',
+                            padding: '12px',
+                            textAlign: 'left',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            background: '#f9fafb',
+                          }}
+                        >
+                          Tên
+                        </th>
+                        <th
+                          style={{
+                            borderBottom: '2px solid #e5e7eb',
+                            padding: '12px',
+                            textAlign: 'left',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            background: '#f9fafb',
+                          }}
+                        >
+                          Giá
+                        </th>
+                        <th
+                          style={{
+                            borderBottom: '2px solid #e5e7eb',
+                            padding: '12px',
+                            textAlign: 'left',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            background: '#f9fafb',
+                          }}
+                        >
+                          Tồn kho
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {variants.map((v) => (
+                        <tr
+                          key={v.id}
+                          style={{
+                            borderBottom: '1px solid #e5e7eb',
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: '12px',
+                              fontSize: '14px',
+                              color: '#374151',
+                            }}
+                          >
+                            {v.sku}
+                          </td>
+                          <td
+                            style={{
+                              padding: '12px',
+                              fontSize: '14px',
+                              color: '#374151',
+                            }}
+                          >
+                            {v.name}
+                          </td>
+                          <td
+                            style={{
+                              padding: '12px',
+                              fontSize: '14px',
+                            }}
+                          >
+                            <input
+                              type="number"
+                              value={Number(v.price)}
+                              onChange={(e) =>
+                                handleVariantChange(v.id, 'price', Number(e.target.value))
+                              }
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                fontSize: '14px',
+                                outline: 'none',
+                              }}
+                              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+                              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                            />
+                          </td>
+                          <td
+                            style={{
+                              padding: '12px',
+                              fontSize: '14px',
+                            }}
+                          >
+                            <input
+                              type="number"
+                              value={v.stock}
+                              onChange={(e) =>
+                                handleVariantChange(v.id, 'stock', Number(e.target.value))
+                              }
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                fontSize: '14px',
+                                outline: 'none',
+                              }}
+                              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
+                              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <button
+                  onClick={handleSaveVariants}
+                  disabled={saving}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    background: saving ? '#9ca3af' : '#667eea',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '25px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    transition: 'background 0.3s',
+                  }}
+                >
+                  {saving ? 'Đang lưu...' : 'Lưu variants'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
