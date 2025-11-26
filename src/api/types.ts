@@ -234,3 +234,152 @@ export interface UpdateVariantDto {
   stock?: number;
   imageId?: number | null;
 }
+
+// ================== CART ==================
+
+// Cart Item (dòng trong giỏ hàng)
+export interface CartItem {
+  id: number;
+  cartId: number;
+  productId: number;
+  variantId: number | null;
+  title: string;
+  variantName: string | null;
+  sku: string | null;
+  imageId: number | null;
+  price: string; // "150000.00"
+  quantity: number;
+  value1: string | null;
+  value2: string | null;
+  value3: string | null;
+  value4: string | null;
+  value5: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Cart (giỏ hàng)
+export interface Cart {
+  id: number;
+  currency: string; // "VND"
+  itemsCount: number; // số lượng dòng items
+  itemsQuantity: number; // tổng số lượng sản phẩm
+  subtotal: string; // "150000.00"
+  items: CartItem[];
+}
+
+// DTO để thêm item vào cart
+export interface AddItemDto {
+  productId: number;
+  variantId?: number;
+  quantity?: number; // mặc định 1
+}
+
+// DTO để cập nhật item trong cart
+export interface UpdateItemDto {
+  quantity: number; // 0 = xóa item
+}
+
+// ================== ADDRESSES ==================
+
+// Address (địa chỉ)
+export interface Address {
+  id: number;
+  userId: number;
+  fullName: string;
+  phone: string;
+  formattedAddress: string;
+  placeId: string | null;
+  lat: string | null; // decimal từ DB trả về dạng string
+  lng: string | null; // decimal từ DB trả về dạng string
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// DTO để tạo địa chỉ mới
+export interface CreateAddressDto {
+  fullName: string;
+  phone: string;
+  formattedAddress: string;
+  placeId?: string;
+  lat?: number;
+  lng?: number;
+  isDefault?: boolean;
+}
+
+// DTO để cập nhật địa chỉ
+export interface UpdateAddressDto {
+  fullName?: string;
+  phone?: string;
+  formattedAddress?: string;
+  placeId?: string;
+  lat?: number;
+  lng?: number;
+}
+
+// ================== ORDERS ==================
+
+// Order Status
+export type OrderStatus =
+  | 'PENDING' // Chờ xử lý
+  | 'CONFIRMED' // Đã xác nhận
+  | 'PROCESSING' // Đang xử lý
+  | 'SHIPPING' // Đang giao hàng
+  | 'DELIVERED' // Đã giao hàng
+  | 'CANCELLED' // Đã hủy
+  | 'REFUNDED'; // Đã hoàn tiền
+
+// Order Item (sản phẩm trong đơn hàng)
+export interface OrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  variantId: number | null;
+  title: string;
+  variantName: string | null;
+  sku: string | null;
+  imageId: number | null;
+  price: string; // "150000.00"
+  quantity: number;
+  value1: string | null;
+  value2: string | null;
+  value3: string | null;
+  value4: string | null;
+  value5: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Order (đơn hàng)
+export interface Order {
+  id: number;
+  userId: number;
+  orderNumber: string; // Mã đơn hàng (unique)
+  status: OrderStatus;
+  addressId: number | null; // ID địa chỉ giao hàng
+  fullName: string;
+  phone: string;
+  formattedAddress: string;
+  itemsCount: number;
+  itemsQuantity: number;
+  subtotal: string; // "150000.00"
+  shippingFee: string; // "30000.00"
+  total: string; // "180000.00"
+  currency: string; // "VND"
+  notes: string | null;
+  items: OrderItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// DTO để tạo đơn hàng từ giỏ hàng
+export interface CreateOrderDto {
+  addressId: number; // ID địa chỉ giao hàng
+  notes?: string; // Ghi chú đơn hàng
+}
+
+// DTO để cập nhật trạng thái đơn hàng
+export interface UpdateOrderStatusDto {
+  status: OrderStatus;
+}

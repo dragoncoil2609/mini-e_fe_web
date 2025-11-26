@@ -20,6 +20,10 @@ import ProductDetailPage from '../pages/products/ProductDetailPage';
 import MyProductsPage from '../pages/products/MyProductsPage';
 import ProductEditPage from '../pages/products/ProductEditPage';
 import ProductVariantsPage from '../pages/products/ProductVariantsPage';
+import CartPage from '../pages/cart/CartPage';
+import OrdersPage from '../pages/orders/OrdersPage';
+import OrderDetailPage from '../pages/orders/OrderDetailPage';
+import AddressesPage from '../pages/addresses/AddressesPage';
 
 export function AppRoutes() {
   return (
@@ -58,6 +62,16 @@ export function AppRoutes() {
 
       {/* --- ADMIN: Quản lý shop --- */}
       <Route path="/admin/shops" element={<AdminShopsListPage />} />
+
+      {/* --- CART --- */}
+      <Route path="/cart" element={<CartPage />} />
+
+      {/* --- ORDERS --- */}
+      <Route path="/orders" element={<OrdersPage />} />
+      <Route path="/orders/:id" element={<OrderDetailPage />} />
+
+      {/* --- ADDRESSES --- */}
+      <Route path="/addresses" element={<AddressesPage />} />
 
       {/* Route không tồn tại → quay về /login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
