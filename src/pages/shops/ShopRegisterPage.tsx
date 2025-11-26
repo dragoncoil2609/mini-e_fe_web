@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerShop, checkShopName } from '../../api/shop.api';
 import LocationPicker from '../../components/LocationPicker';
+import VietnamAddressSelector from '../../components/VietnamAddressSelector';
 
 interface FormState {
   name: string;
@@ -78,9 +79,12 @@ const ShopRegisterPage = () => {
       };
 
       if (form.email.trim()) payload.email = form.email.trim();
-      if (form.description.trim()) payload.description = form.description.trim();
-      if (form.shopAddress.trim()) payload.shopAddress = form.shopAddress.trim();
-      if (form.shopPlaceId.trim()) payload.shopPlaceId = form.shopPlaceId.trim();
+      if (form.description.trim())
+        payload.description = form.description.trim();
+      if (form.shopAddress.trim())
+        payload.shopAddress = form.shopAddress.trim();
+      if (form.shopPlaceId.trim())
+        payload.shopPlaceId = form.shopPlaceId.trim();
       if (form.shopPhone.trim()) payload.shopPhone = form.shopPhone.trim();
       if (form.shopLat.trim()) payload.shopLat = parseFloat(form.shopLat);
       if (form.shopLng.trim()) payload.shopLng = parseFloat(form.shopLng);
@@ -96,7 +100,8 @@ const ShopRegisterPage = () => {
       }
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 'Đăng ký shop thất bại. Vui lòng thử lại.',
+        err.response?.data?.message ||
+          'Đăng ký shop thất bại. Vui lòng thử lại.',
       );
     } finally {
       setLoading(false);
@@ -184,28 +189,123 @@ const ShopRegisterPage = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              color: '#555',
-              fontWeight: '500',
-            }}
-          >
-            Tên shop (*)
-          </label>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              maxLength={150}
+          <div style={{ marginBottom: '20px' }}>
+            <label
               style={{
-                flex: 1,
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Tên shop (*)
+            </label>
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '8px',
+              }}
+            >
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                maxLength={150}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '25px',
+                  border: '1px solid #ddd',
+                  fontSize: '16px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = '#667eea')
+                }
+                onBlur={(e) =>
+                  (e.target.style.borderColor = '#ddd')
+                }
+              />
+              <button
+                type="button"
+                onClick={handleCheckName}
+                disabled={checkingName || !form.name.trim()}
+                style={{
+                  padding: '12px 20px',
+                  background:
+                    checkingName || !form.name.trim()
+                      ? '#9ca3af'
+                      : '#667eea',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '25px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor:
+                    checkingName || !form.name.trim()
+                      ? 'not-allowed'
+                      : 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {checkingName ? 'Đang kiểm tra...' : 'Kiểm tra tên'}
+              </button>
+            </div>
+            {nameExists === true && (
+              <div
+                style={{
+                  color: '#dc2626',
+                  marginTop: '4px',
+                  fontSize: '14px',
+                  padding: '8px',
+                  background: '#fee2e2',
+                  borderRadius: '8px',
+                }}
+              >
+                Tên shop đã tồn tại.
+              </div>
+            )}
+            {nameExists === false && (
+              <div
+                style={{
+                  color: '#16a34a',
+                  marginTop: '4px',
+                  fontSize: '14px',
+                  padding: '8px',
+                  background: '#dcfce7',
+                  borderRadius: '8px',
+                }}
+              >
+                Tên shop có thể sử dụng.
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              style={{
+                width: '100%',
                 padding: '12px 16px',
                 borderRadius: '25px',
                 border: '1px solid #ddd',
@@ -214,161 +314,79 @@ const ShopRegisterPage = () => {
                 transition: 'border-color 0.3s',
                 boxSizing: 'border-box',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+              onFocus={(e) =>
+                (e.target.style.borderColor = '#667eea')
+              }
+              onBlur={(e) =>
+                (e.target.style.borderColor = '#ddd')
+              }
             />
-            <button
-              type="button"
-              onClick={handleCheckName}
-              disabled={checkingName || !form.name.trim()}
-              style={{
-                padding: '12px 20px',
-                background: checkingName || !form.name.trim() ? '#9ca3af' : '#667eea',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '25px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: checkingName || !form.name.trim() ? 'not-allowed' : 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {checkingName ? 'Đang kiểm tra...' : 'Kiểm tra tên'}
-            </button>
           </div>
-          {nameExists === true && (
-            <div
+
+          <div style={{ marginBottom: '20px' }}>
+            <label
               style={{
-                color: '#dc2626',
-                marginTop: '4px',
+                display: 'block',
+                marginBottom: '8px',
                 fontSize: '14px',
-                padding: '8px',
-                background: '#fee2e2',
-                borderRadius: '8px',
+                color: '#555',
+                fontWeight: '500',
               }}
             >
-              Tên shop đã tồn tại.
-            </div>
-          )}
-          {nameExists === false && (
-            <div
+              Mô tả
+            </label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={3}
               style={{
-                color: '#16a34a',
-                marginTop: '4px',
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '15px',
+                border: '1px solid #ddd',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.3s',
+                boxSizing: 'border-box',
+                resize: 'vertical',
+                fontFamily: 'inherit',
+              }}
+              onFocus={(e) =>
+                (e.target.style.borderColor = '#667eea')
+              }
+              onBlur={(e) =>
+                (e.target.style.borderColor = '#ddd')
+              }
+            />
+          </div>
+
+          {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
                 fontSize: '14px',
-                padding: '8px',
-                background: '#dcfce7',
-                borderRadius: '8px',
+                color: '#555',
+                fontWeight: '500',
               }}
             >
-              Tên shop có thể sử dụng.
-            </div>
-          )}
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              color: '#555',
-              fontWeight: '500',
-            }}
-          >
-            Email
-          </label>
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: '25px',
-              border: '1px solid #ddd',
-              fontSize: '16px',
-              outline: 'none',
-              transition: 'border-color 0.3s',
-              boxSizing: 'border-box',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-            onBlur={(e) => (e.target.style.borderColor = '#ddd')}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              color: '#555',
-              fontWeight: '500',
-            }}
-          >
-            Mô tả
-          </label>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={3}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: '15px',
-              border: '1px solid #ddd',
-              fontSize: '16px',
-              outline: 'none',
-              transition: 'border-color 0.3s',
-              boxSizing: 'border-box',
-              resize: 'vertical',
-              fontFamily: 'inherit',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-            onBlur={(e) => (e.target.style.borderColor = '#ddd')}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              color: '#555',
-              fontWeight: '500',
-            }}
-          >
-            Địa chỉ / Vị trí trên bản đồ
-          </label>
-          <div
-            style={{
-              borderRadius: '15px',
-              overflow: 'hidden',
-              border: '1px solid #ddd',
-            }}
-          >
-            <LocationPicker
-              address={form.shopAddress}
-              lat={form.shopLat}
-              lng={form.shopLng}
-              onChange={({ address, lat, lng }) => {
+              Địa chỉ shop
+            </label>
+            <VietnamAddressSelector
+              fullAddress={form.shopAddress}
+              onFullAddressChange={(full) => {
                 setForm((prev) => ({
                   ...prev,
-                  shopAddress: address ?? prev.shopAddress,
-                  shopLat: lat ?? prev.shopLat,
-                  shopLng: lng ?? prev.shopLng,
+                  shopAddress: full,
                 }));
               }}
             />
           </div>
-        </div>
 
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-          <div style={{ flex: 1 }}>
+          {/* Map */}
+          <div style={{ marginBottom: '20px' }}>
             <label
               style={{
                 display: 'block',
@@ -378,13 +396,128 @@ const ShopRegisterPage = () => {
                 fontWeight: '500',
               }}
             >
-              Vĩ độ (lat)
+              Vị trí trên bản đồ
+            </label>
+            <div
+              style={{
+                borderRadius: '15px',
+                overflow: 'hidden',
+                border: '1px solid #ddd',
+              }}
+            >
+              <LocationPicker
+                address={form.shopAddress}
+                lat={form.shopLat}
+                lng={form.shopLng}
+                onChange={({ address, lat, lng }) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    shopAddress: address ?? prev.shopAddress,
+                    shopLat: lat ?? prev.shopLat,
+                    shopLng: lng ?? prev.shopLng,
+                  }));
+                }}
+              />
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              marginBottom: '20px',
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  color: '#555',
+                  fontWeight: '500',
+                }}
+              >
+                Vĩ độ (lat)
+              </label>
+              <input
+                type="number"
+                step="0.0000001"
+                name="shopLat"
+                value={form.shopLat}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '25px',
+                  border: '1px solid #ddd',
+                  fontSize: '16px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = '#667eea')
+                }
+                onBlur={(e) =>
+                  (e.target.style.borderColor = '#ddd')
+                }
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  color: '#555',
+                  fontWeight: '500',
+                }}
+              >
+                Kinh độ (lng)
+              </label>
+              <input
+                type="number"
+                step="0.0000001"
+                name="shopLng"
+                value={form.shopLng}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '25px',
+                  border: '1px solid #ddd',
+                  fontSize: '16px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = '#667eea')
+                }
+                onBlur={(e) =>
+                  (e.target.style.borderColor = '#ddd')
+                }
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                color: '#555',
+                fontWeight: '500',
+              }}
+            >
+              Google Place ID
             </label>
             <input
-              type="number"
-              step="0.0000001"
-              name="shopLat"
-              value={form.shopLat}
+              type="text"
+              name="shopPlaceId"
+              value={form.shopPlaceId}
               onChange={handleChange}
               style={{
                 width: '100%',
@@ -396,11 +529,16 @@ const ShopRegisterPage = () => {
                 transition: 'border-color 0.3s',
                 boxSizing: 'border-box',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+              onFocus={(e) =>
+                (e.target.style.borderColor = '#667eea')
+              }
+              onBlur={(e) =>
+                (e.target.style.borderColor = '#ddd')
+              }
             />
           </div>
-          <div style={{ flex: 1 }}>
+
+          <div style={{ marginBottom: '20px' }}>
             <label
               style={{
                 display: 'block',
@@ -410,13 +548,12 @@ const ShopRegisterPage = () => {
                 fontWeight: '500',
               }}
             >
-              Kinh độ (lng)
+              Số điện thoại
             </label>
             <input
-              type="number"
-              step="0.0000001"
-              name="shopLng"
-              value={form.shopLng}
+              type="text"
+              name="shopPhone"
+              value={form.shopPhone}
               onChange={handleChange}
               style={{
                 width: '100%',
@@ -428,95 +565,34 @@ const ShopRegisterPage = () => {
                 transition: 'border-color 0.3s',
                 boxSizing: 'border-box',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-              onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+              onFocus={(e) =>
+                (e.target.style.borderColor = '#667eea')
+              }
+              onBlur={(e) =>
+                (e.target.style.borderColor = '#ddd')
+              }
             />
           </div>
-        </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              color: '#555',
-              fontWeight: '500',
-            }}
-          >
-            Google Place ID
-          </label>
-          <input
-            type="text"
-            name="shopPlaceId"
-            value={form.shopPlaceId}
-            onChange={handleChange}
+          <button
+            type="submit"
+            disabled={loading}
             style={{
               width: '100%',
-              padding: '12px 16px',
+              padding: '14px',
+              background: loading ? '#9ca3af' : '#667eea',
+              color: '#fff',
+              border: 'none',
               borderRadius: '25px',
-              border: '1px solid #ddd',
               fontSize: '16px',
-              outline: 'none',
-              transition: 'border-color 0.3s',
-              boxSizing: 'border-box',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-            onBlur={(e) => (e.target.style.borderColor = '#ddd')}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
-              color: '#555',
-              fontWeight: '500',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s',
             }}
           >
-            Số điện thoại
-          </label>
-          <input
-            type="text"
-            name="shopPhone"
-            value={form.shopPhone}
-            onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: '25px',
-              border: '1px solid #ddd',
-              fontSize: '16px',
-              outline: 'none',
-              transition: 'border-color 0.3s',
-              boxSizing: 'border-box',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-            onBlur={(e) => (e.target.style.borderColor = '#ddd')}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '14px',
-            background: loading ? '#9ca3af' : '#667eea',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '25px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'background 0.3s',
-          }}
-        >
-          {loading ? 'Đang tạo shop...' : 'Tạo shop'}
-        </button>
-      </form>
+            {loading ? 'Đang tạo shop...' : 'Tạo shop'}
+          </button>
+        </form>
       </div>
     </div>
   );

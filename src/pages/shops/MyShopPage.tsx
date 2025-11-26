@@ -13,8 +13,10 @@ import {
 } from '../../api/products.api';
 import type { Shop } from '../../api/types';
 import LocationPicker from '../../components/LocationPicker';
+import VietnamAddressSelector from '../../components/VietnamAddressSelector';
 
 import type { ProductListItem } from '../../api/types';
+
 interface EditFormState {
   name: string;
   email: string;
@@ -448,82 +450,155 @@ const MyShopPage = () => {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gridTemplateColumns:
+                    'repeat(auto-fit, minmax(250px, 1fr))',
                   gap: '16px',
                   marginBottom: '20px',
                 }}
               >
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Tên shop:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.name}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Slug:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.slug}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Trạng thái:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.status}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Email:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.email || '-'}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Mô tả:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.description || '-'}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Địa chỉ:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.shopAddress || '-'}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Toạ độ:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.shopLat && shop.shopLng
                       ? `${shop.shopLat}, ${shop.shopLng}`
                       : '-'}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     Place ID:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.shopPlaceId || '-'}
                   </div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555', fontSize: '14px' }}>
+                  <strong
+                    style={{ color: '#555', fontSize: '14px' }}
+                  >
                     SĐT:
                   </strong>
-                  <div style={{ color: '#1a1a1a', fontSize: '16px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      color: '#1a1a1a',
+                      fontSize: '16px',
+                      marginTop: '4px',
+                    }}
+                  >
                     {shop.shopPhone || '-'}
                   </div>
                 </div>
@@ -578,8 +653,12 @@ const MyShopPage = () => {
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
 
@@ -610,11 +689,16 @@ const MyShopPage = () => {
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
 
+              {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
               <div style={{ marginBottom: '20px' }}>
                 <label
                   style={{
@@ -625,7 +709,34 @@ const MyShopPage = () => {
                     fontWeight: '500',
                   }}
                 >
-                  Địa chỉ / Vị trí trên bản đồ
+                  Địa chỉ shop
+                </label>
+                <VietnamAddressSelector
+                  fullAddress={form.shopAddress}
+                  onFullAddressChange={(full) => {
+                    setForm((prev) => {
+                      if (!prev) return prev;
+                      return {
+                        ...prev,
+                        shopAddress: full,
+                      };
+                    });
+                  }}
+                />
+              </div>
+
+              {/* Map */}
+              <div style={{ marginBottom: '20px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    color: '#555',
+                    fontWeight: '500',
+                  }}
+                >
+                  Vị trí trên bản đồ
                 </label>
                 <div
                   style={{
@@ -641,10 +752,10 @@ const MyShopPage = () => {
                     onChange={({ address, lat, lng }) => {
                       setForm((prev) => {
                         if (!prev) return prev;
-
                         return {
                           ...prev,
-                          shopAddress: address ?? prev.shopAddress,
+                          shopAddress:
+                            address ?? prev.shopAddress,
                           shopLat: lat ?? prev.shopLat,
                           shopLng: lng ?? prev.shopLng,
                         };
@@ -654,7 +765,13 @@ const MyShopPage = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginBottom: '20px',
+                }}
+              >
                 <div style={{ flex: 1 }}>
                   <label
                     style={{
@@ -683,8 +800,12 @@ const MyShopPage = () => {
                       transition: 'border-color 0.3s',
                       boxSizing: 'border-box',
                     }}
-                    onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                    onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                    onFocus={(e) =>
+                      (e.target.style.borderColor = '#667eea')
+                    }
+                    onBlur={(e) =>
+                      (e.target.style.borderColor = '#ddd')
+                    }
                   />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -715,8 +836,12 @@ const MyShopPage = () => {
                       transition: 'border-color 0.3s',
                       boxSizing: 'border-box',
                     }}
-                    onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                    onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                    onFocus={(e) =>
+                      (e.target.style.borderColor = '#667eea')
+                    }
+                    onBlur={(e) =>
+                      (e.target.style.borderColor = '#ddd')
+                    }
                   />
                 </div>
               </div>
@@ -742,14 +867,18 @@ const MyShopPage = () => {
                     width: '100%',
                     padding: '12px 16px',
                     borderRadius: '25px',
-                    border: '1px solid #ddd',
+                    border: '1px solid #f3ededff',
                     fontSize: '16px',
                     outline: 'none',
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
 
@@ -780,8 +909,12 @@ const MyShopPage = () => {
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
 
@@ -824,8 +957,15 @@ const MyShopPage = () => {
           )}
         </section>
 
-        <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
+        <hr
+          style={{
+            margin: '32px 0',
+            border: 'none',
+            borderTop: '1px solid #e5e7eb',
+          }}
+        />
 
+        {/* SẢN PHẨM CỦA SHOP */}
         <section
           style={{
             padding: '24px',
@@ -848,10 +988,14 @@ const MyShopPage = () => {
           <div style={{ marginBottom: '20px' }}>
             <button
               type="button"
-              onClick={() => setShowCreateProduct((prev) => !prev)}
+              onClick={() =>
+                setShowCreateProduct((prev) => !prev)
+              }
               style={{
                 padding: '12px 24px',
-                background: showCreateProduct ? '#9ca3af' : '#16a34a',
+                background: showCreateProduct
+                  ? '#9ca3af'
+                  : '#16a34a',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '25px',
@@ -906,8 +1050,12 @@ const MyShopPage = () => {
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
               <div style={{ marginBottom: '20px' }}>
@@ -938,8 +1086,12 @@ const MyShopPage = () => {
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
               <div style={{ marginBottom: '20px' }}>
@@ -969,8 +1121,12 @@ const MyShopPage = () => {
                     transition: 'border-color 0.3s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
               <div style={{ marginBottom: '20px' }}>
@@ -1002,8 +1158,12 @@ const MyShopPage = () => {
                     resize: 'vertical',
                     fontFamily: 'inherit',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#667eea')}
-                  onBlur={(e) => (e.target.style.borderColor = '#ddd')}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = '#667eea')
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = '#ddd')
+                  }
                 />
               </div>
               <div style={{ marginBottom: '20px' }}>
@@ -1041,13 +1201,17 @@ const MyShopPage = () => {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  background: creatingProduct ? '#9ca3af' : '#667eea',
+                  background: creatingProduct
+                    ? '#9ca3af'
+                    : '#667eea',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '25px',
                   fontSize: '16px',
                   fontWeight: '600',
-                  cursor: creatingProduct ? 'not-allowed' : 'pointer',
+                  cursor: creatingProduct
+                    ? 'not-allowed'
+                    : 'pointer',
                   transition: 'background 0.3s',
                 }}
               >
@@ -1229,7 +1393,12 @@ const MyShopPage = () => {
                             }}
                           />
                         ) : (
-                          <span style={{ fontSize: 12, color: '#999' }}>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: '#999',
+                            }}
+                          >
                             Không có ảnh
                           </span>
                         )}
@@ -1260,7 +1429,11 @@ const MyShopPage = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => navigate(`/me/products/${p.id}/variants`)}
+                          onClick={() =>
+                            navigate(
+                              `/me/products/${p.id}/variants`,
+                            )
+                          }
                           style={{
                             padding: '8px 16px',
                             background: '#667eea',
