@@ -50,13 +50,14 @@ const MyShopPage = () => {
   const [productsError, setProductsError] = useState<string | null>(null);
 
   const [showCreateProduct, setShowCreateProduct] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateProductFormState>({
-    title: '',
-    price: '',
-    stock: '',
-    description: '',
-    images: null,
-  });
+  const [createForm, setCreateForm] =
+    useState<CreateProductFormState>({
+      title: '',
+      price: '',
+      stock: '',
+      description: '',
+      images: null,
+    });
   const [creatingProduct, setCreatingProduct] = useState(false);
 
   const navigate = useNavigate();
@@ -165,7 +166,9 @@ const MyShopPage = () => {
       if (res.success) {
         setProducts(res.data.items as any);
       } else {
-        setProductsError(res.message || 'Không lấy được sản phẩm.');
+        setProductsError(
+          res.message || 'Không lấy được sản phẩm.',
+        );
       }
     } catch (err: any) {
       setProductsError(
@@ -271,7 +274,9 @@ const MyShopPage = () => {
         <div className="shop-page-no-shop-card">
           <div className="shop-header-icon">🏬</div>
           <h1 className="shop-header-title">Shop của tôi</h1>
-          {error && <div className="shop-message-error">{error}</div>}
+          {error && (
+            <div className="shop-message-error">{error}</div>
+          )}
           <p className="shop-empty-text">Bạn chưa có shop.</p>
           <Link to="/shops/register" className="shop-link-button">
             Đăng ký shop ngay
@@ -289,39 +294,71 @@ const MyShopPage = () => {
           <h1 className="shop-header-title">Shop của tôi</h1>
         </div>
 
-        {error && <div className="shop-message-error">{error}</div>}
-        {successMsg && <div className="shop-message-success">{successMsg}</div>}
+        {error && (
+          <div className="shop-message-error">{error}</div>
+        )}
+        {successMsg && (
+          <div className="shop-message-success">
+            {successMsg}
+          </div>
+        )}
 
         <section className="shop-section">
           {!editing && (
             <>
               <div className="shop-grid-info">
                 <div>
-                  <strong className="shop-info-label">Tên shop:</strong>
-                  <div className="shop-info-value">{shop.name}</div>
+                  <strong className="shop-info-label">
+                    Tên shop:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.name}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Slug:</strong>
-                  <div className="shop-info-value">{shop.slug}</div>
+                  <strong className="shop-info-label">
+                    Slug:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.slug}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Trạng thái:</strong>
-                  <div className="shop-info-value">{shop.status}</div>
+                  <strong className="shop-info-label">
+                    Trạng thái:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.status}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Email:</strong>
-                  <div className="shop-info-value">{shop.email || '-'}</div>
+                  <strong className="shop-info-label">
+                    Email:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.email || '-'}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Mô tả:</strong>
-                  <div className="shop-info-value">{shop.description || '-'}</div>
+                  <strong className="shop-info-label">
+                    Mô tả:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.description || '-'}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Địa chỉ:</strong>
-                  <div className="shop-info-value">{shop.shopAddress || '-'}</div>
+                  <strong className="shop-info-label">
+                    Địa chỉ:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.shopAddress || '-'}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Toạ độ:</strong>
+                  <strong className="shop-info-label">
+                    Toạ độ:
+                  </strong>
                   <div className="shop-info-value">
                     {shop.shopLat && shop.shopLng
                       ? `${shop.shopLat}, ${shop.shopLng}`
@@ -329,16 +366,27 @@ const MyShopPage = () => {
                   </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">Place ID:</strong>
-                  <div className="shop-info-value">{shop.shopPlaceId || '-'}</div>
+                  <strong className="shop-info-label">
+                    Place ID:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.shopPlaceId || '-'}
+                  </div>
                 </div>
                 <div>
-                  <strong className="shop-info-label">SĐT:</strong>
-                  <div className="shop-info-value">{shop.shopPhone || '-'}</div>
+                  <strong className="shop-info-label">
+                    SĐT:
+                  </strong>
+                  <div className="shop-info-value">
+                    {shop.shopPhone || '-'}
+                  </div>
                 </div>
               </div>
 
-              <button onClick={() => setEditing(true)} className="shop-primary-button">
+              <button
+                onClick={() => setEditing(true)}
+                className="shop-primary-button"
+              >
                 Chỉnh sửa
               </button>
             </>
@@ -370,7 +418,9 @@ const MyShopPage = () => {
 
               {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Địa chỉ shop</label>
+                <label className="shop-form-label">
+                  Địa chỉ shop
+                </label>
                 <VietnamAddressSelector
                   fullAddress={form.shopAddress}
                   onFullAddressChange={(full) => {
@@ -387,19 +437,19 @@ const MyShopPage = () => {
 
               {/* Map */}
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Vị trí trên bản đồ</label>
+                <label className="shop-form-label">
+                  Vị trí trên bản đồ
+                </label>
                 <div className="shop-map-wrapper">
                   <LocationPicker
                     address={form.shopAddress}
                     lat={form.shopLat}
                     lng={form.shopLng}
-                    onChange={({ address, lat, lng }) => {
+                    onChange={({ lat, lng }) => {
                       setForm((prev) => {
                         if (!prev) return prev;
                         return {
                           ...prev,
-                          shopAddress:
-                            address ?? prev.shopAddress,
                           shopLat: lat ?? prev.shopLat,
                           shopLng: lng ?? prev.shopLng,
                         };
@@ -411,7 +461,9 @@ const MyShopPage = () => {
 
               <div className="shop-row">
                 <div className="shop-row-item">
-                  <label className="shop-form-label">Vĩ độ (lat)</label>
+                  <label className="shop-form-label">
+                    Vĩ độ (lat)
+                  </label>
                   <input
                     type="number"
                     name="shopLat"
@@ -422,7 +474,9 @@ const MyShopPage = () => {
                   />
                 </div>
                 <div className="shop-row-item">
-                  <label className="shop-form-label">Kinh độ (lng)</label>
+                  <label className="shop-form-label">
+                    Kinh độ (lng)
+                  </label>
                   <input
                     type="number"
                     name="shopLng"
@@ -435,7 +489,9 @@ const MyShopPage = () => {
               </div>
 
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Google Place ID</label>
+                <label className="shop-form-label">
+                  Google Place ID
+                </label>
                 <input
                   type="text"
                   name="shopPlaceId"
@@ -446,7 +502,9 @@ const MyShopPage = () => {
               </div>
 
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Số điện thoại</label>
+                <label className="shop-form-label">
+                  Số điện thoại
+                </label>
                 <input
                   type="text"
                   name="shopPhone"
@@ -457,7 +515,10 @@ const MyShopPage = () => {
               </div>
 
               <div className="shop-row">
-                <button type="submit" className="shop-primary-button shop-row-item">
+                <button
+                  type="submit"
+                  className="shop-primary-button shop-row-item"
+                >
                   Lưu thay đổi
                 </button>
                 <button
@@ -476,7 +537,9 @@ const MyShopPage = () => {
 
         {/* SẢN PHẨM CỦA SHOP */}
         <section className="shop-section">
-          <h2 className="shop-section-title">Sản phẩm của shop</h2>
+          <h2 className="shop-section-title">
+            Sản phẩm của shop
+          </h2>
 
           <div style={{ marginBottom: '20px' }}>
             <button
@@ -508,7 +571,9 @@ const MyShopPage = () => {
               }}
             >
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Tên sản phẩm</label>
+                <label className="shop-form-label">
+                  Tên sản phẩm
+                </label>
                 <input
                   type="text"
                   name="title"
@@ -519,7 +584,9 @@ const MyShopPage = () => {
                 />
               </div>
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Giá (VND)</label>
+                <label className="shop-form-label">
+                  Giá (VND)
+                </label>
                 <input
                   type="number"
                   name="price"
@@ -530,7 +597,9 @@ const MyShopPage = () => {
                 />
               </div>
               <div className="shop-register-form-group">
-                <label className="shop-form-label">Tồn kho ban đầu</label>
+                <label className="shop-form-label">
+                  Tồn kho ban đầu
+                </label>
                 <input
                   type="number"
                   name="stock"

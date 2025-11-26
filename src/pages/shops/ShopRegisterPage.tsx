@@ -33,9 +33,11 @@ const ShopRegisterPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [checkingName, setCheckingName] = useState(false);
-  const [nameExists, setNameExists] = useState<boolean | null>(null);
+  const [nameExists, setNameExists] =
+    useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] =
+    useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -57,11 +59,14 @@ const ShopRegisterPage = () => {
       if (res.success) {
         setNameExists(res.data.exists);
       } else {
-        setError(res.message || 'Không kiểm tra được tên shop.');
+        setError(
+          res.message || 'Không kiểm tra được tên shop.',
+        );
       }
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 'Có lỗi khi kiểm tra tên shop.',
+        err.response?.data?.message ||
+          'Có lỗi khi kiểm tra tên shop.',
       );
     } finally {
       setCheckingName(false);
@@ -86,9 +91,12 @@ const ShopRegisterPage = () => {
         payload.shopAddress = form.shopAddress.trim();
       if (form.shopPlaceId.trim())
         payload.shopPlaceId = form.shopPlaceId.trim();
-      if (form.shopPhone.trim()) payload.shopPhone = form.shopPhone.trim();
-      if (form.shopLat.trim()) payload.shopLat = parseFloat(form.shopLat);
-      if (form.shopLng.trim()) payload.shopLng = parseFloat(form.shopLng);
+      if (form.shopPhone.trim())
+        payload.shopPhone = form.shopPhone.trim();
+      if (form.shopLat.trim())
+        payload.shopLat = parseFloat(form.shopLat);
+      if (form.shopLng.trim())
+        payload.shopLng = parseFloat(form.shopLng);
 
       const res = await registerShop(payload);
 
@@ -114,17 +122,25 @@ const ShopRegisterPage = () => {
       <div className="shop-register-card">
         <div className="shop-register-header">
           <div className="shop-register-icon">🏬</div>
-          <h1 className="shop-register-title">Đăng ký shop</h1>
+          <h1 className="shop-register-title">
+            Đăng ký shop
+          </h1>
         </div>
 
-        {error && <div className="shop-register-error">{error}</div>}
+        {error && (
+          <div className="shop-register-error">{error}</div>
+        )}
         {successMsg && (
-          <div className="shop-register-success">{successMsg}</div>
+          <div className="shop-register-success">
+            {successMsg}
+          </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="shop-register-form-group">
-            <label className="shop-register-label">Tên shop (*)</label>
+            <label className="shop-register-label">
+              Tên shop (*)
+            </label>
             <div className="shop-register-name-row">
               <input
                 type="text"
@@ -141,7 +157,9 @@ const ShopRegisterPage = () => {
                 disabled={checkingName || !form.name.trim()}
                 className="shop-register-check-button"
               >
-                {checkingName ? 'Đang kiểm tra...' : 'Kiểm tra tên'}
+                {checkingName
+                  ? 'Đang kiểm tra...'
+                  : 'Kiểm tra tên'}
               </button>
             </div>
             {nameExists === true && (
@@ -180,7 +198,9 @@ const ShopRegisterPage = () => {
 
           {/* Địa chỉ 3 cấp + địa chỉ cụ thể */}
           <div className="shop-register-form-group">
-            <label className="shop-register-label">Địa chỉ shop</label>
+            <label className="shop-register-label">
+              Địa chỉ shop
+            </label>
             <VietnamAddressSelector
               fullAddress={form.shopAddress}
               onFullAddressChange={(full) => {
@@ -194,16 +214,17 @@ const ShopRegisterPage = () => {
 
           {/* Map */}
           <div className="shop-register-form-group">
-            <label className="shop-register-label">Vị trí trên bản đồ</label>
+            <label className="shop-register-label">
+              Vị trí trên bản đồ
+            </label>
             <div className="shop-register-map-wrapper">
               <LocationPicker
                 address={form.shopAddress}
                 lat={form.shopLat}
                 lng={form.shopLng}
-                onChange={({ address, lat, lng }) => {
+                onChange={({ lat, lng }) => {
                   setForm((prev) => ({
                     ...prev,
-                    shopAddress: address ?? prev.shopAddress,
                     shopLat: lat ?? prev.shopLat,
                     shopLng: lng ?? prev.shopLng,
                   }));
@@ -214,7 +235,9 @@ const ShopRegisterPage = () => {
 
           <div className="shop-register-row">
             <div className="shop-register-row-item">
-              <label className="shop-register-label">Vĩ độ (lat)</label>
+              <label className="shop-register-label">
+                Vĩ độ (lat)
+              </label>
               <input
                 type="number"
                 step="0.0000001"
@@ -225,7 +248,9 @@ const ShopRegisterPage = () => {
               />
             </div>
             <div className="shop-register-row-item">
-              <label className="shop-register-label">Kinh độ (lng)</label>
+              <label className="shop-register-label">
+                Kinh độ (lng)
+              </label>
               <input
                 type="number"
                 step="0.0000001"
@@ -238,7 +263,9 @@ const ShopRegisterPage = () => {
           </div>
 
           <div className="shop-register-form-group">
-            <label className="shop-register-label">Google Place ID</label>
+            <label className="shop-register-label">
+              Google Place ID
+            </label>
             <input
               type="text"
               name="shopPlaceId"
@@ -249,7 +276,9 @@ const ShopRegisterPage = () => {
           </div>
 
           <div className="shop-register-form-group">
-            <label className="shop-register-label">Số điện thoại</label>
+            <label className="shop-register-label">
+              Số điện thoại
+            </label>
             <input
               type="text"
               name="shopPhone"
