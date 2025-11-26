@@ -74,6 +74,26 @@
   padding: 12px;
   color: #666;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.deleted-users-loading::before {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .deleted-users-table {
@@ -100,8 +120,14 @@
   color: #374151;
 }
 
+.deleted-users-table tbody tr {
+  transition: all 0.2s;
+}
+
 .deleted-users-table tbody tr:hover {
-  background: #f9fafb;
+  background: #f3f4f6;
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .deleted-users-table-empty {

@@ -65,6 +65,13 @@
   margin-bottom: 24px;
   background: #fff;
   text-align: center;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.product-detail-main-image:hover {
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.12);
+  border-color: #667eea;
 }
 
 .product-detail-main-image img {
@@ -80,6 +87,13 @@
   border-radius: 15px;
   margin-bottom: 24px;
   background: #fff;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.product-detail-info-card:hover {
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
 }
 
 .product-detail-info-grid {
@@ -127,6 +141,13 @@
   border-radius: 15px;
   margin-bottom: 24px;
   background: #fff;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.product-detail-images-section:hover {
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
 }
 
 .product-detail-images-title {

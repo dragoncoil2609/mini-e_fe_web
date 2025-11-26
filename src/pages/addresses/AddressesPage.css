@@ -63,6 +63,26 @@
   text-align: center;
   color: #666;
   font-size: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.addresses-loading::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .addresses-error {
@@ -252,12 +272,14 @@
   border-radius: 12px;
   padding: 20px;
   border: 2px solid #e5e7eb;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .addresses-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.12);
+  transform: translateY(-3px);
+  border-color: #667eea;
 }
 
 .addresses-item-default {
