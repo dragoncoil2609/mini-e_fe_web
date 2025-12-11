@@ -1,4 +1,3 @@
-// src/pages/shops/ShopRegisterPage.tsx
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerShop, checkShopName } from '../../api/shop.api';
@@ -33,41 +32,25 @@ const ShopRegisterPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [checkingName, setCheckingName] = useState(false);
-  const [nameExists, setNameExists] =
-    useState<boolean | null>(null);
+  const [nameExists, setNameExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] =
-    useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === 'name') {
-      setNameExists(null);
-    }
+    if (name === 'name') setNameExists(null);
   };
 
   const handleCheckName = async () => {
     if (!form.name.trim()) return;
     setCheckingName(true);
-    setError(null);
-
     try {
       const res = await checkShopName(form.name.trim());
-      if (res.success) {
-        setNameExists(res.data.exists);
-      } else {
-        setError(
-          res.message || 'Không kiểm tra được tên shop.',
-        );
-      }
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          'Có lỗi khi kiểm tra tên shop.',
-      );
+      if (res.success) setNameExists(res.data.exists);
+    } catch (err) {
+      console.error(err);
     } finally {
       setCheckingName(false);
     }
@@ -77,40 +60,29 @@ const ShopRegisterPage = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccessMsg(null);
 
     try {
       const payload: any = {
         name: form.name.trim(),
+        shopAddress: form.shopAddress.trim(),
+        shopPhone: form.shopPhone.trim(),
       };
 
+      // Map optional fields
       if (form.email.trim()) payload.email = form.email.trim();
-      if (form.description.trim())
-        payload.description = form.description.trim();
-      if (form.shopAddress.trim())
-        payload.shopAddress = form.shopAddress.trim();
-      if (form.shopPhone.trim())
-        payload.shopPhone = form.shopPhone.trim();
-      if (form.shopLat.trim())
-        payload.shopLat = parseFloat(form.shopLat);
-      if (form.shopLng.trim())
-        payload.shopLng = parseFloat(form.shopLng);
-
-      // shopPlaceId hiện chưa dùng: bỏ input nhưng vẫn giữ payload nếu sau này có
+      if (form.description.trim()) payload.description = form.description.trim();
+      if (form.shopLat) payload.shopLat = parseFloat(form.shopLat);
+      if (form.shopLng) payload.shopLng = parseFloat(form.shopLng);
 
       const res = await registerShop(payload);
 
       if (res.success) {
-        setSuccessMsg('Đăng ký shop thành công!');
-        navigate('/shops/me');
+        navigate('/shops/me'); // Chuyển trang khi thành công
       } else {
-        setError(res.message || 'Đăng ký shop thất bại.');
+        setError(res.message || 'Đăng ký thất bại.');
       }
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          'Đăng ký shop thất bại. Vui lòng thử lại.',
-      );
+      setError(err.response?.data?.message || 'Lỗi kết nối server.');
     } finally {
       setLoading(false);
     }
@@ -118,148 +90,167 @@ const ShopRegisterPage = () => {
 
   return (
     <div className="shop-register-page">
-      <div className="shop-register-card">
-        <div className="shop-register-header">
-          <div className="shop-register-icon">🏬</div>
-          <h1 className="shop-register-title">
-            Đăng ký shop
-          </h1>
+      <div className="shop-register-container">
+        {/* Top bar giống format Me/Home */}
+        <div className="shop-register-topbar">
+          <button
+            type="button"
+            className="shop-topbar-btn shop-topbar-btn--ghost"
+            onClick={() => navigate('/home')}
+          >
+            ← Trang chủ
+          </button>
         </div>
 
-        {error && (
-          <div className="shop-register-error">{error}</div>
-        )}
-        {successMsg && (
-          <div className="shop-register-success">
-            {successMsg}
-          </div>
-        )}
+        {/* Header card */}
+        <div className="shop-register-header">
+          <h1 className="shop-register-title">Đăng ký mở shop</h1>
+          <p className="shop-register-subtitle">
+            Tạo cửa hàng của riêng bạn, quản lý sản phẩm và đơn hàng dễ dàng hơn.
+          </p>
+        </div>
+
+        {error && <div className="global-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">
-              Tên shop (*)
-            </label>
-            <div className="shop-register-name-row">
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                maxLength={150}
-                className="shop-register-input shop-register-name-input"
-              />
-              <button
-                type="button"
-                onClick={handleCheckName}
-                disabled={checkingName || !form.name.trim()}
-                className="shop-register-check-button"
-              >
-                {checkingName
-                  ? 'Đang kiểm tra...'
-                  : 'Kiểm tra tên'}
-              </button>
-            </div>
-            {nameExists === true && (
-              <div className="shop-register-name-error">
-                Tên shop đã tồn tại.
+          <div className="shop-register-content">
+            {/* --- CỘT TRÁI: THÔNG TIN CƠ BẢN --- */}
+            <div className="info-column">
+              <h3 className="section-heading">Thông tin cơ bản</h3>
+
+              {/* 1. Tên Shop */}
+              <div className="form-group">
+                <label className="form-label">Tên Shop (*)</label>
+                <div className="input-with-action">
+                  <input
+                    type="text"
+                    name="name"
+                    className="form-input"
+                    placeholder="Nhập tên shop của bạn..."
+                    value={form.name}
+                    onChange={handleChange}
+                    required
+                    maxLength={150}
+                  />
+                  <button
+                    type="button"
+                    className="btn-check-name"
+                    onClick={handleCheckName}
+                    disabled={checkingName || !form.name}
+                  >
+                    {checkingName ? '...' : 'Kiểm tra'}
+                  </button>
+                </div>
+                {nameExists === true && (
+                  <div className="msg-helper msg-error">
+                    Tên shop đã tồn tại!
+                  </div>
+                )}
+                {nameExists === false && (
+                  <div className="msg-helper msg-success">
+                    Tên shop hợp lệ.
+                  </div>
+                )}
               </div>
-            )}
-            {nameExists === false && (
-              <div className="shop-register-name-ok">
-                Tên shop có thể sử dụng.
+
+              {/* 2. Số điện thoại */}
+              <div className="form-group">
+                <label className="form-label">Số điện thoại (*)</label>
+                <input
+                  type="tel"
+                  name="shopPhone"
+                  className="form-input"
+                  placeholder="Ví dụ: 0912345678"
+                  value={form.shopPhone}
+                  onChange={handleChange}
+                  required
+                />
               </div>
-            )}
-          </div>
 
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="shop-register-input"
-            />
-          </div>
+              {/* 3. Địa chỉ hành chính + chi tiết */}
+              <div className="form-group">
+                <label className="form-label">
+                  Địa chỉ cụ thể (Số nhà, Tên đường)
+                </label>
+                <VietnamAddressSelector
+                  fullAddress={form.shopAddress}
+                  onFullAddressChange={(full) =>
+                    setForm((prev) => ({ ...prev, shopAddress: full }))
+                  }
+                  onLatLngChange={(lat, lng) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      shopLat: lat,
+                      shopLng: lng,
+                    }))
+                  }
+                />
+              </div>
 
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">Mô tả</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={3}
-              className="shop-register-textarea"
-            />
-          </div>
+              {/* 4. Email */}
+              <div className="form-group">
+                <label className="form-label">Email (Tuỳ chọn)</label>
+                <input
+                  type="email"
+                  name="email"
+                  className="form-input"
+                  placeholder="Email liên hệ shop"
+                  value={form.email}
+                  onChange={handleChange}
+                />
+              </div>
 
-          {/* Địa chỉ 3 cấp + địa chỉ cụ thể + gợi ý */}
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">
-              Địa chỉ shop
-            </label>
-            <VietnamAddressSelector
-              fullAddress={form.shopAddress}
-              onFullAddressChange={(full) => {
-                setForm((prev) => ({
-                  ...prev,
-                  shopAddress: full,
-                }));
-              }}
-              onLatLngChange={(lat, lng) => {
-                setForm((prev) => ({
-                  ...prev,
-                  shopLat: lat,
-                  shopLng: lng,
-                }));
-              }}
-            />
-          </div>
+              {/* 5. Mô tả */}
+              <div className="form-group">
+                <label className="form-label">Mô tả (Tuỳ chọn)</label>
+                <textarea
+                  name="description"
+                  className="form-textarea"
+                  placeholder="Giới thiệu đôi nét về cửa hàng..."
+                  value={form.description}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
 
-          {/* Map */}
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">
-              Vị trí trên bản đồ
-            </label>
-            <div className="shop-register-map-wrapper">
-              <LocationPicker
-                address={form.shopAddress}
-                lat={form.shopLat}
-                lng={form.shopLng}
-                onChange={({ lat, lng }) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    shopLat: lat ?? prev.shopLat,
-                    shopLng: lng ?? prev.shopLng,
-                  }));
-                }}
-              />
+            {/* --- CỘT PHẢI: BẢN ĐỒ --- */}
+            <div className="map-column">
+              <h3 className="section-heading">Chọn vị trí trên bản đồ</h3>
+              <div className="map-wrapper">
+                <LocationPicker
+                  address={form.shopAddress}
+                  lat={form.shopLat}
+                  lng={form.shopLng}
+                  onChange={({ lat, lng }) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      shopLat: lat ?? prev.shopLat,
+                      shopLng: lng ?? prev.shopLng,
+                    }))
+                  }
+                />
+              </div>
+              <p className="map-helper-text">
+                * Kéo/thả ghim để chọn chính xác vị trí shop của bạn để Shipper
+                dễ tìm.
+              </p>
             </div>
           </div>
 
-          {/* Không còn input Lat/Lng/PlaceId, chỉ còn SĐT */}
-          <div className="shop-register-form-group">
-            <label className="shop-register-label">
-              Số điện thoại
-            </label>
-            <input
-              type="text"
-              name="shopPhone"
-              value={form.shopPhone}
-              onChange={handleChange}
-              className="shop-register-input"
-            />
+          {/* --- FOOTER: BUTTON --- */}
+          <div className="register-footer">
+            <button
+              type="submit"
+              className="btn-submit-main"
+              disabled={loading}
+            >
+              {loading ? 'Đang xử lý...' : 'Đăng ký shop'}
+            </button>
+            <p className="terms-text">
+              Bằng cách đăng ký, bạn đồng ý với Điều khoản và Điều kiện của
+              Mini&nbsp;E.
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="shop-register-submit"
-          >
-            {loading ? 'Đang tạo shop...' : 'Tạo shop'}
-          </button>
         </form>
       </div>
     </div>

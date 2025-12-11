@@ -1,172 +1,268 @@
+/* Nền xám + card trắng giống Home / Me */
 .shop-register-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 40px 20px;
-}
-
-.shop-register-card {
-  max-width: 800px;
-  margin: 0 auto;
-  background: #f8f9fa;
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-}
-
-.shop-register-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.shop-register-icon {
-  width: 80px;
-  height: 80px;
-  background: #667eea;
-  border-radius: 50%;
-  margin: 0 auto 20px;
+  background-color: #f5f7fa;
+  padding: 32px 16px 40px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  font-size: 40px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.shop-register-container {
+  width: 100%;
+  max-width: 1100px;
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+  border: 1px solid #e5e7eb;
+  padding: 22px 24px 30px;
+}
+
+/* Top bar giống MeProfile */
+.shop-register-topbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.shop-topbar-btn {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s,
+    transform 0.1s;
+}
+
+.shop-topbar-btn--ghost {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+
+.shop-topbar-btn--ghost:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+/* Header card nhẹ phía trên form */
+.shop-register-header {
+  background: linear-gradient(135deg, #eef2ff 0%, #fef9c3 100%);
+  border-radius: 18px;
+  padding: 16px 18px 14px;
+  margin-bottom: 20px;
 }
 
 .shop-register-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: #1a1a1a;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  color: #111827;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.shop-register-subtitle {
+  font-size: 14px;
+  color: #4b5563;
   margin: 0;
 }
 
-.shop-register-error {
-  color: #dc2626;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #fee2e2;
-  border-radius: 8px;
-  font-size: 14px;
+/* Layout 2 cột giống các page khác */
+.shop-register-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-bottom: 28px;
 }
 
-.shop-register-success {
-  color: #16a34a;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #dcfce7;
-  border-radius: 8px;
-  font-size: 14px;
+.info-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.shop-register-form-group {
-  margin-bottom: 20px;
-}
-
-.shop-register-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: #555;
-  font-weight: 500;
-}
-
-.shop-register-input,
-.shop-register-textarea {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 25px;
-  border: 1px solid #ddd;
+/* Tiêu đề section */
+.section-heading {
   font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+}
+
+/* Form nhóm */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* Input & Textarea style giống Me */
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
   outline: none;
-  transition: border-color 0.3s;
   box-sizing: border-box;
+  background: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
-.shop-register-input:focus,
-.shop-register-textarea:focus {
+.form-input:focus,
+.form-textarea:focus {
   border-color: #667eea;
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.25);
+  background: #ffffff;
 }
 
-.shop-register-textarea {
-  border-radius: 15px;
+.form-textarea {
+  min-height: 90px;
   resize: vertical;
-  font-family: inherit;
 }
 
-.shop-register-name-row {
+/* Input + button check name */
+.input-with-action {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
 }
 
-.shop-register-name-input {
-  flex: 1;
-}
-
-.shop-register-check-button {
-  padding: 12px 20px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 25px;
-  font-size: 14px;
-  font-weight: 500;
+.btn-check-name {
+  padding: 0 14px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
   cursor: pointer;
-  white-space: nowrap;
-}
-
-.shop-register-check-button:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
-
-.shop-register-name-error {
-  color: #dc2626;
-  margin-top: 4px;
-  font-size: 14px;
-  padding: 8px;
-  background: #fee2e2;
-  border-radius: 8px;
-}
-
-.shop-register-name-ok {
-  color: #16a34a;
-  margin-top: 4px;
-  font-size: 14px;
-  padding: 8px;
-  background: #dcfce7;
-  border-radius: 8px;
-}
-
-.shop-register-map-wrapper {
-  border-radius: 15px;
-  overflow: hidden;
-  border: 1px solid #ddd;
-}
-
-.shop-register-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.shop-register-row-item {
-  flex: 1;
-}
-
-.shop-register-submit {
-  width: 100%;
-  padding: 14px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 25px;
-  font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.2s;
 }
 
-.shop-register-submit:disabled {
-  background: #9ca3af;
+.btn-check-name:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.btn-check-name:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* Helper text */
+.msg-helper {
+  font-size: 12px;
+  margin-top: 4px;
+}
 
+.msg-error {
+  color: #dc2626;
+}
+
+.msg-success {
+  color: #16a34a;
+}
+
+/* Cột map */
+.map-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.map-wrapper {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 320px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+}
+
+.map-helper-text {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Footer submit */
+.register-footer {
+  text-align: center;
+  margin-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 20px;
+}
+
+.btn-submit-main {
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px 34px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: all 0.2s;
+}
+
+.btn-submit-main:hover:not(:disabled) {
+  background-color: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.4);
+}
+
+.btn-submit-main:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.terms-text {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Alert lỗi chung */
+.global-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .shop-register-container {
+    padding: 18px 16px 24px;
+    border-radius: 18px;
+  }
+
+  .shop-register-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
