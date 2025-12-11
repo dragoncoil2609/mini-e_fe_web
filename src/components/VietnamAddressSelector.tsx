@@ -32,7 +32,6 @@ interface SuggestItem {
 }
 
 const VietnamAddressSelector: React.FC<VietnamAddressSelectorProps> = ({
-  fullAddress,
   onFullAddressChange,
   onLatLngChange,
 }) => {
