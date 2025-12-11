@@ -86,3 +86,28 @@ export async function deleteShop(id: number): Promise<ApiResponse<null>> {
   const res = await http.delete<ApiResponse<null>>(`/shops/${id}`);
   return res.data;
 }
+
+export async function uploadShopLogo(file: File): Promise<ApiResponse<Shop>> {
+  const formData = new FormData();
+  formData.append('file', file); // 'file' phải khớp với @UploadedFile() bên NestJS
+  
+  const res = await http.patch<ApiResponse<Shop>>('/shops/me/logo', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
+}
+
+// 8) Upload Cover Shop
+export async function uploadShopCover(file: File): Promise<ApiResponse<Shop>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const res = await http.patch<ApiResponse<Shop>>('/shops/me/cover', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
+}

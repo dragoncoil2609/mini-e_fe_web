@@ -1,14 +1,19 @@
-// src/pages/shops/MyShopPage.tsx
 import {
   useEffect,
   useState,
+  useRef,
   type FormEvent,
   type ChangeEvent,
 } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { getMyShop, updateShop } from '../../api/shop.api';
+import { useNavigate } from 'react-router-dom';
 import {
-  getPublicProducts,
+  getMyShop,
+  updateShop,
+  uploadShopLogo,
+  uploadShopCover,
+} from '../../api/shop.api';
+import {
+  getProductsByShop,
   createProductMultipart,
 } from '../../api/products.api';
 import type { Shop, ProductListItem } from '../../api/types';
@@ -16,6 +21,15 @@ import { getMainImageUrl } from '../../utils/productImage';
 import LocationPicker from '../../components/LocationPicker';
 import VietnamAddressSelector from '../../components/VietnamAddressSelector';
 import './MyShopPage.css';
+
+interface ShopWithStats extends Shop {
+  productCount?: number;
+  totalRevenue?: number;
+  totalOrders?: number;
+  totalSold?: number;
+  logoUrl?: string | null;
+  coverUrl?: string | null;
+}
 
 interface EditFormState {
   name: string;
@@ -37,38 +51,57 @@ interface CreateProductFormState {
 }
 
 const MyShopPage = () => {
-  const [shop, setShop] = useState<Shop | null>(null);
+  const navigate = useNavigate();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const [shop, setShop] = useState<ShopWithStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // --- STATE LOADING UPLOAD ---
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] =
-    useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [form, setForm] = useState<EditFormState | null>(null);
 
-  const [products, setProducts] = useState<ProductListItem[]>(
-    [],
-  );
-  const [productsLoading, setProductsLoading] =
-    useState(false);
-  const [productsError, setProductsError] =
-    useState<string | null>(null);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
 
-  const [showCreateProduct, setShowCreateProduct] =
-    useState(false);
-  const [createForm, setCreateForm] =
-    useState<CreateProductFormState>({
-      title: '',
-      price: '',
-      stock: '',
-      description: '',
-      images: null,
-    });
-  const [creatingProduct, setCreatingProduct] =
-    useState(false);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateProductFormState>({
+    title: '',
+    price: '',
+    stock: '',
+    description: '',
+    images: null,
+  });
+  const [creatingProduct, setCreatingProduct] = useState(false);
 
-  const navigate = useNavigate();
+  const formatCurrency = (val: number | string | undefined) => {
+    const num = Number(val);
+    if (isNaN(num)) return '0 ₫';
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(num);
+  };
 
-  // ================= SHOP =================
+  const loadProducts = async (shopId: number) => {
+    setProductsLoading(true);
+    try {
+      const res = await getProductsByShop(shopId, { page: 1, limit: 20 });
+      if (res.success) {
+        setProducts(res.data.items);
+      }
+    } catch (err) {
+      console.error('Lỗi tải sản phẩm:', err);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
 
   const loadMyShop = async () => {
     setLoading(true);
@@ -76,28 +109,25 @@ const MyShopPage = () => {
     try {
       const res = await getMyShop();
       if (res.success) {
-        setShop(res.data);
+        const data = res.data as unknown as ShopWithStats;
+        setShop(data);
         setForm({
-          name: res.data.name,
-          email: res.data.email || '',
-          description: res.data.description || '',
-          shopAddress: res.data.shopAddress || '',
-          shopLat: res.data.shopLat || '',
-          shopLng: res.data.shopLng || '',
-          shopPlaceId: res.data.shopPlaceId || '',
-          shopPhone: res.data.shopPhone || '',
+          name: data.name,
+          email: data.email || '',
+          description: data.description || '',
+          shopAddress: data.shopAddress || '',
+          shopLat: data.shopLat || '',
+          shopLng: data.shopLng || '',
+          shopPlaceId: data.shopPlaceId || '',
+          shopPhone: data.shopPhone || '',
         });
-
-        void loadProducts(res.data.id);
+        void loadProducts(data.id);
       } else {
-        setError(res.message || 'Không lấy được thông tin shop.');
+        setError(res.message || 'Lỗi tải shop.');
       }
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Bạn chưa có shop hoặc có lỗi xảy ra.';
-      setError(msg);
-      setShop(null);
+      console.error(err);
+      setError('Bạn chưa có shop hoặc lỗi kết nối.');
     } finally {
       setLoading(false);
     }
@@ -107,7 +137,58 @@ const MyShopPage = () => {
     void loadMyShop();
   }, []);
 
-  const handleChange = (
+  // --- HANDLE UPLOAD LOGO ---
+  const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !shop) return;
+
+    setLogoUploading(true);
+    setSuccessMsg(null);
+
+    try {
+      const res = await uploadShopLogo(file);
+      if (res.success) {
+        setShop((prev) =>
+          prev ? { ...prev, logoUrl: res.data.logoUrl } : null,
+        );
+        setSuccessMsg('Đã cập nhật Logo thành công!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi upload logo. Vui lòng thử lại.');
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  // --- HANDLE UPLOAD COVER ---
+  const handleCoverChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !shop) return;
+
+    setCoverUploading(true);
+    setSuccessMsg(null);
+
+    try {
+      const res = await uploadShopCover(file);
+      if (res.success) {
+        setShop((prev) =>
+          prev ? { ...prev, coverUrl: res.data.coverUrl } : null,
+        );
+        setSuccessMsg('Đã cập nhật Ảnh bìa thành công!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi upload ảnh bìa. Vui lòng thử lại.');
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  };
+
+  // --- HANDLE EDIT FORM ---
+  const handleEditChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     if (!form) return;
@@ -115,124 +196,49 @@ const MyShopPage = () => {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!shop || !form) return;
 
-    setError(null);
-    setSuccessMsg(null);
-
     try {
-      const payload: any = {};
-      if (form.name.trim() && form.name.trim() !== shop.name) {
-        payload.name = form.name.trim();
-      }
-      payload.email = form.email.trim() || null;
-      payload.description = form.description.trim() || null;
-      payload.shopAddress = form.shopAddress.trim() || null;
-      payload.shopPhone = form.shopPhone.trim() || null;
-
-      payload.shopLat = form.shopLat.trim()
-        ? parseFloat(form.shopLat)
-        : null;
-      payload.shopLng = form.shopLng.trim()
-        ? parseFloat(form.shopLng)
-        : null;
+      const payload: any = { ...form };
+      if (form.shopLat) payload.shopLat = parseFloat(form.shopLat);
+      if (form.shopLng) payload.shopLng = parseFloat(form.shopLng);
 
       const res = await updateShop(shop.id, payload);
       if (res.success) {
-        setShop(res.data);
-        setSuccessMsg('Cập nhật shop thành công!');
+        setShop(res.data as unknown as ShopWithStats);
+        setSuccessMsg('Cập nhật thông tin shop thành công!');
         setEditing(false);
       } else {
-        setError(res.message || 'Cập nhật thất bại.');
+        alert(res.message);
       }
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.message ||
-          'Cập nhật thất bại. Vui lòng thử lại.',
-      );
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi cập nhật thông tin shop.');
     }
   };
 
-  // ================= PRODUCTS CỦA SHOP =================
-
-  const loadProducts = async (shopId: number) => {
-    setProductsLoading(true);
-    setProductsError(null);
-    try {
-      const res = await getPublicProducts({
-        page: 1,
-        limit: 50,
-        shopId,
-      });
-      if (res.success) {
-        setProducts(res.data.items as any);
-      } else {
-        setProductsError(
-          res.message || 'Không lấy được sản phẩm.',
-        );
-      }
-    } catch (err: any) {
-      setProductsError(
-        err?.response?.data?.message ||
-          'Không lấy được danh sách sản phẩm.',
-      );
-    } finally {
-      setProductsLoading(false);
-    }
-  };
-
-  const handleCreateInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setCreateForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleCreateImagesChange = (
-    e: ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = e.target.files;
-    setCreateForm((prev) => ({
-      ...prev,
-      images: files,
-    }));
-  };
-
+  // --- HANDLE CREATE PRODUCT ---
   const handleCreateProductSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!shop) return;
-
-    setError(null);
-    setSuccessMsg(null);
     setCreatingProduct(true);
-
     try {
       const fd = new FormData();
-      fd.append('title', createForm.title.trim());
-      fd.append('price', createForm.price.trim());
-      if (createForm.stock.trim()) {
-        fd.append('stock', createForm.stock.trim());
+      fd.append('title', createForm.title);
+      fd.append('price', createForm.price);
+      fd.append('stock', createForm.stock);
+      fd.append('description', createForm.description);
+      if (createForm.images) {
+        Array.from(createForm.images).forEach((f) =>
+          fd.append('images', f),
+        );
       }
-      if (createForm.description.trim()) {
-        fd.append('description', createForm.description.trim());
-      }
-
-      if (createForm.images && createForm.images.length > 0) {
-        Array.from(createForm.images).forEach((file) => {
-          fd.append('images', file);
-        });
-      }
-
       const res = await createProductMultipart(fd);
       if (res.success) {
-        const newProduct = res.data;
-        setSuccessMsg('Tạo sản phẩm thành công!');
-        void loadProducts(shop.id);
+        alert('Tạo sản phẩm thành công!');
+        setShowCreateProduct(false);
         setCreateForm({
           title: '',
           price: '',
@@ -240,438 +246,544 @@ const MyShopPage = () => {
           description: '',
           images: null,
         });
-        setShowCreateProduct(false);
-        navigate(`/me/products/${newProduct.id}/variants`);
+        void loadProducts(shop.id);
       } else {
-        setError(res.message || 'Tạo sản phẩm thất bại.');
+        alert(res.message);
       }
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.message ||
-          'Tạo sản phẩm thất bại. Vui lòng thử lại.',
-      );
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi tạo sản phẩm.');
     } finally {
       setCreatingProduct(false);
     }
   };
 
-  // ================= RENDER =================
-
+  // --- RENDER LOADING / EMPTY ---
   if (loading) {
     return (
-      <div className="shop-page-loading">
-        Đang tải...
+      <div className="myshop-page-root">
+        <div className="myshop-loading-card">
+          Đang tải dữ liệu shop...
+        </div>
       </div>
     );
   }
 
   if (!shop) {
     return (
-      <div className="shop-page-no-shop-container">
-        <div className="shop-page-no-shop-card">
-          <div className="shop-header-icon">🏬</div>
-          <h1 className="shop-header-title">Shop của tôi</h1>
-          {error && (
-            <div className="shop-message-error">{error}</div>
-          )}
-          <p className="shop-empty-text">Bạn chưa có shop.</p>
-          <Link to="/shops/register" className="shop-link-button">
-            Đăng ký shop ngay
-          </Link>
+      <div className="myshop-page-root">
+        <div className="myshop-empty-card">
+          Bạn chưa có shop. Hãy đăng ký mở shop trước.
         </div>
       </div>
     );
   }
 
+  // --- RENDER CHÍNH ---
   return (
-    <div className="shop-page-container">
-      <div className="shop-page-card">
-        <div className="shop-header">
-          <button onClick={() => navigate('/home')} className="home-button">
-            🏠 Về trang chủ
+    <div className="myshop-page-root">
+      <div className="myshop-container">
+        {/* Top bar */}
+        <div className="myshop-topbar">
+          <button
+            type="button"
+            className="myshop-topbar-btn myshop-topbar-btn--ghost"
+            onClick={() => navigate('/home')}
+          >
+            ← Trang chủ
           </button>
-          <div className="shop-header-icon">🏬</div>
-          <h1 className="shop-header-title">Shop của tôi</h1>
         </div>
 
-        {error && (
-          <div className="shop-message-error">{error}</div>
-        )}
         {successMsg && (
-          <div className="shop-message-success">
-            {successMsg}
+          <div className="myshop-success">{successMsg}</div>
+        )}
+        {error && <div className="myshop-error">{error}</div>}
+
+        {/* Hidden file inputs */}
+        <input
+          type="file"
+          ref={logoInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
+          onChange={handleLogoChange}
+        />
+        <input
+          type="file"
+          ref={coverInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
+          onChange={handleCoverChange}
+        />
+
+        {/* HEADER: Cover + Logo + Tên shop */}
+        <div className="myshop-header-section">
+          {/* Ảnh bìa */}
+          <div
+            className={`myshop-cover ${
+              !shop.coverUrl ? 'empty-cover' : ''
+            } ${coverUploading ? 'loading' : ''}`}
+            style={
+              shop.coverUrl
+                ? { backgroundImage: `url(${shop.coverUrl})` }
+                : {}
+            }
+            onClick={() =>
+              !editing &&
+              !coverUploading &&
+              coverInputRef.current?.click()
+            }
+          >
+            {!shop.coverUrl && (
+              <span className="myshop-cover-placeholder">
+                Chưa có ảnh bìa
+              </span>
+            )}
+
+            {!editing && !coverUploading && (
+              <div className="btn-upload-icon">📷</div>
+            )}
+
+            {coverUploading && (
+              <div className="upload-loading-overlay">
+                <div className="spinner" />
+              </div>
+            )}
+          </div>
+
+          {/* Logo + Tên + Trạng thái */}
+          <div className="myshop-avatar-container">
+            <div
+              className={`myshop-avatar ${
+                logoUploading ? 'loading' : ''
+              }`}
+              onClick={() =>
+                !editing &&
+                !logoUploading &&
+                logoInputRef.current?.click()
+              }
+            >
+              {shop.logoUrl ? (
+                <img src={shop.logoUrl} alt="Logo" />
+              ) : (
+                <span>Logo</span>
+              )}
+
+              {!editing && !logoUploading && (
+                <div className="btn-upload-icon">📷</div>
+              )}
+
+              {logoUploading && (
+                <div className="upload-loading-overlay">
+                  <div className="spinner" />
+                </div>
+              )}
+            </div>
+
+            <div className="myshop-name-block">
+              <h1 className="myshop-name">{shop.name}</h1>
+              <span
+                className={`status-badge status-${shop.status.toLowerCase()}`}
+              >
+                {shop.status}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* STATS */}
+        {!editing && (
+          <div className="stats-grid">
+            <div className="stat-item">
+              <div className="stat-label">Sản phẩm</div>
+              <div className="stat-value">
+                <span className="stat-icon">📄</span>
+                {shop.productCount || 0}
+              </div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Doanh thu</div>
+              <div className="stat-value">
+                {formatCurrency(shop.totalRevenue)}
+              </div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Đơn hàng</div>
+              <div className="stat-value">
+                {shop.totalOrders || 0}
+              </div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Đã bán</div>
+              <div className="stat-value">
+                <span className="stat-icon">📦</span>
+                {shop.totalSold || 0}
+              </div>
+            </div>
           </div>
         )}
 
-        <section className="shop-section">
-          {!editing && (
-            <>
-              <div className="shop-grid-info">
-                <div>
-                  <strong className="shop-info-label">
-                    Tên shop:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.name}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    Slug:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.slug}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    Trạng thái:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.status}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    Email:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.email || '-'}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    Mô tả:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.description || '-'}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    Địa chỉ:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.shopAddress || '-'}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    Toạ độ:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.shopLat && shop.shopLng
-                      ? `${shop.shopLat}, ${shop.shopLng}`
-                      : '-'}
-                  </div>
-                </div>
-                <div>
-                  <strong className="shop-info-label">
-                    SĐT:
-                  </strong>
-                  <div className="shop-info-value">
-                    {shop.shopPhone || '-'}
-                  </div>
-                </div>
+        {/* INFO / EDIT FORM */}
+        {!editing && (
+          <div className="info-container">
+            <button
+              type="button"
+              className="btn-edit-float"
+              onClick={() => setEditing(true)}
+            >
+              ✏️ Chỉnh sửa thông tin
+            </button>
+            <div className="info-column">
+              <h3>Thông tin liên hệ</h3>
+              <div className="info-row">
+                <span className="info-key">Địa chỉ:</span>
+                <span className="info-val">
+                  {shop.shopAddress || '(Chưa cập nhật)'}
+                </span>
               </div>
+              <div className="info-row">
+                <span className="info-key">SĐT:</span>
+                <span className="info-val">
+                  {shop.shopPhone || '(Chưa cập nhật)'}
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-key">Email:</span>
+                <span className="info-val">
+                  {shop.email || '(Chưa cập nhật)'}
+                </span>
+              </div>
+            </div>
+            <div className="info-column">
+              <h3>Chi tiết Shop</h3>
+              <div className="info-row">
+                <span className="info-key">Mô tả:</span>
+                <span className="info-val">
+                  {shop.description || 'Chưa có mô tả.'}
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-key">Slug:</span>
+                <span className="info-val">@{shop.slug}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-key">Toạ độ:</span>
+                <span className="info-val">
+                  {shop.shopLat
+                    ? `${shop.shopLat}, ${shop.shopLng}`
+                    : 'Chưa định vị'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-              <button
-                onClick={() => setEditing(true)}
-                className="shop-primary-button"
-              >
-                Chỉnh sửa
-              </button>
-            </>
-          )}
-
-          {editing && form && (
-            <form onSubmit={handleSubmit}>
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Tên shop
-                </label>
+        {editing && form && (
+          <div className="edit-form-wrapper">
+            <h2 className="edit-form-title">
+              Chỉnh sửa thông tin Shop
+            </h2>
+            <form onSubmit={handleEditSubmit}>
+              <div className="edit-form-row">
+                <label className="form-label">Tên Shop</label>
                 <input
-                  type="text"
+                  className="form-input"
                   name="name"
                   value={form.name}
-                  onChange={handleChange}
-                  className="shop-input"
+                  onChange={handleEditChange}
+                  required
                 />
               </div>
 
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  className="shop-input"
-                />
-              </div>
-
-              {/* Địa chỉ + gợi ý */}
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Địa chỉ shop
-                </label>
-                <VietnamAddressSelector
-                  fullAddress={form.shopAddress}
-                  onFullAddressChange={(full) => {
-                    setForm((prev) => {
-                      if (!prev) return prev;
-                      return {
-                        ...prev,
-                        shopAddress: full,
-                      };
-                    });
-                  }}
-                  onLatLngChange={(lat, lng) => {
-                    setForm((prev) => {
-                      if (!prev) return prev;
-                      return {
-                        ...prev,
-                        shopLat: lat,
-                        shopLng: lng,
-                      };
-                    });
-                  }}
-                />
-              </div>
-
-              {/* Map */}
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Vị trí trên bản đồ
-                </label>
-                <div className="shop-map-wrapper">
-                  <LocationPicker
-                    address={form.shopAddress}
-                    lat={form.shopLat}
-                    lng={form.shopLng}
-                    onChange={({ lat, lng }) => {
-                      setForm((prev) => {
-                        if (!prev) return prev;
-                        return {
-                          ...prev,
-                          shopLat: lat ?? prev.shopLat,
-                          shopLng: lng ?? prev.shopLng,
-                        };
-                      });
-                    }}
+              <div className="edit-form-row edit-form-row--2col">
+                <div className="edit-form-col">
+                  <label className="form-label">Email</label>
+                  <input
+                    className="form-input"
+                    name="email"
+                    value={form.email}
+                    onChange={handleEditChange}
+                  />
+                </div>
+                <div className="edit-form-col">
+                  <label className="form-label">
+                    Số điện thoại
+                  </label>
+                  <input
+                    className="form-input"
+                    name="shopPhone"
+                    value={form.shopPhone}
+                    onChange={handleEditChange}
                   />
                 </div>
               </div>
 
-              {/* Không còn input Lat/Lng/PlaceId, chỉ giữ SĐT */}
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Số điện thoại
-                </label>
-                <input
-                  type="text"
-                  name="shopPhone"
-                  value={form.shopPhone}
-                  onChange={handleChange}
-                  className="shop-input"
+              <div className="edit-form-row">
+                <label className="form-label">Mô tả</label>
+                <textarea
+                  className="form-input"
+                  name="description"
+                  rows={3}
+                  value={form.description}
+                  onChange={handleEditChange}
                 />
               </div>
 
-              <div className="shop-row">
-                <button
-                  type="submit"
-                  className="shop-primary-button shop-row-item"
-                >
+              <div className="edit-form-row">
+                <label className="form-label">
+                  Địa chỉ hành chính
+                </label>
+                <VietnamAddressSelector
+                  fullAddress={form.shopAddress}
+                  onFullAddressChange={(full) =>
+                    setForm((p) =>
+                      p ? { ...p, shopAddress: full } : null,
+                    )
+                  }
+                  onLatLngChange={(lat, lng) =>
+                    setForm((p) =>
+                      p
+                        ? {
+                            ...p,
+                            shopLat: lat,
+                            shopLng: lng,
+                          }
+                        : null,
+                    )
+                  }
+                />
+              </div>
+
+              <div className="edit-form-row">
+                <label className="form-label">
+                  Ghim vị trí trên bản đồ
+                </label>
+                <div className="edit-map-wrapper">
+                  <LocationPicker
+                    address={form.shopAddress}
+                    lat={form.shopLat}
+                    lng={form.shopLng}
+                    onChange={({ lat, lng }) =>
+                      setForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              shopLat: lat || '',
+                              shopLng: lng || '',
+                            }
+                          : null,
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="edit-form-actions">
+                <button type="submit" className="btn-primary">
                   Lưu thay đổi
                 </button>
                 <button
                   type="button"
+                  className="btn-secondary"
                   onClick={() => setEditing(false)}
-                  className="shop-secondary-button shop-row-item"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
               </div>
             </form>
-          )}
-        </section>
+          </div>
+        )}
 
-        <hr className="shop-hr" />
-
-        {/* SẢN PHẨM CỦA SHOP */}
-        <section className="shop-section">
-          <h2 className="shop-section-title">
-            Sản phẩm của shop
-          </h2>
-
-          <div style={{ marginBottom: '20px' }}>
+        {/* DANH SÁCH SẢN PHẨM */}
+        <div className="myshop-products-section">
+          <div className="action-bar">
+            <h2 className="section-title">Danh sách sản phẩm</h2>
             <button
               type="button"
+              className="btn-primary"
               onClick={() =>
-                setShowCreateProduct((prev) => !prev)
-              }
-              className={
-                showCreateProduct
-                  ? 'shop-toggle-button shop-toggle-button--secondary'
-                  : 'shop-toggle-button'
+                setShowCreateProduct(!showCreateProduct)
               }
             >
-              {showCreateProduct
-                ? 'Đóng form thêm sản phẩm'
-                : '+ Thêm sản phẩm'}
+              {showCreateProduct ? 'Đóng form' : '+ Thêm sản phẩm'}
             </button>
           </div>
 
           {showCreateProduct && (
             <form
               onSubmit={handleCreateProductSubmit}
-              className="shop-create-product-form"
+              className="create-product-form"
             >
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Tên sản phẩm
-                </label>
+              <h4 className="create-product-title">
+                Thêm sản phẩm mới
+              </h4>
+
+              <div className="edit-form-row">
+                <label className="form-label">Tên sản phẩm</label>
                 <input
-                  type="text"
-                  name="title"
+                  className="form-input"
                   value={createForm.title}
-                  onChange={handleCreateInputChange}
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      title: e.target.value,
+                    })
+                  }
                   required
-                  className="shop-input"
                 />
               </div>
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Giá (VND)
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={createForm.price}
-                  onChange={handleCreateInputChange}
-                  required
-                  className="shop-input"
-                />
+
+              <div className="edit-form-row edit-form-row--2col">
+                <div className="edit-form-col">
+                  <label className="form-label">Giá</label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={createForm.price}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        price: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="edit-form-col">
+                  <label className="form-label">Kho</label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={createForm.stock}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        stock: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Tồn kho ban đầu
-                </label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={createForm.stock}
-                  onChange={handleCreateInputChange}
-                  className="shop-input"
-                />
-              </div>
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">Mô tả</label>
+
+              <div className="edit-form-row">
+                <label className="form-label">Mô tả</label>
                 <textarea
-                  name="description"
-                  value={createForm.description}
-                  onChange={handleCreateInputChange}
+                  className="form-input"
                   rows={3}
-                  className="shop-textarea"
+                  value={createForm.description}
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      description: e.target.value,
+                    })
+                  }
                 />
               </div>
-              <div className="shop-register-form-group">
-                <label className="shop-form-label">
-                  Ảnh sản phẩm (tối đa 10 ảnh)
-                </label>
+
+              <div className="edit-form-row">
+                <label className="form-label">Ảnh</label>
                 <input
                   type="file"
                   multiple
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={handleCreateImagesChange}
-                  className="shop-file-input"
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      images: e.target.files,
+                    })
+                  }
                 />
               </div>
 
               <button
                 type="submit"
+                className="btn-primary"
                 disabled={creatingProduct}
-                className="shop-primary-button"
               >
                 {creatingProduct ? 'Đang tạo...' : 'Tạo sản phẩm'}
               </button>
             </form>
           )}
 
-          {productsLoading && (
-            <div className="shop-empty-text">
+          {productsLoading ? (
+            <p className="myshop-products-loading">
               Đang tải sản phẩm...
-            </div>
-          )}
-          {productsError && (
-            <div className="shop-message-error">
-              {productsError}
-            </div>
-          )}
-
-          {!productsLoading && products.length === 0 && (
-            <div className="shop-empty-text">
-              Chưa có sản phẩm nào.
-            </div>
-          )}
-
-          {products.length > 0 && (
-            <div className="shop-table-wrapper">
+            </p>
+          ) : (
+            <div className="myshop-table-wrapper">
               <table className="shop-table">
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Tên</th>
-                    <th>Ảnh</th>
+                    <th>Sản phẩm</th>
                     <th>Giá</th>
                     <th>Trạng thái</th>
                     <th>Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.id}</td>
-                      <td>{p.title}</td>
-                      <td>
-                        {getMainImageUrl(p) ? (
-                          <img
-                            src={getMainImageUrl(p)!}
-                            alt={p.title}
-                            className="shop-product-thumb"
-                          />
-                        ) : (
-                          <span className="shop-product-thumb--empty">
-                            Không có ảnh
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {p.price} {p.currency}
-                      </td>
-                      <td>{p.status}</td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/me/products/${p.id}/variants`,
-                            )
-                          }
-                          className="shop-variants-button"
-                        >
-                          Quản lý biến thể
-                        </button>
+                  {products.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="shop-table-empty">
+                        Chưa có sản phẩm nào.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    products.map((p) => (
+                      <tr key={p.id}>
+                        <td>#{p.id}</td>
+                        <td>
+                          <div className="shop-table-product-cell">
+                            {getMainImageUrl(p) ? (
+                              <img
+                                src={getMainImageUrl(p)!}
+                                width={48}
+                                height={48}
+                                style={{
+                                  objectFit: 'cover',
+                                  borderRadius: 4,
+                                  border: '1px solid #eee',
+                                }}
+                                alt=""
+                              />
+                            ) : (
+                              <div className="shop-table-product-placeholder" />
+                            )}
+                            <span className="shop-table-product-name">
+                              {p.title}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="shop-table-price">
+                          {p.price} {p.currency}
+                        </td>
+                        <td>
+                          <span
+                            className="shop-status-pill"
+                            data-status={p.status}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-secondary--small"
+                            onClick={() =>
+                              navigate(
+                                `/me/products/${p.id}/variants`,
+                              )
+                            }
+                          >
+                            Chi tiết
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
+        </div>
       </div>
     </div>
   );

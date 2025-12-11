@@ -126,3 +126,17 @@ export async function updateProductVariant(
   );
   return res.data;
 }
+
+export async function getProductsByShop(
+  shopId: number,
+  params?: {
+    page?: number;
+    limit?: number;
+  }
+): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
+  const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
+    `/products/by-shop/${shopId}`,
+    { params },
+  );
+  return res.data;
+}

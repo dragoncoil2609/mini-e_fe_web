@@ -111,8 +111,14 @@ export interface Shop {
   email: string | null;
   description: string | null;
   status: ShopStatus;
+  
+  // --- THÊM 2 DÒNG NÀY ---
+  logoUrl?: string | null;
+  coverUrl?: string | null;
+  // -----------------------
+
   shopAddress: string | null;
-  shopLat: string | null;      // BE trả về string như ví dụ
+  shopLat: string | null;      
   shopLng: string | null;
   shopPlaceId: string | null;
   shopPhone: string | null;
