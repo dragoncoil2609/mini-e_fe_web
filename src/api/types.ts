@@ -29,7 +29,6 @@ export interface AuthUser {
   role: 'USER' | 'SELLER' | 'ADMIN';
   isVerified: boolean;
   createdAt?: string;
-  // có thể thêm lastLoginAt, updatedAt... sau nếu BE trả về
 }
 
 // Login / register / refresh response
@@ -123,7 +122,7 @@ export interface Shop {
 
 // ================== PRODUCT ==================
 
-// Trạng thái sản phẩm — có thể mở rộng thêm nếu BE có thêm enum
+// Trạng thái sản phẩm
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT' | string;
 
 // Ảnh sản phẩm
@@ -135,6 +134,12 @@ export interface ProductImage {
   isMain: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// [MỚI] Định nghĩa cấu trúc Option Schema (Fix lỗi implicit any)
+export interface ProductOptionSchema {
+  name: string;      // Ví dụ: "Màu sắc"
+  values: string[];  // Ví dụ: ["Đỏ", "Xanh"]
 }
 
 // Item trong list /products
@@ -154,24 +159,39 @@ export interface ProductListItem {
   // URL ảnh chính/thumbnail của sản phẩm (deprecated - dùng images với isMain thay thế)
   thumbnailUrl?: string | null;
 }
-// Chi tiết 1 sản phẩm
+
+// [CẬP NHẬT] Chi tiết 1 sản phẩm
 export interface ProductDetail {
   id: number;
   shopId: number;
   title: string;
   slug: string;
   description: string | null;
-  optionSchema: any | null; // nếu BE có type cụ thể thì sửa lại cho chặt
+  
+  // Đã sửa type từ 'any' sang mảng cụ thể
+  optionSchema?: ProductOptionSchema[] | null; 
+  
   price: string;            // "150000.00"
+  
+  // Thêm trường giá gốc (gạch ngang)
+  compareAtPrice?: string | null; 
+  
   currency: string;         // "VND"
   stock: number;
+  
+  // Thêm trường số lượng đã bán
+  sold: number;
+
   status: ProductStatus;
   createdAt: string;
   updatedAt: string;
   images?: ProductImage[];
+  
+  // Có thể dùng nếu BE trả về mainImageUrl riêng
+  mainImageUrl?: string | null;
 }
 
-// ========== VARIANTS ==========
+// ================== VARIANTS ==================
 
 export interface ProductVariantOption {
   option: string; // "Màu"
@@ -204,7 +224,7 @@ export interface GenerateVariantsPayload {
   mode: GenerateVariantsMode;
 }
 
-// ========== DTO FE GỬI LÊN ==========
+// ================== DTO FE GỬI LÊN ==================
 
 // Tạo product – JSON body (Cách B)
 export interface CreateProductJsonDto {

@@ -69,23 +69,35 @@ export function getMainImageUrl(
 ): string | null {
   if (!product) return null;
 
-  // Nếu có images array
-  if (product.images && product.images.length > 0) {
+  const anyProduct = product as any;
+
+  // 1) Ưu tiên mảng images (dùng cho trang chi tiết hoặc list có kèm images)
+  if (Array.isArray(anyProduct.images) && anyProduct.images.length > 0) {
+    const images = anyProduct.images as ProductImage[];
+
     // Tìm ảnh có isMain = true
-    const mainImage = product.images.find((img) => img.isMain);
-    if (mainImage) return normalizeImageUrl(mainImage.url);
+    const mainImage = images.find((img) => img.isMain);
+    if (mainImage) {
+      return normalizeImageUrl(mainImage.url);
+    }
 
     // Nếu không có main, lấy ảnh đầu tiên
-    return normalizeImageUrl(product.images[0].url);
+    return normalizeImageUrl(images[0].url);
   }
 
-  // Fallback: dùng thumbnailUrl nếu có (backward compatibility)
-  if ('thumbnailUrl' in product && product.thumbnailUrl) {
-    return normalizeImageUrl(product.thumbnailUrl);
+  // 2) Trường hợp BE chỉ trả về mainImageUrl (GET /products)
+  if (typeof anyProduct.mainImageUrl === 'string' && anyProduct.mainImageUrl) {
+    return normalizeImageUrl(anyProduct.mainImageUrl);
+  }
+
+  // 3) Fallback: dùng thumbnailUrl nếu có (backward compatibility)
+  if (typeof anyProduct.thumbnailUrl === 'string' && anyProduct.thumbnailUrl) {
+    return normalizeImageUrl(anyProduct.thumbnailUrl);
   }
 
   return null;
 }
+
 
 /**
  * Lấy tất cả ảnh của product (sắp xếp theo position, ảnh main đầu tiên)

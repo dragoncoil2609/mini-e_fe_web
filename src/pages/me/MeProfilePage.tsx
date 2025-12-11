@@ -1,5 +1,5 @@
-// src/pages/me/MeProfilePage.tsx
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getMe,
   updateMe,
@@ -7,9 +7,14 @@ import {
   type UpdateMePayload,
 } from '../../api/users.api';
 import type { User } from '../../api/types';
-import { useNavigate } from 'react-router-dom';
-import { getMyShop } from '../../api/shop.api';
 import './MeProfilePage.css';
+
+// Helper format ngày tháng VN
+const formatDateVN = (dateString?: string | Date) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('vi-VN');
+};
 
 type Gender = 'MALE' | 'FEMALE' | 'OTHER' | '';
 
@@ -19,7 +24,7 @@ interface MeFormState {
   avatarUrl: string;
   birthday: string; // YYYY-MM-DD
   gender: Gender;
-  password: string;
+  password: string; // Mật khẩu mới
 }
 
 const defaultForm: MeFormState = {
@@ -39,15 +44,16 @@ const MeProfilePage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkingShop, setCheckingShop] = useState<boolean>(false);
 
-  // Load thông tin user hiện tại
+  // Load thông tin user
   useEffect(() => {
     const fetchMe = async () => {
       try {
         setLoading(true);
         const me = await getMe();
         setProfile(me);
+
+        // Map dữ liệu từ API vào Form
         setForm({
           name: me.name || '',
           phone: me.phone || '',
@@ -94,16 +100,15 @@ const MeProfilePage: React.FC = () => {
         avatarUrl: form.avatarUrl || undefined,
         birthday: form.birthday || undefined,
         gender: (form.gender as any) || undefined,
-        password: form.password || undefined,
+        password: form.password ? form.password : undefined,
       };
 
       const updated = await updateMe(payload);
       setProfile(updated);
       alert('Cập nhật hồ sơ thành công!');
-      setForm((prev) => ({
-        ...prev,
-        password: '',
-      }));
+
+      // Reset password sau khi lưu thành công
+      setForm((prev) => ({ ...prev, password: '' }));
     } catch (err: any) {
       console.error(err);
       setError(err?.response?.data?.message || 'Cập nhật thất bại');
@@ -112,26 +117,15 @@ const MeProfilePage: React.FC = () => {
     }
   };
 
-  // Xóa mềm tài khoản của chính mình
   const handleDeleteAccount = async () => {
-    if (
-      !window.confirm(
-        'Bạn chắc chắn muốn xoá tài khoản? Hành động này không thể hoàn tác!',
-      )
-    ) {
+    if (!window.confirm('CẢNH BÁO: Bạn chắc chắn muốn xoá tài khoản?')) {
       return;
     }
-
     try {
       await deleteMe();
-      alert(
-        'Tài khoản đã được xoá (soft delete). Bạn sẽ được chuyển về trang đăng nhập.',
-      );
-
-      // TODO: tuỳ bạn đang lưu token thế nào
+      alert('Tài khoản đã được xoá. Hẹn gặp lại!');
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-
       window.location.href = '/auth/login';
     } catch (err: any) {
       console.error(err);
@@ -139,210 +133,256 @@ const MeProfilePage: React.FC = () => {
     }
   };
 
-  // Nút Shop:
-  // - Nếu có shop → /shops/me
-  // - Nếu chưa có shop (404) → /shops/register
-  const handleGoShop = async () => {
-    setCheckingShop(true);
-    try {
-      await getMyShop(); // nếu 200 → đã có shop
+  const handleShopAction = () => {
+    if (profile?.role === 'USER') {
+      navigate('/shops/register');
+    } else {
       navigate('/shops/me');
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const message: string | undefined = err?.response?.data?.message;
-
-      // BE trả 404 hoặc message "Bạn chưa có shop." → điều hướng tới trang đăng ký shop
-      if (status === 404 || message?.includes('chưa có shop')) {
-        navigate('/shops/register');
-      } else {
-        console.error(err);
-        alert(message || 'Không kiểm tra được shop của bạn.');
-      }
-    } finally {
-      setCheckingShop(false);
     }
   };
 
-  if (loading)
-    return (
-      <div className="me-profile-loading">
-        Đang tải hồ sơ...
-      </div>
-    );
-  if (error)
-    return (
-      <div className="me-profile-container">
-        <div className="me-profile-card">
-          <div className="me-profile-error">{error}</div>
-        </div>
-      </div>
-    );
-  if (!profile)
-    return (
-      <div className="me-profile-container">
-        <div className="me-profile-card">
-          <div className="me-profile-error">Không tìm thấy user.</div>
-        </div>
-      </div>
-    );
+  // Hiển thị avatar realtime khi nhập URL, nếu lỗi thì dùng avatar cũ hoặc placeholder
+  const displayAvatar =
+    form.avatarUrl || profile?.avatarUrl || 'https://via.placeholder.com/150';
 
-  const avatarSrc = form.avatarUrl || profile.avatarUrl || '';
-  const avatarInitial =
-    (profile.name && profile.name.charAt(0).toUpperCase()) ||
-    (profile.email && profile.email.charAt(0).toUpperCase()) ||
-    '?';
+  if (loading) {
+    return (
+      <div className="me-page-root">
+        <div className="me-page-loading">Đang tải...</div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="me-page-root">
+        <div className="me-page-error">{error || 'Lỗi tải trang'}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="me-profile-container">
-      <div className="me-profile-card">
-        <button
-          onClick={() => navigate('/home')}
-          className="me-profile-home-button"
-        >
-          🏠 Về trang chủ
-        </button>
-        <div className="me-profile-header">
-          <div className="me-profile-avatar">
-            {avatarSrc ? (
+    <div className="me-page-root">
+      <div className="me-page-container">
+        {/* Top bar giống định dạng gọn như Home */}
+        <div className="me-top-bar">
+          <button
+            onClick={() => navigate('/home')}
+            className="me-top-bar-button me-top-bar-button--ghost"
+          >
+            ← Trang chủ
+          </button>
+          <button
+            onClick={handleShopAction}
+            className="me-top-bar-button me-top-bar-button--primary"
+          >
+            {profile.role === 'USER'
+              ? '🏪 Đăng ký bán hàng'
+              : '⚙️ Vào cửa hàng của tôi'}
+          </button>
+        </div>
+
+        {/* Header + avatar */}
+        <section className="me-header-card">
+          <div className="me-header-text">
+            <h1 className="me-page-title">Tài khoản của bạn</h1>
+            <p className="me-page-subtitle">
+              Quản lý thông tin hồ sơ, bảo mật và tuỳ chọn cá nhân.
+            </p>
+          </div>
+
+          <div className="me-summary-section">
+            <div className="me-avatar-col">
               <img
-                src={avatarSrc}
+                src={displayAvatar}
                 alt="Avatar"
+                className="me-avatar-img"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/150';
+                }}
               />
-            ) : (
-              avatarInitial
-            )}
+            </div>
+            <div className="me-info-col">
+              <div className="me-name-row">
+                <h2 className="me-display-name">
+                  {profile.name || 'Người dùng chưa đặt tên'}
+                </h2>
+                {profile.role !== 'USER' && (
+                  <span className="badge-role">{profile.role}</span>
+                )}
+                {profile.isVerified && (
+                  <span className="badge-verified">✅ Verified</span>
+                )}
+              </div>
+              <div className="me-email-row">
+                Email: <span className="email-text">{profile.email}</span>
+                <span className="readonly-tag">Read-only</span>
+              </div>
+              <p className="me-member-since">
+                Thành viên từ: {formatDateVN(profile.createdAt)}
+              </p>
+            </div>
           </div>
-          <h1 className="me-profile-title">
-            Hồ sơ cá nhân
-          </h1>
-          <p className="me-profile-info">
-            <strong>Email:</strong> {profile.email}
-          </p>
-          <p className="me-profile-info">
-            <strong>Vai trò:</strong> {profile.role}
-          </p>
+        </section>
+
+        {/* Tabs hàng ngang giống style Home */}
+        <div className="me-tabs-container">
+          <button className="me-tab active">Thông tin chung</button>
+          <button className="me-tab disabled">Lịch sử mua hàng</button>
+          <button className="me-tab disabled">Ví Vouchers</button>
         </div>
 
-        <div className="me-profile-section">
+        {/* Form card */}
+        <section className="me-form-card">
+          {error && <div className="me-error-message">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="me-main-form">
+            {/* 1. Họ và tên */}
+            <div className="form-group-row">
+              <label className="form-label">Họ và tên</label>
+              <div className="form-input-col">
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  className="form-input-sketch"
+                  placeholder="Nhập tên hiển thị"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* 2. Số điện thoại */}
+            <div className="form-group-row">
+              <label className="form-label">Số điện thoại</label>
+              <div className="form-input-col">
+                <input
+                  type="text"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  className="form-input-sketch"
+                  placeholder="Ví dụ: 0901234567"
+                />
+              </div>
+            </div>
+
+            {/* 3. Avatar URL */}
+            <div className="form-group-row">
+              <label className="form-label">Avatar URL</label>
+              <div className="form-input-col">
+                <input
+                  type="text"
+                  name="avatarUrl"
+                  value={form.avatarUrl}
+                  onChange={handleChange}
+                  className="form-input-sketch"
+                  placeholder="https://example.com/anh.jpg"
+                />
+              </div>
+            </div>
+
+            {/* 4. Ngày sinh */}
+            <div className="form-group-row">
+              <label className="form-label">Ngày sinh</label>
+              <div className="form-input-col date-input-group">
+                <input
+                  type="date"
+                  name="birthday"
+                  value={form.birthday || ''}
+                  onChange={handleChange}
+                  className="form-input-sketch input-date"
+                />
+              </div>
+            </div>
+
+            {/* 5. Giới tính */}
+            <div className="form-group-row">
+              <label className="form-label">Giới tính</label>
+              <div className="form-input-col radio-group">
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="MALE"
+                    checked={form.gender === 'MALE'}
+                    onChange={handleChange}
+                  />{' '}
+                  Nam
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="FEMALE"
+                    checked={form.gender === 'FEMALE'}
+                    onChange={handleChange}
+                  />{' '}
+                  Nữ
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="OTHER"
+                    checked={form.gender === 'OTHER'}
+                    onChange={handleChange}
+                  />{' '}
+                  Khác
+                </label>
+              </div>
+            </div>
+
+            {/* 6. Mật khẩu mới */}
+            <div className="form-group-row">
+              <label className="form-label">Mật khẩu mới</label>
+              <div className="form-input-col">
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  className="form-input-sketch"
+                  placeholder="Để trống nếu không đổi"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <div className="form-group-row me-password-hint-row">
+              <label className="form-label" />
+              <div className="form-input-col">
+                <span className="me-password-hint">
+                  * Mật khẩu phải có ít nhất 8 ký tự, bao gồm cả chữ và số.
+                </span>
+              </div>
+            </div>
+
+            <div className="form-submit-row">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-update-sketch"
+              >
+                {saving ? 'ĐANG LƯU...' : 'CẬP NHẬT'}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {/* Footer hành động */}
+        <div className="me-footer-section">
+          <p className="me-footer-note">
+            Cần xoá tài khoản? Hành động này không thể hoàn tác.
+          </p>
           <button
-            type="button"
-            onClick={handleGoShop}
-            disabled={checkingShop}
-            className="me-profile-button"
-            style={{ background: checkingShop ? '#9ca3af' : '#16a34a' }}
+            onClick={handleDeleteAccount}
+            className="btn-delete-sketch"
           >
-            {checkingShop ? 'Đang kiểm tra shop...' : 'Shop của tôi'}
+            Xoá tài khoản
           </button>
         </div>
-
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-          }}
-        >
-          <div className="me-profile-form-group">
-            <label className="me-profile-label">
-              Tên hiển thị
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className="me-profile-input"
-            />
-          </div>
-
-          <div className="me-profile-form-group">
-            <label className="me-profile-label">
-              Số điện thoại
-            </label>
-            <input
-              type="text"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="me-profile-input"
-            />
-          </div>
-
-          <div className="me-profile-form-group">
-            <label className="me-profile-label">
-              Avatar URL
-            </label>
-            <input
-              type="text"
-              name="avatarUrl"
-              value={form.avatarUrl}
-              onChange={handleChange}
-              className="me-profile-input"
-            />
-          </div>
-
-          <div className="me-profile-form-group">
-            <label className="me-profile-label">
-              Ngày sinh
-            </label>
-            <input
-              type="date"
-              name="birthday"
-              value={form.birthday || ''}
-              onChange={handleChange}
-              className="me-profile-input"
-            />
-          </div>
-
-          <div className="me-profile-form-group">
-            <label className="me-profile-label">
-              Giới tính
-            </label>
-            <select
-              name="gender"
-              value={form.gender}
-              onChange={handleChange}
-              className="me-profile-select"
-            >
-              <option value="">-- Chọn giới tính --</option>
-              <option value="MALE">Nam</option>
-              <option value="FEMALE">Nữ</option>
-              <option value="OTHER">Khác</option>
-            </select>
-          </div>
-
-          <div className="me-profile-form-group">
-            <label className="me-profile-label">
-              Mật khẩu mới (nếu muốn đổi)
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              className="me-profile-input"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="me-profile-button"
-            style={{ background: saving ? '#9ca3af' : '#667eea' }}
-          >
-            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </button>
-        </form>
-
-        <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
-
-        <button
-          onClick={handleDeleteAccount}
-          className="me-profile-button me-profile-button-danger"
-        >
-          Xoá tài khoản của tôi
-        </button>
       </div>
     </div>
   );
