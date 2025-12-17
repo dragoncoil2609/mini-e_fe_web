@@ -24,6 +24,7 @@ import CartPage from '../pages/cart/CartPage';
 import OrdersPage from '../pages/orders/OrdersPage';
 import OrderDetailPage from '../pages/orders/OrderDetailPage';
 import AddressesPage from '../pages/addresses/AddressesPage';
+import ProductCreatePage from '../pages/products/ProductCreatePage';
 
 export function AppRoutes() {
   return (
@@ -42,23 +43,24 @@ export function AppRoutes() {
 
       <Route path="/home" element={<HomePage />} />
       <Route path="/admin" element={<HomePageAdmin />} />
-      <Route path="/me" element={<MeProfilePage />} />
+      <Route path="/me" element={<MeProfilePage />} />   
       <Route path="/admin/users" element={<UsersListPage />} />
       <Route path="/admin/users/deleted" element={<DeletedUsersPage/>} />
 
       {/* --- SHOP (user/seller) --- */}
       <Route path="/shops/register" element={<ShopRegisterPage />} />
-      <Route path="/shops/me" element={<MyShopPage />} />
+      <Route path="/shops/me" element={<MyShopPage/>} />
 
       {/* PUBLIC PRODUCT */}
       <Route path="/products" element={<ProductsListPage />} />
       <Route path="/products/:id" element={<ProductDetailPage />} />
-      <Route path="/me/products/:id/variants" element={<ProductVariantsPage />} />
 
       {/* SELLER / ADMIN PRODUCT (quản lý của mình) */}
       <Route path="/me/products" element={<MyProductsPage />} />
-      <Route path="/me/products/new" element={<ProductEditPage />} />
+      <Route path="/me/products/new" element={<ProductCreatePage />} />
       <Route path="/me/products/:id/edit" element={<ProductEditPage />} />
+      <Route path="/me/products/:id/variants" element={<ProductVariantsPage />} />
+
 
       {/* --- ADMIN: Quản lý shop --- */}
       <Route path="/admin/shops" element={<AdminShopsListPage />} />

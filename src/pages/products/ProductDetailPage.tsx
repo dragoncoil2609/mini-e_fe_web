@@ -13,7 +13,7 @@ import {
   getMainImageUrl,
   getAllImages,
 } from '../../utils/productImage';
-import './ProductDetailPage.css';
+import './style/ProductDetailPage.css';
 
 export default function ProductDetailPage() {
   const navigate = useNavigate();

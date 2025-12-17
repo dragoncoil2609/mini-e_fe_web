@@ -12,10 +12,7 @@ import {
   uploadShopLogo,
   uploadShopCover,
 } from '../../api/shop.api';
-import {
-  getProductsByShop,
-  createProductMultipart,
-} from '../../api/products.api';
+import { getProductsByShop } from '../../api/products.api';
 import type { Shop, ProductListItem } from '../../api/types';
 import { getMainImageUrl } from '../../utils/productImage';
 import LocationPicker from '../../components/LocationPicker';
@@ -42,14 +39,6 @@ interface EditFormState {
   shopPhone: string;
 }
 
-interface CreateProductFormState {
-  title: string;
-  price: string;
-  stock: string;
-  description: string;
-  images: FileList | null;
-}
-
 const MyShopPage = () => {
   const navigate = useNavigate();
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -70,16 +59,6 @@ const MyShopPage = () => {
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
 
-  const [showCreateProduct, setShowCreateProduct] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateProductFormState>({
-    title: '',
-    price: '',
-    stock: '',
-    description: '',
-    images: null,
-  });
-  const [creatingProduct, setCreatingProduct] = useState(false);
-
   const formatCurrency = (val: number | string | undefined) => {
     const num = Number(val);
     if (isNaN(num)) return '0 ₫';
@@ -89,13 +68,22 @@ const MyShopPage = () => {
     }).format(num);
   };
 
+  const unwrap = <T,>(res: any): T => {
+    if (res && typeof res === 'object') {
+      if ('success' in res) return res.data as T;
+      if ('data' in res) return res.data as T;
+    }
+    return res as T;
+  };
+
   const loadProducts = async (shopId: number) => {
     setProductsLoading(true);
     try {
-      const res = await getProductsByShop(shopId, { page: 1, limit: 20 });
-      if (res.success) {
-        setProducts(res.data.items);
-      }
+      const res = await getProductsByShop(shopId, { page: 1, limit: 10 });
+      const payload = unwrap<any>(res);
+      // payload có thể là {items,total} hoặc trực tiếp items
+      const items = Array.isArray(payload) ? payload : (payload?.items ?? []);
+      setProducts(items);
     } catch (err) {
       console.error('Lỗi tải sản phẩm:', err);
     } finally {
@@ -108,23 +96,24 @@ const MyShopPage = () => {
     setError(null);
     try {
       const res = await getMyShop();
-      if (res.success) {
-        const data = res.data as unknown as ShopWithStats;
-        setShop(data);
-        setForm({
-          name: data.name,
-          email: data.email || '',
-          description: data.description || '',
-          shopAddress: data.shopAddress || '',
-          shopLat: data.shopLat || '',
-          shopLng: data.shopLng || '',
-          shopPlaceId: data.shopPlaceId || '',
-          shopPhone: data.shopPhone || '',
-        });
-        void loadProducts(data.id);
-      } else {
-        setError(res.message || 'Lỗi tải shop.');
+      const data = unwrap<ShopWithStats>(res);
+      if (!data?.id) {
+        setError('Bạn chưa có shop hoặc lỗi tải shop.');
+        setShop(null);
+        return;
       }
+      setShop(data);
+      setForm({
+        name: data.name,
+        email: data.email || '',
+        description: data.description || '',
+        shopAddress: data.shopAddress || '',
+        shopLat: data.shopLat || '',
+        shopLng: data.shopLng || '',
+        shopPlaceId: data.shopPlaceId || '',
+        shopPhone: data.shopPhone || '',
+      });
+      void loadProducts(data.id);
     } catch (err: any) {
       console.error(err);
       setError('Bạn chưa có shop hoặc lỗi kết nối.');
@@ -147,10 +136,9 @@ const MyShopPage = () => {
 
     try {
       const res = await uploadShopLogo(file);
-      if (res.success) {
-        setShop((prev) =>
-          prev ? { ...prev, logoUrl: res.data.logoUrl } : null,
-        );
+      const payload = unwrap<any>(res);
+      if (payload?.logoUrl) {
+        setShop((prev) => (prev ? { ...prev, logoUrl: payload.logoUrl } : null));
         setSuccessMsg('Đã cập nhật Logo thành công!');
       }
     } catch (err) {
@@ -172,10 +160,9 @@ const MyShopPage = () => {
 
     try {
       const res = await uploadShopCover(file);
-      if (res.success) {
-        setShop((prev) =>
-          prev ? { ...prev, coverUrl: res.data.coverUrl } : null,
-        );
+      const payload = unwrap<any>(res);
+      if (payload?.coverUrl) {
+        setShop((prev) => (prev ? { ...prev, coverUrl: payload.coverUrl } : null));
         setSuccessMsg('Đã cập nhật Ảnh bìa thành công!');
       }
     } catch (err) {
@@ -206,12 +193,13 @@ const MyShopPage = () => {
       if (form.shopLng) payload.shopLng = parseFloat(form.shopLng);
 
       const res = await updateShop(shop.id, payload);
-      if (res.success) {
-        setShop(res.data as unknown as ShopWithStats);
+      const data = unwrap<ShopWithStats>(res);
+      if (data?.id) {
+        setShop(data);
         setSuccessMsg('Cập nhật thông tin shop thành công!');
         setEditing(false);
       } else {
-        alert(res.message);
+        alert((res as any)?.message || 'Cập nhật thất bại');
       }
     } catch (err) {
       console.error(err);
@@ -219,52 +207,11 @@ const MyShopPage = () => {
     }
   };
 
-  // --- HANDLE CREATE PRODUCT ---
-  const handleCreateProductSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!shop) return;
-    setCreatingProduct(true);
-    try {
-      const fd = new FormData();
-      fd.append('title', createForm.title);
-      fd.append('price', createForm.price);
-      fd.append('stock', createForm.stock);
-      fd.append('description', createForm.description);
-      if (createForm.images) {
-        Array.from(createForm.images).forEach((f) =>
-          fd.append('images', f),
-        );
-      }
-      const res = await createProductMultipart(fd);
-      if (res.success) {
-        alert('Tạo sản phẩm thành công!');
-        setShowCreateProduct(false);
-        setCreateForm({
-          title: '',
-          price: '',
-          stock: '',
-          description: '',
-          images: null,
-        });
-        void loadProducts(shop.id);
-      } else {
-        alert(res.message);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Lỗi tạo sản phẩm.');
-    } finally {
-      setCreatingProduct(false);
-    }
-  };
-
   // --- RENDER LOADING / EMPTY ---
   if (loading) {
     return (
       <div className="myshop-page-root">
-        <div className="myshop-loading-card">
-          Đang tải dữ liệu shop...
-        </div>
+        <div className="myshop-loading-card">Đang tải dữ liệu shop...</div>
       </div>
     );
   }
@@ -294,9 +241,7 @@ const MyShopPage = () => {
           </button>
         </div>
 
-        {successMsg && (
-          <div className="myshop-success">{successMsg}</div>
-        )}
+        {successMsg && <div className="myshop-success">{successMsg}</div>}
         {error && <div className="myshop-error">{error}</div>}
 
         {/* Hidden file inputs */}
@@ -319,29 +264,17 @@ const MyShopPage = () => {
         <div className="myshop-header-section">
           {/* Ảnh bìa */}
           <div
-            className={`myshop-cover ${
-              !shop.coverUrl ? 'empty-cover' : ''
-            } ${coverUploading ? 'loading' : ''}`}
-            style={
-              shop.coverUrl
-                ? { backgroundImage: `url(${shop.coverUrl})` }
-                : {}
-            }
-            onClick={() =>
-              !editing &&
-              !coverUploading &&
-              coverInputRef.current?.click()
-            }
+            className={`myshop-cover ${!shop.coverUrl ? 'empty-cover' : ''} ${
+              coverUploading ? 'loading' : ''
+            }`}
+            style={shop.coverUrl ? { backgroundImage: `url(${shop.coverUrl})` } : {}}
+            onClick={() => !editing && !coverUploading && coverInputRef.current?.click()}
           >
             {!shop.coverUrl && (
-              <span className="myshop-cover-placeholder">
-                Chưa có ảnh bìa
-              </span>
+              <span className="myshop-cover-placeholder">Chưa có ảnh bìa</span>
             )}
 
-            {!editing && !coverUploading && (
-              <div className="btn-upload-icon">📷</div>
-            )}
+            {!editing && !coverUploading && <div className="btn-upload-icon">📷</div>}
 
             {coverUploading && (
               <div className="upload-loading-overlay">
@@ -353,24 +286,12 @@ const MyShopPage = () => {
           {/* Logo + Tên + Trạng thái */}
           <div className="myshop-avatar-container">
             <div
-              className={`myshop-avatar ${
-                logoUploading ? 'loading' : ''
-              }`}
-              onClick={() =>
-                !editing &&
-                !logoUploading &&
-                logoInputRef.current?.click()
-              }
+              className={`myshop-avatar ${logoUploading ? 'loading' : ''}`}
+              onClick={() => !editing && !logoUploading && logoInputRef.current?.click()}
             >
-              {shop.logoUrl ? (
-                <img src={shop.logoUrl} alt="Logo" />
-              ) : (
-                <span>Logo</span>
-              )}
+              {shop.logoUrl ? <img src={shop.logoUrl} alt="Logo" /> : <span>Logo</span>}
 
-              {!editing && !logoUploading && (
-                <div className="btn-upload-icon">📷</div>
-              )}
+              {!editing && !logoUploading && <div className="btn-upload-icon">📷</div>}
 
               {logoUploading && (
                 <div className="upload-loading-overlay">
@@ -381,9 +302,7 @@ const MyShopPage = () => {
 
             <div className="myshop-name-block">
               <h1 className="myshop-name">{shop.name}</h1>
-              <span
-                className={`status-badge status-${shop.status.toLowerCase()}`}
-              >
+              <span className={`status-badge status-${shop.status.toLowerCase()}`}>
                 {shop.status}
               </span>
             </div>
@@ -402,15 +321,11 @@ const MyShopPage = () => {
             </div>
             <div className="stat-item">
               <div className="stat-label">Doanh thu</div>
-              <div className="stat-value">
-                {formatCurrency(shop.totalRevenue)}
-              </div>
+              <div className="stat-value">{formatCurrency(shop.totalRevenue)}</div>
             </div>
             <div className="stat-item">
               <div className="stat-label">Đơn hàng</div>
-              <div className="stat-value">
-                {shop.totalOrders || 0}
-              </div>
+              <div className="stat-value">{shop.totalOrders || 0}</div>
             </div>
             <div className="stat-item">
               <div className="stat-label">Đã bán</div>
@@ -432,45 +347,37 @@ const MyShopPage = () => {
             >
               ✏️ Chỉnh sửa thông tin
             </button>
+
+            {/* Cột Trái: Thông tin liên hệ cơ bản */}
             <div className="info-column">
               <h3>Thông tin liên hệ</h3>
               <div className="info-row">
-                <span className="info-key">Địa chỉ:</span>
-                <span className="info-val">
-                  {shop.shopAddress || '(Chưa cập nhật)'}
-                </span>
-              </div>
-              <div className="info-row">
                 <span className="info-key">SĐT:</span>
-                <span className="info-val">
-                  {shop.shopPhone || '(Chưa cập nhật)'}
-                </span>
+                <span className="info-val">{shop.shopPhone || '(Chưa cập nhật)'}</span>
               </div>
               <div className="info-row">
                 <span className="info-key">Email:</span>
-                <span className="info-val">
-                  {shop.email || '(Chưa cập nhật)'}
-                </span>
+                <span className="info-val">{shop.email || '(Chưa cập nhật)'}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-key">Link Shop:</span>
+                <span className="info-val">@{shop.slug}</span>
               </div>
             </div>
+
+            {/* Cột Phải: Chi tiết Shop (Mô tả & Địa chỉ) */}
             <div className="info-column">
               <h3>Chi tiết Shop</h3>
               <div className="info-row">
                 <span className="info-key">Mô tả:</span>
-                <span className="info-val">
-                  {shop.description || 'Chưa có mô tả.'}
-                </span>
+                <span className="info-val">{shop.description || 'Chưa có mô tả.'}</span>
               </div>
+              
+              {/* --- ĐÃ SỬA: Hiện Địa chỉ thay vì Tọa độ --- */}
               <div className="info-row">
-                <span className="info-key">Slug:</span>
-                <span className="info-val">@{shop.slug}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-key">Toạ độ:</span>
-                <span className="info-val">
-                  {shop.shopLat
-                    ? `${shop.shopLat}, ${shop.shopLng}`
-                    : 'Chưa định vị'}
+                <span className="info-key">Địa chỉ:</span>
+                <span className="info-val" style={{ lineHeight: '1.4' }}>
+                  {shop.shopAddress || 'Chưa cập nhật địa chỉ'}
                 </span>
               </div>
             </div>
@@ -479,9 +386,7 @@ const MyShopPage = () => {
 
         {editing && form && (
           <div className="edit-form-wrapper">
-            <h2 className="edit-form-title">
-              Chỉnh sửa thông tin Shop
-            </h2>
+            <h2 className="edit-form-title">Chỉnh sửa thông tin Shop</h2>
             <form onSubmit={handleEditSubmit}>
               <div className="edit-form-row">
                 <label className="form-label">Tên Shop</label>
@@ -505,9 +410,7 @@ const MyShopPage = () => {
                   />
                 </div>
                 <div className="edit-form-col">
-                  <label className="form-label">
-                    Số điện thoại
-                  </label>
+                  <label className="form-label">Số điện thoại</label>
                   <input
                     className="form-input"
                     name="shopPhone"
@@ -529,34 +432,20 @@ const MyShopPage = () => {
               </div>
 
               <div className="edit-form-row">
-                <label className="form-label">
-                  Địa chỉ hành chính
-                </label>
+                <label className="form-label">Địa chỉ hành chính</label>
                 <VietnamAddressSelector
                   fullAddress={form.shopAddress}
                   onFullAddressChange={(full) =>
-                    setForm((p) =>
-                      p ? { ...p, shopAddress: full } : null,
-                    )
+                    setForm((p) => (p ? { ...p, shopAddress: full } : null))
                   }
                   onLatLngChange={(lat, lng) =>
-                    setForm((p) =>
-                      p
-                        ? {
-                            ...p,
-                            shopLat: lat,
-                            shopLng: lng,
-                          }
-                        : null,
-                    )
+                    setForm((p) => (p ? { ...p, shopLat: lat, shopLng: lng } : null))
                   }
                 />
               </div>
 
               <div className="edit-form-row">
-                <label className="form-label">
-                  Ghim vị trí trên bản đồ
-                </label>
+                <label className="form-label">Ghim vị trí trên bản đồ</label>
                 <div className="edit-map-wrapper">
                   <LocationPicker
                     address={form.shopAddress}
@@ -597,116 +486,19 @@ const MyShopPage = () => {
         <div className="myshop-products-section">
           <div className="action-bar">
             <h2 className="section-title">Danh sách sản phẩm</h2>
+
+            {/* ✅ đổi "+ Thêm sản phẩm" thành "Quản lý sản phẩm" */}
             <button
               type="button"
               className="btn-primary"
-              onClick={() =>
-                setShowCreateProduct(!showCreateProduct)
-              }
+              onClick={() => navigate('/me/products')}
             >
-              {showCreateProduct ? 'Đóng form' : '+ Thêm sản phẩm'}
+              Quản lý sản phẩm
             </button>
           </div>
 
-          {showCreateProduct && (
-            <form
-              onSubmit={handleCreateProductSubmit}
-              className="create-product-form"
-            >
-              <h4 className="create-product-title">
-                Thêm sản phẩm mới
-              </h4>
-
-              <div className="edit-form-row">
-                <label className="form-label">Tên sản phẩm</label>
-                <input
-                  className="form-input"
-                  value={createForm.title}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      title: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="edit-form-row edit-form-row--2col">
-                <div className="edit-form-col">
-                  <label className="form-label">Giá</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={createForm.price}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        price: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
-                <div className="edit-form-col">
-                  <label className="form-label">Kho</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={createForm.stock}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        stock: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="edit-form-row">
-                <label className="form-label">Mô tả</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={createForm.description}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      description: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="edit-form-row">
-                <label className="form-label">Ảnh</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      images: e.target.files,
-                    })
-                  }
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={creatingProduct}
-              >
-                {creatingProduct ? 'Đang tạo...' : 'Tạo sản phẩm'}
-              </button>
-            </form>
-          )}
-
           {productsLoading ? (
-            <p className="myshop-products-loading">
-              Đang tải sản phẩm...
-            </p>
+            <p className="myshop-products-loading">Đang tải sản phẩm...</p>
           ) : (
             <div className="myshop-table-wrapper">
               <table className="shop-table">
@@ -756,10 +548,7 @@ const MyShopPage = () => {
                           {p.price} {p.currency}
                         </td>
                         <td>
-                          <span
-                            className="shop-status-pill"
-                            data-status={p.status}
-                          >
+                          <span className="shop-status-pill" data-status={p.status}>
                             {p.status}
                           </span>
                         </td>
@@ -767,13 +556,17 @@ const MyShopPage = () => {
                           <button
                             type="button"
                             className="btn-secondary btn-secondary--small"
-                            onClick={() =>
-                              navigate(
-                                `/me/products/${p.id}/variants`,
-                              )
-                            }
+                            onClick={() => navigate(`/me/products/${p.id}/edit`)}
+                            style={{ marginRight: 8 }}
                           >
-                            Chi tiết
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-secondary--small"
+                            onClick={() => navigate(`/me/products/${p.id}/variants`)}
+                          >
+                            Biến thể
                           </button>
                         </td>
                       </tr>

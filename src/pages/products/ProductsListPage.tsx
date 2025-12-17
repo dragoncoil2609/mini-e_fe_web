@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getPublicProducts } from '../../api/products.api';
 import type { ProductListItem, PaginatedResult, ApiResponse } from '../../api/types';
-import './ProductsListPage.css';
+import './style/ProductsListPage.css';
 
 const DEFAULT_LIMIT = 20;
 

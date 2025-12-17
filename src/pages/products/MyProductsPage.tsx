@@ -1,78 +1,171 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { getPublicProducts } from '../../api/products.api';
-import type { ProductListItem, PaginatedResult, ApiResponse } from '../../api/types';
-import './MyProductsPage.css';
-
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { getMyShop } from '../../api/shop.api';
+import { getProductsByShop, deleteProduct } from '../../api/products.api';
+import type { ProductListItem, PaginatedResult } from '../../api/types';
+import { getMainImageUrl } from '../../utils/productImage';
+import './style/MyProductsPage.css';
 
 const DEFAULT_LIMIT = 20;
 
 export default function MyProductsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [items, setItems] = useState<ProductListItem[]>([]);
   const [page, setPage] = useState<number>(Number(searchParams.get('page')) || 1);
   const [limit] = useState<number>(Number(searchParams.get('limit')) || DEFAULT_LIMIT);
   const [total, setTotal] = useState<number>(0);
+
+  const [q, setQ] = useState<string>(searchParams.get('q') || '');
+
+  const [shopId, setShopId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  // shopId có thể đọc từ query ?shopId= hoặc sau này bạn thay bằng API "shop của tôi"
-  const shopIdParam = searchParams.get('shopId');
-  const shopId = shopIdParam ? Number(shopIdParam) : undefined;
+  const unwrap = <T,>(res: any): T => {
+    if (res && typeof res === 'object') {
+      if ('success' in res) return res.data as T;
+      if ('data' in res) return res.data as T;
+    }
+    return res as T;
+  };
 
   useEffect(() => {
-    if (!shopId) {
-      setError('Chưa có shopId. Truyền ?shopId=... hoặc gọi API shop của bạn rồi chuyển sang đây.');
-      return;
-    }
+    // lấy shop của tôi để có shopId
+    (async () => {
+      try {
+        const res = await getMyShop();
+        const data = unwrap<any>(res);
+        if (!data?.id) throw new Error('NO_SHOP');
+        setShopId(Number(data.id));
+      } catch (e) {
+        console.error(e);
+        setError('Bạn chưa có shop hoặc không tải được shop của bạn.');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const load = async () => {
+    if (!shopId) return;
 
     setLoading(true);
     setError(null);
+    setMsg(null);
 
-    getPublicProducts({ page, limit, shopId })
-      .then((res) => {
-        const payload = (res as unknown as ApiResponse<PaginatedResult<ProductListItem>>).data;
-        setItems(payload.items);
-        setTotal(payload.total);
+    try {
+      const res = await getProductsByShop(shopId, { page, limit });
+      const payload = unwrap<any>(res);
 
-        const params: any = { page: String(page), limit: String(limit), shopId: String(shopId) };
-        setSearchParams(params);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Không tải được danh sách sản phẩm của shop.');
-      })
-      .finally(() => setLoading(false));
-  }, [page, limit, shopId, setSearchParams]);
+      const paginated: PaginatedResult<ProductListItem> =
+        payload?.items && payload?.total !== undefined
+          ? payload
+          : {
+              items: Array.isArray(payload) ? payload : payload?.items ?? [],
+              total: payload?.total ?? 0,
+            };
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
+      setItems(paginated.items || []);
+      setTotal(Number(paginated.total || 0));
 
-  const handleCreate = () => {
-    navigate('/me/products/new');
+      const params: any = { page: String(page), limit: String(limit) };
+      if (q) params.q = q;
+      setSearchParams(params);
+    } catch (err) {
+      console.error(err);
+      setError('Không tải được danh sách sản phẩm của shop.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopId, page, limit]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(total / limit)),
+    [total, limit],
+  );
+
+  const handleDelete = async (productId: number) => {
+    if (!confirm(`Xoá sản phẩm #${productId}?`)) return;
+
+    setLoading(true);
+    setError(null);
+    setMsg(null);
+
+    try {
+      const res = await deleteProduct(productId);
+      const ok = (res as any)?.success ?? true;
+      if (!ok) throw new Error((res as any)?.message || 'DELETE_FAILED');
+
+      setMsg('Đã xoá sản phẩm.');
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data?.message || 'Xoá sản phẩm thất bại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="my-products-container">
       <div className="my-products-card">
         <div className="my-products-header">
-          <button onClick={() => navigate('/home')} className="home-button">
-            🏠 Về trang chủ
+          <button
+            onClick={() => navigate('/shops/me')}
+            className="home-button"
+          >
+            ← Về shop của tôi
           </button>
           <div className="my-products-icon">📦</div>
-          <h1 className="my-products-title">Sản phẩm của shop</h1>
+          <h1 className="my-products-title">Quản lý sản phẩm</h1>
         </div>
 
-        <div className="my-products-create-button">
-          <button onClick={handleCreate}>+ Tạo sản phẩm mới</button>
+        {/* Thanh tạo + tìm kiếm */}
+        <div className="my-products-header-actions">
+          <button
+            onClick={() => navigate('/me/products/new')}
+            className="my-products-link"
+          >
+            + Thêm sản phẩm
+          </button>
+
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Tìm theo tên..."
+              className="my-products-search-input"
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              setPage(1);
+              void load();
+            }}
+            className="my-products-link"
+          >
+            Tìm
+          </button>
         </div>
 
         {loading && <div className="my-products-loading">Đang tải...</div>}
-
         {error && <div className="my-products-error">{error}</div>}
+        {msg && !loading && (
+          <div className="my-products-loading" style={{ color: '#16a34a' }}>
+            {msg}
+          </div>
+        )}
 
-        {!loading && items.length === 0 && (
+        {!loading && items.length === 0 && !error && (
           <div className="my-products-empty">Shop chưa có sản phẩm nào.</div>
         )}
 
@@ -82,7 +175,7 @@ export default function MyProductsPage() {
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Tên</th>
+                  <th>Sản phẩm</th>
                   <th>Giá</th>
                   <th>Trạng thái</th>
                   <th>Hành động</th>
@@ -91,19 +184,82 @@ export default function MyProductsPage() {
               <tbody>
                 {items.map((p) => (
                   <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td>{p.title}</td>
+                    <td>#{p.id}</td>
+                    <td>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 10,
+                          alignItems: 'center',
+                        }}
+                      >
+                        {getMainImageUrl(p) ? (
+                          <img
+                            src={getMainImageUrl(p)!}
+                            alt=""
+                            width={44}
+                            height={44}
+                            style={{
+                              objectFit: 'cover',
+                              borderRadius: 8,
+                              border: '1px solid #eee',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 8,
+                              background: '#eee',
+                            }}
+                          />
+                        )}
+                        <span>{p.title}</span>
+                      </div>
+                    </td>
                     <td>
                       {p.price} {p.currency}
                     </td>
                     <td>{p.status}</td>
-                    <td>
-                      <Link to={`/me/products/${p.id}/edit`} className="my-products-link">
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <button
+                        className="my-products-link"
+                        style={{ marginRight: 8 }}
+                        onClick={() => navigate(`/me/products/${p.id}/edit`)}
+                      >
                         Sửa
-                      </Link>
-                      <Link to={`/products/${p.id}`} className="my-products-link">
+                      </button>
+
+                      <button
+                        className="my-products-link"
+                        style={{ marginRight: 8 }}
+                        onClick={() =>
+                          navigate(`/me/products/${p.id}/variants`)
+                        }
+                      >
+                        Biến thể
+                      </button>
+
+                      <Link
+                        to={`/products/${p.id}`}
+                        className="my-products-link"
+                        style={{ marginRight: 8 }}
+                      >
                         Xem public
                       </Link>
+
+                      <button
+                        className="my-products-link"
+                        onClick={() => handleDelete(p.id)}
+                        style={{
+                          background: '#fee2e2',
+                          color: '#b91c1c',
+                          borderColor: '#fecaca',
+                        }}
+                      >
+                        Xoá
+                      </button>
                     </td>
                   </tr>
                 ))}
