@@ -111,3 +111,9 @@ export async function uploadShopCover(file: File): Promise<ApiResponse<Shop>> {
   });
   return res.data;
 }
+
+// 9) Lấy chi tiết shop theo id
+export async function getShopDetail(id: number): Promise<ApiResponse<Shop>> {
+  const res = await http.get<ApiResponse<Shop>>(`/shops/${id}`);
+  return res.data;
+}

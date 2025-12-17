@@ -25,6 +25,7 @@ import OrdersPage from '../pages/orders/OrdersPage';
 import OrderDetailPage from '../pages/orders/OrderDetailPage';
 import AddressesPage from '../pages/addresses/AddressesPage';
 import ProductCreatePage from '../pages/products/ProductCreatePage';
+import ShopDetailsPage from '../pages/shops/ShopDetailsPage';
 
 export function AppRoutes() {
   return (
@@ -50,6 +51,7 @@ export function AppRoutes() {
       {/* --- SHOP (user/seller) --- */}
       <Route path="/shops/register" element={<ShopRegisterPage />} />
       <Route path="/shops/me" element={<MyShopPage/>} />
+      <Route path="/shops/:id" element={<ShopDetailsPage />} />
 
       {/* PUBLIC PRODUCT */}
       <Route path="/products" element={<ProductsListPage />} />
