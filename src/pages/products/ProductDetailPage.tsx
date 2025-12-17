@@ -1,280 +1,385 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  getPublicProductDetail,
-  getProductVariants,
-} from '../../api/products.api';
-import type {
-  ProductDetail,
-  ProductVariant,
-  ApiResponse,
-} from '../../api/types';
-import {
-  getMainImageUrl,
-  getAllImages,
-} from '../../utils/productImage';
+// src/pages/ProductDetailPage.tsx
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+
+import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
+import { getShopDetail } from '../../api/shop.api';
+
+import type { ApiResponse, ProductDetail, ProductVariant, Shop } from '../../api/types';
+
+import { getAllImages, getMainImageUrl } from '../../utils/productImage';
 import './style/ProductDetailPage.css';
 
+const formatCurrency = (value: number | string | undefined | null) => {
+  const num = Number(value ?? 0);
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
+};
+
+// normalize options của variant về Record để match ổn định (hỗ trợ cả array & object)
+function variantOptionsToRecord(v: ProductVariant): Record<string, string> {
+  const raw: unknown = (v as any).options;
+
+  if (!raw) return {};
+
+  // case đúng theo types.ts: options là array [{ option, value }]
+  if (Array.isArray(raw)) {
+    const rec: Record<string, string> = {};
+    for (const it of raw) {
+      const key = String((it as any)?.option ?? (it as any)?.name ?? '');
+      const val = String((it as any)?.value ?? (it as any)?.val ?? '');
+      if (key) rec[key] = val;
+    }
+    return rec;
+  }
+
+  // case BE trả object: { "Màu": "Trắng", "Size": "M" }
+  if (typeof raw === 'object') return raw as Record<string, string>;
+
+  // case hiếm: BE trả string JSON
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const rec: Record<string, string> = {};
+        for (const it of parsed) {
+          const key = String((it as any)?.option ?? (it as any)?.name ?? '');
+          const val = String((it as any)?.value ?? (it as any)?.val ?? '');
+          if (key) rec[key] = val;
+        }
+        return rec;
+      }
+      if (parsed && typeof parsed === 'object') return parsed as Record<string, string>;
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
 export default function ProductDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const params = useParams();
-  const id = Number(params.id);
+  const numericId = id ? Number(id) : null;
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [shop, setShop] = useState<Shop | null>(null);
 
-  // State UI
-  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [quantity, setQuantity] = useState<number>(1);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State Logic sản phẩm
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [selectedOptions, setSelectedOptions] = useState<
-    Record<string, string>
-  >({});
-  const [quantity, setQuantity] = useState(1);
+  const optionSchema = product?.optionSchema || [];
 
-  // Fetch dữ liệu
+  const allImages = useMemo(() => {
+    if (!product) return [];
+    return getAllImages(product); // [{ id, normalizedUrl }]
+  }, [product]);
+
+  // đã chọn đủ option chưa
+  const isFullOptionsSelected =
+    optionSchema.length > 0 && Object.keys(selectedOptions).length === optionSchema.length;
+
+  // derive variant dựa theo selectedOptions (match đúng kiểu options array)
+  const currentVariant = useMemo(() => {
+    if (!product) return null;
+    if (!variants.length) return null;
+
+    const need = product.optionSchema?.length || 0;
+    if (need <= 0) return null;
+    if (Object.keys(selectedOptions).length !== need) return null;
+
+    return (
+      variants.find((v) => {
+        const rec = variantOptionsToRecord(v);
+        return Object.entries(selectedOptions).every(([k, val]) => rec[k] === val);
+      }) || null
+    );
+  }, [product, variants, selectedOptions]);
+
+  // Load product detail + variants
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
+    if (!numericId) return;
 
-    Promise.all([
-      getPublicProductDetail(id),
-      getProductVariants(id).catch(() => null), // Variant lỗi thì bỏ qua
-    ])
+    setLoading(true);
+    setError(null);
+
+    Promise.all([getPublicProductDetail(numericId), getProductVariants(numericId).catch(() => null)])
       .then(([detailRes, variantRes]) => {
-        const detailData = (
-          detailRes as unknown as ApiResponse<ProductDetail>
-        ).data;
-        setProduct(detailData);
-        // Set ảnh mặc định
-        setPreviewImage(getMainImageUrl(detailData));
+        const detail = (detailRes as unknown as ApiResponse<ProductDetail>).data;
+
+        setProduct(detail);
+        setSelectedOptions({});
+        setQuantity(1);
+
+        const main = getMainImageUrl(detail);
+        setPreviewImage(main || null);
 
         if (variantRes) {
-          const variantData = (
-            variantRes as unknown as ApiResponse<ProductVariant[]>
-          ).data;
-          setVariants(variantData);
+          const vs = (variantRes as unknown as ApiResponse<ProductVariant[]>).data;
+          setVariants(Array.isArray(vs) ? vs : []);
+        } else {
+          setVariants([]);
         }
       })
       .catch((err) => {
         console.error(err);
-        setError('Không tải được thông tin sản phẩm.');
+        setError('Không tải được sản phẩm.');
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [numericId]);
 
-  // Logic tìm Variant dựa trên Option đang chọn
-  const currentVariant = useMemo(() => {
-    if (variants.length === 0) return null;
+  // Load shop info từ product.shopId
+  useEffect(() => {
+    const shopId = product?.shopId;
+    if (!shopId) {
+      setShop(null);
+      return;
+    }
 
-    // Tìm variant khớp với TẤT CẢ option đang chọn
-    return variants.find((v) => {
-      if (!v.options) return false;
-      return v.options.every(
-        (opt) => selectedOptions[opt.option] === opt.value,
-      );
-    });
-  }, [variants, selectedOptions]);
+    let cancelled = false;
 
-  // Xử lý khi user click chọn Option (Màu/Size)
+    (async () => {
+      try {
+        const res = await getShopDetail(shopId);
+        if (!cancelled) setShop(res.success ? (res.data as Shop) : null);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setShop(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.shopId]);
+
+  // Khi variant đổi → ưu tiên ảnh của variant (imageId), nếu không thì dùng main
+  useEffect(() => {
+    if (!product) return;
+
+    if (!isFullOptionsSelected || !currentVariant) {
+      setPreviewImage(getMainImageUrl(product) || null);
+      return;
+    }
+
+    const vid = currentVariant.imageId != null ? Number(currentVariant.imageId) : null;
+    if (vid) {
+      const found = allImages.find((x) => Number(x.id) === vid);
+      if (found?.normalizedUrl) {
+        setPreviewImage(found.normalizedUrl);
+        return;
+      }
+    }
+
+    setPreviewImage(getMainImageUrl(product) || null);
+  }, [currentVariant, isFullOptionsSelected, allImages, product]);
+
   const handleOptionClick = (optionName: string, value: string) => {
-    const newOptions = { ...selectedOptions, [optionName]: value };
-    setSelectedOptions(newOptions);
-
-    // TODO: nếu sau này BE trả về image cho variant, chỗ này có thể đổi previewImage theo variant
+    setSelectedOptions((prev) => ({ ...prev, [optionName]: value }));
   };
 
-  // Format tiền tệ
-  const formatPrice = (amount: number | string) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(Number(amount));
+  const displayPrice = currentVariant?.price ?? product?.price;
+  const displayStock = currentVariant?.stock ?? product?.stock ?? 0;
+
+  const basePrice = product?.price;
+  const hasVariantPrice =
+    currentVariant &&
+    currentVariant.price !== undefined &&
+    Number(currentVariant.price) !== Number(basePrice ?? 0);
+
+  const numericStock = Number(displayStock ?? 0);
+  const inStock = numericStock > 0;
+
+  const canPurchase = inStock && (!optionSchema.length || isFullOptionsSelected);
+
+  const clampQty = (q: number) => {
+    const min = 1;
+    const max = numericStock > 0 ? numericStock : Number.MAX_SAFE_INTEGER;
+    return Math.max(min, Math.min(max, q));
   };
 
-  // Xác định thông tin hiển thị (Giá, Kho, SKU)
-  const displayPrice = currentVariant ? currentVariant.price : product?.price;
-  const displayStock = currentVariant ? currentVariant.stock : product?.stock;
-  const displaySku = currentVariant ? currentVariant.sku : '---';
+  const handleAddToCart = () => {
+    alert('TODO: add to cart');
+  };
 
-  // Kiểm tra đã chọn đủ option chưa (để enable nút Mua)
-  const isFullOptionsSelected = product?.optionSchema
-    ? product.optionSchema.length ===
-      Object.keys(selectedOptions).length
-    : true;
+  const handleBuyNow = () => {
+    alert('TODO: buy now');
+  };
 
-  const canAddToCart =
-    isFullOptionsSelected && Number(displayStock) > 0;
+  if (!numericId) {
+    return (
+      <div className="pdp-loading">
+        <div className="pdp-error-card">Thiếu id sản phẩm trên URL.</div>
+      </div>
+    );
+  }
 
-  // --- RENDER ---
-
-  if (loading)
+  if (loading) {
     return (
       <div className="pdp-loading">
         <div className="pdp-loading-card">Đang tải sản phẩm...</div>
       </div>
     );
+  }
 
-  if (error || !product)
+  if (error || !product) {
     return (
       <div className="pdp-loading">
         <div className="pdp-error-card">
-          {error || 'Sản phẩm không tồn tại'}
+          <div style={{ marginBottom: 12 }}>{error || 'Sản phẩm không tồn tại.'}</div>
+          <button type="button" className="pdp-btn-buy" onClick={() => navigate('/products')}>
+            ← Quay lại danh sách
+          </button>
         </div>
       </div>
     );
+  }
 
-  const allImages = getAllImages(product);
+  const mainUrl = previewImage || getMainImageUrl(product) || '';
+  const shopName = shop?.name || '';
+  const avatarLetter = shopName ? shopName.trim()[0]?.toUpperCase() : 'S';
+
+  // totalSold: cố gắng lấy theo nhiều kiểu để không crash nếu API khác nhau
+  const totalSold =
+    (shop as any)?.totalSold ??
+    (shop as any)?.stats?.totalSold ??
+    (shop as any)?.stats?.total_sold ??
+    null;
 
   return (
     <div className="pdp-container">
       <div className="pdp-wrapper">
-        {/* Breadcrumb / Back */}
         <div className="pdp-breadcrumb">
-          <span onClick={() => navigate('/home')}>Trang chủ</span>
+          <span onClick={() => navigate('/products')}>Sản phẩm</span>
           <span className="pdp-breadcrumb-sep">/</span>
-          <span className="pdp-breadcrumb-current">
-            {product.title}
-          </span>
+          <span className="pdp-breadcrumb-current">{product.title}</span>
         </div>
 
         <div className="pdp-main-card">
-          {/* CỘT TRÁI: HÌNH ẢNH */}
+          {/* LEFT: IMAGES */}
           <div className="pdp-gallery-col">
             <div className="pdp-main-image-frame">
-              {previewImage ? (
-                <img src={previewImage} alt={product.title} />
-              ) : (
-                <div className="pdp-no-image">Không có ảnh</div>
-              )}
+              {mainUrl ? <img src={mainUrl} alt={product.title} /> : <div className="pdp-no-image">No image</div>}
             </div>
 
-            <div className="pdp-thumb-list">
-              {allImages.map((img) => (
-                <button
-                  key={img.id}
-                  type="button"
-                  className={`pdp-thumb-item ${
-                    previewImage === img.normalizedUrl
-                      ? 'active'
-                      : ''
-                  }`}
-                  onMouseEnter={() =>
-                    setPreviewImage(img.normalizedUrl)
-                  }
-                  onClick={() =>
-                    setPreviewImage(img.normalizedUrl)
-                  }
-                >
-                  <img src={img.normalizedUrl} alt="thumbnail" />
-                </button>
-              ))}
-            </div>
+            {allImages.length > 0 && (
+              <div className="pdp-thumb-list">
+                {allImages.map((img) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    className={`pdp-thumb-item ${img.normalizedUrl === mainUrl ? 'active' : ''}`}
+                    onClick={() => setPreviewImage(img.normalizedUrl)}
+                    aria-label="Xem ảnh"
+                  >
+                    <img src={img.normalizedUrl} alt="thumb" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* CỘT PHẢI: THÔNG TIN */}
+          {/* RIGHT: INFO */}
           <div className="pdp-info-col">
-            {/* Shop Info (placeholder) */}
-            <div className="pdp-shop-header">
-              <div className="pdp-shop-avatar">🏪</div>
-              <div className="pdp-shop-meta">
-                <h4 className="pdp-shop-name">
-                  Cửa hàng chính hãng
-                </h4>
-                <div className="pdp-shop-sub">
-                  <span className="pdp-sold-count">
-                    Đã bán {product.sold ?? 0}
-                  </span>
+            {/* SHOP HEADER (match CSS) */}
+            {shop && (
+              <div className="pdp-shop-header">
+                <div className="pdp-shop-avatar">{avatarLetter}</div>
+                <div className="pdp-shop-meta">
+                  <p className="pdp-shop-name">
+                    <span
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/shops/${shop.id}`)}
+                      title="Xem shop"
+                    >
+                      {shop.name}
+                    </span>
+                  </p>
+                  <div className="pdp-shop-sub">Bán bởi shop</div>
                 </div>
+
+                {totalSold != null && <div className="pdp-sold-count">Đã bán: {Number(totalSold) || 0}</div>}
               </div>
-            </div>
+            )}
 
             <h1 className="pdp-title">{product.title}</h1>
 
             <div className="pdp-price-box">
-              {product.compareAtPrice &&
-                Number(product.compareAtPrice) >
-                  Number(displayPrice) && (
-                  <span className="pdp-compare-price">
-                    {formatPrice(product.compareAtPrice)}
-                  </span>
-                )}
-              <span className="pdp-current-price">
-                {formatPrice(displayPrice || 0)}
-              </span>
+              <div className="pdp-current-price">{formatCurrency(displayPrice)}</div>
+              {product.compareAtPrice && (
+                <div className="pdp-compare-price">{formatCurrency(product.compareAtPrice)}</div>
+              )}
             </div>
 
-            {/* Options (Màu, Size, ...) */}
-            {product.optionSchema &&
-              product.optionSchema.map((schema, idx) => (
-                <div key={idx} className="pdp-option-group">
-                  <span className="pdp-option-label">
-                    {schema.name}:
-                  </span>
-                  <div className="pdp-option-values">
-                    {schema.values.map((val) => {
-                      const isSelected =
-                        selectedOptions[schema.name] === val;
-                      return (
-                        <button
-                          key={val}
-                          type="button"
-                          className={`pdp-option-btn ${
-                            isSelected ? 'selected' : ''
-                          }`}
-                          onClick={() =>
-                            handleOptionClick(schema.name, val)
-                          }
-                        >
-                          {val}
-                        </button>
-                      );
-                    })}
-                  </div>
+            {/* OPTIONS */}
+            {optionSchema.map((opt) => (
+              <div className="pdp-option-group" key={opt.name}>
+                <div className="pdp-option-label">{opt.name}</div>
+                <div className="pdp-option-values">
+                  {opt.values.map((val) => {
+                    const selected = selectedOptions[opt.name] === val;
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        className={`pdp-option-btn ${selected ? 'selected' : ''}`}
+                        onClick={() => handleOptionClick(opt.name, val)}
+                      >
+                        {val}
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+            ))}
 
-            {/* Meta info: SKU & Kho */}
             <div className="pdp-meta-info">
               <div className="pdp-meta-item">
-                <span className="pdp-meta-label">SKU</span>
-                <span className="pdp-meta-value">
-                  {displaySku}
-                </span>
+                <div className="pdp-meta-label">Tồn kho</div>
+                <div className="pdp-meta-value">{numericStock}</div>
               </div>
+
               <div className="pdp-meta-item">
-                <span className="pdp-meta-label">Tồn kho</span>
-                <span className="pdp-meta-value">
-                  {displayStock} sản phẩm
-                </span>
+                <div className="pdp-meta-label">SKU</div>
+                <div className="pdp-meta-value">{currentVariant?.sku || '---'}</div>
               </div>
             </div>
 
-            {/* Số lượng + nút hành động */}
+            {/* QUANTITY + ACTION */}
             <div className="pdp-actions">
               <div className="pdp-quantity-group">
-                <span className="pdp-option-label">Số lượng:</span>
+                <span>Số lượng</span>
+
                 <div className="pdp-quantity-control">
                   <button
                     type="button"
-                    onClick={() =>
-                      setQuantity((q) => Math.max(1, q - 1))
-                    }
+                    onClick={() => setQuantity((q) => clampQty(q - 1))}
+                    aria-label="decrease"
+                    disabled={!inStock}
                   >
-                    −
+                    –
                   </button>
+
                   <input
                     type="number"
+                    min={1}
+                    max={numericStock > 0 ? numericStock : undefined}
                     value={quantity}
-                    readOnly
+                    onChange={(e) => setQuantity(clampQty(Number(e.target.value || 1)))}
+                    disabled={!inStock}
+                    inputMode="numeric"
                   />
+
                   <button
                     type="button"
-                    onClick={() =>
-                      setQuantity((q) => q + 1)
-                    }
+                    onClick={() => setQuantity((q) => clampQty(q + 1))}
+                    aria-label="increase"
+                    disabled={!inStock}
                   >
                     +
                   </button>
@@ -285,41 +390,36 @@ export default function ProductDetailPage() {
                 <button
                   type="button"
                   className="pdp-btn-cart"
-                  disabled={!canAddToCart}
-                  onClick={() =>
-                    alert(
-                      `Thêm vào giỏ: ${
-                        currentVariant
-                          ? currentVariant.sku
-                          : 'Sản phẩm gốc'
-                      } - SL: ${quantity}`,
-                    )
-                  }
+                  disabled={!canPurchase}
+                  onClick={handleAddToCart}
                 >
-                  🛒 Thêm vào giỏ
+                  Thêm vào giỏ
                 </button>
+
                 <button
                   type="button"
                   className="pdp-btn-buy"
-                  disabled={!canAddToCart}
+                  disabled={!canPurchase}
+                  onClick={handleBuyNow}
                 >
-                  Mua ngay
+                  {canPurchase
+                    ? 'Mua ngay'
+                    : optionSchema.length && !isFullOptionsSelected
+                      ? 'Vui lòng chọn biến thể'
+                      : 'Hết hàng'}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* MÔ TẢ SẢN PHẨM */}
-        <section className="pdp-description-section">
-          <h3>Mô tả sản phẩm</h3>
-          <div
-            className="pdp-desc-content"
-            dangerouslySetInnerHTML={{
-              __html: product.description || '',
-            }}
-          />
-        </section>
+        {/* DESCRIPTION (match CSS) */}
+        {product.description && (
+          <div className="pdp-description-section">
+            <h3>Mô tả</h3>
+            <div className="pdp-desc-content">{product.description}</div>
+          </div>
+        )}
       </div>
     </div>
   );
