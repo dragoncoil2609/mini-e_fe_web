@@ -1,0 +1,248 @@
+/* src/pages/payment/PaymentResultPage.css */
+
+.payres-container {
+  min-height: 100vh;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar (format giống HomePage) */
+.payres-headerbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  border-bottom: 1px solid #eef0f4;
+  box-shadow: 0 2px 12px rgba(17, 24, 39, 0.05);
+}
+
+.payres-headerbar-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.payres-brand {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: #667eea;
+}
+
+.payres-brand:hover {
+  background: #f1f5ff;
+}
+
+.payres-headerbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.payres-chip {
+  text-decoration: none;
+  color: #111827;
+  background: #f3f4f6;
+  border: 1px solid #eef0f4;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.payres-chip:hover {
+  background: #e9edf6;
+  transform: translateY(-1px);
+}
+
+.payres-main {
+  flex: 1;
+  padding: 22px 18px 44px;
+}
+
+.payres-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.payres-card {
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+}
+
+.payres-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eef0f4;
+  margin-bottom: 16px;
+}
+
+.payres-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 900;
+  flex: 0 0 auto;
+  background: #f3f4f6;
+  border: 1px solid #eef0f4;
+}
+
+.payres-icon-success {
+  background: #ecfdf3;
+  border-color: #abefc6;
+}
+
+.payres-icon-warning {
+  background: #fffaeb;
+  border-color: #fedf89;
+}
+
+.payres-icon-danger {
+  background: #fef3f2;
+  border-color: #fecdca;
+}
+
+.payres-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.payres-subtitle {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.payres-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid #eef0f4;
+  background: #f3f4f6;
+  color: #344054;
+  margin-top: 10px;
+}
+
+.payres-pill-success {
+  background: #ecfdf3;
+  border-color: #abefc6;
+  color: #067647;
+}
+
+.payres-pill-warning {
+  background: #fffaeb;
+  border-color: #fedf89;
+  color: #b54708;
+}
+
+.payres-pill-danger {
+  background: #fef3f2;
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.payres-section {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #eef0f4;
+  background: #f9fafb;
+}
+
+.payres-kv {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px 14px;
+  font-size: 14px;
+  color: #344054;
+}
+
+.payres-k {
+  color: #667085;
+  font-weight: 800;
+}
+
+.payres-v {
+  color: #111827;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.payres-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.payres-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 900;
+  text-decoration: none;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #111827;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.payres-btn:hover {
+  background: #f2f4f7;
+  transform: translateY(-1px);
+}
+
+.payres-btn-primary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.payres-btn-primary:hover {
+  background: #0b1220;
+}
+
+.payres-note {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #667085;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .payres-kv {
+    grid-template-columns: 1fr;
+  }
+}

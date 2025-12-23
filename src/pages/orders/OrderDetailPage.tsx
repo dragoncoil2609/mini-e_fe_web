@@ -33,20 +33,44 @@ export default function OrderDetailPage() {
     void load();
   }, [id]);
 
-  if (!id) return <div className="order-detail-container"><div className="order-detail-card">Thiếu ID đơn hàng.</div></div>;
-  if (loading) return <div className="order-detail-container"><div className="order-detail-card">Đang tải...</div></div>;
-  if (error) return <div className="order-detail-container"><div className="order-detail-card">{error}</div></div>;
-  if (!order) return null;
+  const labelStatus = (s: Order['status']) => {
+    const map: Record<string, string> = {
+      PENDING: 'Chờ xử lý',
+      PAID: 'Đã thanh toán',
+      PROCESSING: 'Đang xử lý',
+      SHIPPED: 'Đang giao',
+      COMPLETED: 'Hoàn thành',
+      CANCELLED: 'Đã huỷ',
+    };
+    return map[String(s)] || String(s);
+  };
 
-  return (
-    <div className="order-detail-container">
-      <div className="order-detail-card">
-        <div className="order-detail-header">
-          <div className="order-detail-header-buttons">
-            <button onClick={() => navigate('/orders')} className="order-detail-back-button">← Quay lại</button>
-            <button onClick={() => navigate('/home')} className="home-button">🏠 Về trang chủ</button>
+  const statusClass = (s: Order['status']) => {
+    const key = String(s || '').toLowerCase();
+    const normalized: Record<string, string> = {
+      shipped: 'shipping',
+      completed: 'completed',
+      paid: 'paid',
+    };
+    return `order-detail-status order-detail-status-${normalized[key] || key}`;
+  };
+
+  const body = () => {
+    if (!id) return <div className="order-detail-state">Thiếu ID đơn hàng.</div>;
+    if (loading) return <div className="order-detail-state">Đang tải...</div>;
+    if (error) return <div className="order-detail-state">{error}</div>;
+    if (!order) return null;
+
+    return (
+      <>
+        <div className="order-detail-title-row">
+          <div>
+            <h1 className="order-detail-title">Chi tiết đơn hàng</h1>
+            <p className="order-detail-subtitle">Mã đơn <b>{order.code}</b> • {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
           </div>
-          <h1 className="order-detail-title">Chi tiết đơn hàng</h1>
+          <div className="order-detail-title-actions">
+            <button onClick={() => navigate('/orders')} className="order-detail-back-button">← Quay lại</button>
+          </div>
         </div>
 
         <div className="order-detail-section">
@@ -56,7 +80,7 @@ export default function OrderDetailPage() {
           </div>
           <div className="order-detail-info-row">
             <span className="order-detail-label">Trạng thái:</span>
-            <span className="order-detail-value">{order.status}</span>
+            <span className={statusClass(order.status)}>{labelStatus(order.status)}</span>
           </div>
           <div className="order-detail-info-row">
             <span className="order-detail-label">Thanh toán:</span>
@@ -129,7 +153,29 @@ export default function OrderDetailPage() {
             </div>
           </div>
         </div>
-      </div>
+
+      </>
+    );
+  };
+
+  return (
+    <div className="order-detail-container">
+      <header className="order-detail-headerbar">
+        <div className="order-detail-headerbar-content">
+          <button className="order-detail-brand" onClick={() => navigate('/home')}>Mini-E</button>
+          <div className="order-detail-headerbar-right">
+            <Link className="order-detail-chip" to="/products">🛍️ Sản phẩm</Link>
+            <Link className="order-detail-chip" to="/cart">🛒 Giỏ hàng</Link>
+            <Link className="order-detail-chip" to="/orders">📦 Đơn hàng</Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="order-detail-main">
+        <div className="order-detail-content">
+          <div className="order-detail-card">{body()}</div>
+        </div>
+      </main>
     </div>
   );
 }

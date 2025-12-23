@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { OrdersApi } from '../../api/orders.api';
 import type { PaymentMethod, PreviewOrderResponse } from '../../api/types';
+import './CheckoutPage.css';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [sp] = useSearchParams();
+
   const itemIds = useMemo(() => {
     const raw = sp.get('itemIds') || '';
     return raw
@@ -38,6 +40,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!itemIds.length) return;
     void loadPreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemIds.join(',')]);
 
   const pay = async () => {
@@ -60,7 +63,6 @@ export default function CheckoutPage() {
       // VNPAY: redirect sang gateway để hiện QR chuẩn
       if ('paymentUrl' in res.data) {
         window.location.href = res.data.paymentUrl;
-        return;
       }
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Thanh toán thất bại');
@@ -69,120 +71,151 @@ export default function CheckoutPage() {
     }
   };
 
-  if (!itemIds.length) {
-    return (
-      <div style={{ padding: 20 }}>
-        <h2>Checkout</h2>
-        <p>Bạn chưa chọn sản phẩm nào.</p>
-        <Link to="/cart">Quay lại giỏ hàng</Link>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-        <h2>Thanh toán</h2>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Link to="/cart">← Giỏ hàng</Link>
-          <Link to="/addresses">Địa chỉ</Link>
-        </div>
-      </div>
-
-      {loading && <p>Đang xử lý...</p>}
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-
-      {preview && (
-        <>
-          <div style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 10 }}>
-            <h3>Giao đến</h3>
-            <div><b>{preview.address.fullName}</b> - {preview.address.phone}</div>
-            <div>{preview.address.formattedAddress}</div>
-            <small>Nếu sai địa chỉ, hãy đặt địa chỉ mặc định ở trang Địa chỉ.</small>
+    <div className="checkout-container">
+      <header className="checkout-headerbar">
+        <div className="checkout-headerbar-content">
+          <button className="checkout-brand" onClick={() => navigate('/home')}>Mini-E</button>
+          <div className="checkout-headerbar-right">
+            <Link className="checkout-chip" to="/products">🛍️ Sản phẩm</Link>
+            <Link className="checkout-chip" to="/cart">🛒 Giỏ hàng</Link>
+            <Link className="checkout-chip" to="/orders">📦 Đơn hàng</Link>
           </div>
+        </div>
+      </header>
 
-          <div style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 10 }}>
-            <h3>Sản phẩm</h3>
-            {preview.orders.map((g, idx) => (
-              <div key={idx} style={{ padding: 10, borderTop: idx ? '1px dashed #ddd' : 'none' }}>
-                <div style={{ fontWeight: 600 }}>{g.product.title}</div>
-                {g.items.map((it) => (
-                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 6 }}>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      {it.imageUrl ? (
-                        <img src={it.imageUrl} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: 44, height: 44, borderRadius: 8, background: '#eee' }} />
-                      )}
-                      <div>
-                        <div>{it.name}</div>
-                        <small>x{it.quantity}</small>
+      <main className="checkout-main">
+        <div className="checkout-content">
+          <div className="checkout-card">
+            <div className="checkout-title-row">
+              <div>
+                <h1 className="checkout-title">Thanh toán</h1>
+                <p className="checkout-subtitle">Xác nhận địa chỉ, kiểm tra đơn và chọn phương thức thanh toán.</p>
+              </div>
+              <div className="checkout-title-actions">
+                <Link className="checkout-secondary-link" to="/cart">← Giỏ hàng</Link>
+                <Link className="checkout-secondary-link" to="/addresses">Địa chỉ</Link>
+              </div>
+            </div>
+
+            {!itemIds.length ? (
+              <div className="checkout-empty">
+                <p>Bạn chưa chọn sản phẩm nào để thanh toán.</p>
+                <Link className="checkout-primary" to="/cart">Quay lại giỏ hàng</Link>
+              </div>
+            ) : (
+              <>
+                {loading && <div className="checkout-loading">Đang xử lý...</div>}
+                {error && <div className="checkout-error">{error}</div>}
+
+                {preview && (
+                  <>
+                    <div className="checkout-section">
+                      <h2 className="checkout-section-title">Giao đến</h2>
+                      <div className="checkout-address">
+                        <div className="checkout-address-name">
+                          <b>{preview.address.fullName}</b> • {preview.address.phone}
+                        </div>
+                        <div className="checkout-address-text">{preview.address.formattedAddress}</div>
+                        <div className="checkout-address-hint">
+                          Nếu sai địa chỉ, hãy đặt địa chỉ mặc định ở trang <b>Địa chỉ</b>.
+                        </div>
                       </div>
                     </div>
-                    <div>{new Intl.NumberFormat('vi-VN').format(it.totalLine)} VND</div>
-                  </div>
-                ))}
-                <div style={{ marginTop: 8 }}>
-                  <small>Phí ship: <b>{new Intl.NumberFormat('vi-VN').format(g.shippingFee)} VND</b></small>
-                </div>
-              </div>
-            ))}
+
+                    <div className="checkout-section">
+                      <h2 className="checkout-section-title">Sản phẩm</h2>
+                      <div className="checkout-orders">
+                        {preview.orders.map((g, idx) => (
+                          <div key={idx} className="checkout-order-group">
+                            <div className="checkout-order-group-title">{g.product.title}</div>
+                            <div className="checkout-items">
+                              {g.items.map((it) => (
+                                <div key={it.id} className="checkout-item">
+                                  <div className="checkout-item-left">
+                                    {it.imageUrl ? (
+                                      <img className="checkout-item-image" src={it.imageUrl} alt="" />
+                                    ) : (
+                                      <div className="checkout-item-image checkout-item-image--placeholder" />
+                                    )}
+                                    <div className="checkout-item-info">
+                                      <div className="checkout-item-name">{it.name}</div>
+                                      <div className="checkout-item-qty">x{it.quantity}</div>
+                                    </div>
+                                  </div>
+                                  <div className="checkout-item-total">
+                                    {new Intl.NumberFormat('vi-VN').format(it.totalLine)} VND
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="checkout-shipping-fee">
+                              Phí ship: <b>{new Intl.NumberFormat('vi-VN').format(g.shippingFee)} VND</b>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="checkout-section">
+                      <h2 className="checkout-section-title">Tổng tiền</h2>
+                      <div className="checkout-summary">
+                        <div className="checkout-summary-row">
+                          <span className="checkout-summary-label">Tạm tính</span>
+                          <b className="checkout-summary-value">
+                            {new Intl.NumberFormat('vi-VN').format(preview.summary.subtotal)} VND
+                          </b>
+                        </div>
+                        <div className="checkout-summary-row">
+                          <span className="checkout-summary-label">Phí ship</span>
+                          <b className="checkout-summary-value">
+                            {new Intl.NumberFormat('vi-VN').format(preview.summary.shippingFee)} VND
+                          </b>
+                        </div>
+                        <div className="checkout-summary-total">
+                          <span className="checkout-summary-total-label">Tổng cộng</span>
+                          <b className="checkout-summary-total-value">
+                            {new Intl.NumberFormat('vi-VN').format(preview.summary.total)} VND
+                          </b>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="checkout-section">
+                      <h2 className="checkout-section-title">Phương thức thanh toán</h2>
+
+                      <label className="checkout-radio">
+                        <input type="radio" checked={method === 'COD'} onChange={() => setMethod('COD')} />
+                        <span>Thanh toán khi nhận hàng (COD)</span>
+                      </label>
+
+                      <label className="checkout-radio">
+                        <input type="radio" checked={method === 'VNPAY'} onChange={() => setMethod('VNPAY')} />
+                        <span>VNPAY (quét QR trên trang VNPAY)</span>
+                      </label>
+
+                      <div className="checkout-note">
+                        <div className="checkout-note-label">Ghi chú (tuỳ chọn)</div>
+                        <input
+                          className="checkout-note-input"
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          placeholder="Ví dụ: giao giờ hành chính..."
+                        />
+                      </div>
+
+                      <button onClick={pay} disabled={loading} className="checkout-pay">
+                        {method === 'VNPAY' ? 'Thanh toán VNPay' : 'Đặt hàng COD'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </div>
-
-          <div style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 10 }}>
-            <h3>Tổng tiền</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Tạm tính</span>
-              <b>{new Intl.NumberFormat('vi-VN').format(preview.summary.subtotal)} VND</b>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Phí ship</span>
-              <b>{new Intl.NumberFormat('vi-VN').format(preview.summary.shippingFee)} VND</b>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-              <span>Tổng cộng</span>
-              <b>{new Intl.NumberFormat('vi-VN').format(preview.summary.total)} VND</b>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 10 }}>
-            <h3>Phương thức thanh toán</h3>
-            <label style={{ display: 'block', marginTop: 6 }}>
-              <input type="radio" checked={method === 'COD'} onChange={() => setMethod('COD')} /> Thanh toán khi nhận hàng (COD)
-            </label>
-            <label style={{ display: 'block', marginTop: 6 }}>
-              <input type="radio" checked={method === 'VNPAY'} onChange={() => setMethod('VNPAY')} /> VNPAY (quét QR trên trang VNPAY)
-            </label>
-
-            <div style={{ marginTop: 10 }}>
-              <div>Ghi chú (tuỳ chọn)</div>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Ví dụ: giao giờ hành chính..."
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
-              />
-            </div>
-
-            <button
-              onClick={pay}
-              disabled={loading}
-              style={{
-                marginTop: 12,
-                width: '100%',
-                padding: 12,
-                borderRadius: 10,
-                border: 'none',
-                background: '#111',
-                color: '#fff',
-                cursor: 'pointer',
-              }}
-            >
-              {method === 'VNPAY' ? 'Thanh toán VNPay' : 'Đặt hàng COD'}
-            </button>
-          </div>
-        </>
-      )}
+        </div>
+      </main>
     </div>
   );
 }

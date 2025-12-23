@@ -27,7 +27,7 @@ import ProductCreatePage from '../pages/products/ProductCreatePage';
 import ShopDetailsPage from '../pages/shops/ShopDetailsPage';
 
 import CheckoutPage from '../pages/checkout/CheckoutPage';
-import PaymentResultPage from '../payments/PaymentResultPage';
+import PaymentResultPage from '../pages/payments/PaymentResultPage';
 
 export function AppRoutes() {
   return (

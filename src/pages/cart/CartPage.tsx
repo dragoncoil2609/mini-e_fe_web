@@ -171,54 +171,80 @@ export default function CartPage() {
   if (loading) {
     return (
       <div className="cart-container">
-        <div className="cart-card">
-          <div className="cart-loading">Đang tải giỏ hàng...</div>
-        </div>
+        <header className="cart-headerbar">
+          <div className="cart-headerbar-content">
+            <button className="cart-brand" onClick={() => navigate('/home')}>Mini-E</button>
+            <div className="cart-headerbar-right">
+              <Link className="cart-chip" to="/products">🛍️ Sản phẩm</Link>
+              <Link className="cart-chip" to="/orders">📦 Đơn hàng</Link>
+            </div>
+          </div>
+        </header>
+
+        <main className="cart-main">
+          <div className="cart-content">
+            <div className="cart-card">
+              <div className="cart-loading">Đang tải giỏ hàng...</div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="cart-container">
-      <div className="cart-card">
-        <div className="cart-header">
-          <button onClick={() => navigate('/home')} className="home-button">
-            🏠 Về trang chủ
-          </button>
-          <div className="cart-icon">🛒</div>
-          <h1 className="cart-title">Giỏ hàng của tôi</h1>
-        </div>
-
-        {error && <div className="cart-error">{error}</div>}
-        {message && <div className="cart-message">{message}</div>}
-
-        {!cart || cart.items.length === 0 ? (
-          <div className="cart-empty">
-            <p>Giỏ hàng của bạn đang trống.</p>
-            <Link to="/products" className="cart-empty-link">
-              Xem sản phẩm
-            </Link>
+      <header className="cart-headerbar">
+        <div className="cart-headerbar-content">
+          <button className="cart-brand" onClick={() => navigate('/home')}>Mini-E</button>
+          <div className="cart-headerbar-right">
+            <Link className="cart-chip" to="/products">🛍️ Sản phẩm</Link>
+            <Link className="cart-chip" to="/orders">📦 Đơn hàng</Link>
           </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button onClick={toggleAll} className="cart-clear-button">
-                {cart.items.every((i) => selectedIds.has(i.id)) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-              </button>
-              <Link to="/addresses" className="cart-empty-link">
-                Quản lý địa chỉ
-              </Link>
+        </div>
+      </header>
+
+      <main className="cart-main">
+        <div className="cart-content">
+          <div className="cart-card">
+            <div className="cart-title-row">
+              <div>
+                <h1 className="cart-title">Giỏ hàng</h1>
+                <p className="cart-subtitle">Chọn sản phẩm để thanh toán, cập nhật số lượng hoặc xóa nhanh.</p>
+              </div>
+              <Link to="/products" className="cart-primary">Mua thêm</Link>
             </div>
 
-            <div className="cart-items-list">
-              {cart.items.map((item) => {
-                const imageUrl = getItemImageUrl(item);
-                const itemTotal = Number(item.price) * item.quantity;
-                const isUpdating = updating.has(item.id);
+            {error && <div className="cart-error">{error}</div>}
+            {message && <div className="cart-message">{message}</div>}
 
-                return (
-                  <div key={item.id} className="cart-item">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {!cart || cart.items.length === 0 ? (
+              <div className="cart-empty">
+                <p>Giỏ hàng của bạn đang trống.</p>
+                <Link to="/products" className="cart-empty-link">
+                  Xem sản phẩm
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="cart-toolbar">
+                  <button onClick={toggleAll} className="cart-secondary-button">
+                    {cart.items.every((i) => selectedIds.has(i.id)) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                  </button>
+                  <Link to="/addresses" className="cart-secondary-link">
+                    Quản lý địa chỉ
+                  </Link>
+                </div>
+
+                <div className="cart-items-list">
+                  {cart.items.map((item) => {
+                    const imageUrl = getItemImageUrl(item);
+                    const itemTotal = Number(item.price) * item.quantity;
+                    const isUpdating = updating.has(item.id);
+
+                    return (
+                      <div key={item.id} className="cart-item">
+                    <div className="cart-check-wrap">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(item.id)}
@@ -281,30 +307,34 @@ export default function CartPage() {
                     >
                       🗑️
                     </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="cart-summary">
+                  <div className="cart-summary-row">
+                    <span className="cart-summary-label">Đã chọn:</span>
+                    <span className="cart-summary-value">
+                      {selectedSummary.count} dòng / {selectedSummary.qty} món
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="cart-summary-row">
+                    <span className="cart-summary-label">Tạm tính (đã chọn):</span>
+                    <span className="cart-summary-value">
+                      {formatPrice(selectedSummary.subtotal.toFixed(2))} {cart.currency}
+                    </span>
+                  </div>
 
-            <div className="cart-summary">
-              <div className="cart-summary-row">
-                <span className="cart-summary-label">Đã chọn:</span>
-                <span className="cart-summary-value">{selectedSummary.count} dòng / {selectedSummary.qty} món</span>
-              </div>
-              <div className="cart-summary-row">
-                <span className="cart-summary-label">Tạm tính (đã chọn):</span>
-                <span className="cart-summary-value">
-                  {formatPrice(selectedSummary.subtotal.toFixed(2))} {cart.currency}
-                </span>
-              </div>
-
-              <button className="cart-checkout-button" disabled={selectedIds.size === 0} onClick={goCheckout}>
-                Thanh toán
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+                  <button className="cart-checkout-button" disabled={selectedIds.size === 0} onClick={goCheckout}>
+                    Thanh toán
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
