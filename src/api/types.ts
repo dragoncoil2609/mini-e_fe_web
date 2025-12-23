@@ -277,6 +277,7 @@ export interface CartItem {
   sku: string | null;
 
   imageId: number | null;
+  imageUrl?: string | null;
 
   price: string; // "150000.00"
   quantity: number;

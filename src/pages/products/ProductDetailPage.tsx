@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
 import { getShopDetail } from '../../api/shop.api';
+import { CartApi } from '../../api/cart.api';
 
 import type { ApiResponse, ProductDetail, ProductVariant, Shop } from '../../api/types';
 
@@ -15,13 +16,10 @@ const formatCurrency = (value: number | string | undefined | null) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 };
 
-// normalize options của variant về Record để match ổn định (hỗ trợ cả array & object)
 function variantOptionsToRecord(v: ProductVariant): Record<string, string> {
   const raw: unknown = (v as any).options;
-
   if (!raw) return {};
 
-  // case đúng theo types.ts: options là array [{ option, value }]
   if (Array.isArray(raw)) {
     const rec: Record<string, string> = {};
     for (const it of raw) {
@@ -32,10 +30,8 @@ function variantOptionsToRecord(v: ProductVariant): Record<string, string> {
     return rec;
   }
 
-  // case BE trả object: { "Màu": "Trắng", "Size": "M" }
   if (typeof raw === 'object') return raw as Record<string, string>;
 
-  // case hiếm: BE trả string JSON
   if (typeof raw === 'string') {
     try {
       const parsed = JSON.parse(raw);
@@ -73,24 +69,27 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [adding, setAdding] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+
   const optionSchema = product?.optionSchema || [];
 
   const allImages = useMemo(() => {
     if (!product) return [];
-    return getAllImages(product); // [{ id, normalizedUrl }]
+    return getAllImages(product);
   }, [product]);
 
-  // đã chọn đủ option chưa
   const isFullOptionsSelected =
     optionSchema.length > 0 && Object.keys(selectedOptions).length === optionSchema.length;
 
-  // derive variant dựa theo selectedOptions (match đúng kiểu options array)
   const currentVariant = useMemo(() => {
     if (!product) return null;
     if (!variants.length) return null;
 
     const need = product.optionSchema?.length || 0;
-    if (need <= 0) return null;
+    if (need <= 0) return variants[0] ?? null;
+
     if (Object.keys(selectedOptions).length !== need) return null;
 
     return (
@@ -101,7 +100,6 @@ export default function ProductDetailPage() {
     );
   }, [product, variants, selectedOptions]);
 
-  // Load product detail + variants
   useEffect(() => {
     if (!numericId) return;
 
@@ -133,7 +131,6 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false));
   }, [numericId]);
 
-  // Load shop info từ product.shopId
   useEffect(() => {
     const shopId = product?.shopId;
     if (!shopId) {
@@ -158,11 +155,10 @@ export default function ProductDetailPage() {
     };
   }, [product?.shopId]);
 
-  // Khi variant đổi → ưu tiên ảnh của variant (imageId), nếu không thì dùng main
   useEffect(() => {
     if (!product) return;
 
-    if (!isFullOptionsSelected || !currentVariant) {
+    if (!currentVariant) {
       setPreviewImage(getMainImageUrl(product) || null);
       return;
     }
@@ -177,19 +173,19 @@ export default function ProductDetailPage() {
     }
 
     setPreviewImage(getMainImageUrl(product) || null);
-  }, [currentVariant, isFullOptionsSelected, allImages, product]);
+  }, [currentVariant, allImages, product]);
 
   const handleOptionClick = (optionName: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [optionName]: value }));
   };
 
   const displayPrice = currentVariant?.price ?? product?.price;
-  const displayStock = currentVariant?.stock ?? product?.stock ?? 0;
+  const displayStock = currentVariant?.stock ?? 0;
 
   const numericStock = Number(displayStock ?? 0);
   const inStock = numericStock > 0;
 
-  const canPurchase = inStock && (!optionSchema.length || isFullOptionsSelected);
+  const canPurchase = inStock && (!optionSchema.length || isFullOptionsSelected) && !!currentVariant;
 
   const clampQty = (q: number) => {
     const min = 1;
@@ -197,12 +193,60 @@ export default function ProductDetailPage() {
     return Math.max(min, Math.min(max, q));
   };
 
-  const handleAddToCart = () => {
-    alert('TODO: add to cart');
+  // ✅ return boolean để BuyNow điều hướng chuẩn
+  const handleAddToCart = async (): Promise<boolean> => {
+    setActionError(null);
+    setActionMsg(null);
+
+    if (!product) return false;
+
+    if (!currentVariant) {
+      setActionError('Vui lòng chọn biến thể trước khi thêm vào giỏ.');
+      return false;
+    }
+
+    if (optionSchema.length && !isFullOptionsSelected) {
+      setActionError('Vui lòng chọn đầy đủ biến thể.');
+      return false;
+    }
+
+    if (!inStock) {
+      setActionError('Sản phẩm đã hết hàng.');
+      return false;
+    }
+
+    setAdding(true);
+    try {
+      const res = await CartApi.addItem({
+        productId: product.id,
+        variantId: Number((currentVariant as any).id),
+        quantity,
+      });
+
+      if (res.success) {
+        setActionMsg('Đã thêm vào giỏ hàng!');
+        return true;
+      }
+
+      setActionError(res.message || 'Thêm vào giỏ hàng thất bại.');
+      return false;
+    } catch (err: any) {
+      console.error(err);
+      const status = err?.response?.status;
+      if (status === 401) {
+        navigate('/login');
+        return false;
+      }
+      setActionError(err?.response?.data?.message || 'Thêm vào giỏ hàng thất bại.');
+      return false;
+    } finally {
+      setAdding(false);
+    }
   };
 
-  const handleBuyNow = () => {
-    alert('TODO: buy now');
+  const handleBuyNow = async () => {
+    const ok = await handleAddToCart();
+    if (ok) navigate('/cart');
   };
 
   if (!numericId) {
@@ -238,24 +282,22 @@ export default function ProductDetailPage() {
   const shopName = shop?.name || '';
   const avatarLetter = shopName ? shopName.trim()[0]?.toUpperCase() : 'S';
 
-  // totalSold: cố gắng lấy theo nhiều kiểu để không crash nếu API khác nhau
   const totalSold =
-    (shop as any)?.totalSold ??
-    (shop as any)?.stats?.totalSold ??
-    (shop as any)?.stats?.total_sold ??
-    null;
+    (shop as any)?.totalSold ?? (shop as any)?.stats?.totalSold ?? (shop as any)?.stats?.total_sold ?? null;
 
   return (
     <div className="pdp-container">
       <div className="pdp-wrapper">
         <div className="pdp-breadcrumb">
+          <span onClick={() => navigate('/home')}>Trang chủ</span>
+          <span className="pdp-breadcrumb-sep">/</span>
           <span onClick={() => navigate('/products')}>Sản phẩm</span>
           <span className="pdp-breadcrumb-sep">/</span>
           <span className="pdp-breadcrumb-current">{product.title}</span>
         </div>
 
         <div className="pdp-main-card">
-          {/* LEFT: IMAGES */}
+          {/* LEFT */}
           <div className="pdp-gallery-col">
             <div className="pdp-main-image-frame">
               {mainUrl ? <img src={mainUrl} alt={product.title} /> : <div className="pdp-no-image">No image</div>}
@@ -278,19 +320,14 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* RIGHT: INFO */}
+          {/* RIGHT */}
           <div className="pdp-info-col">
-            {/* SHOP HEADER (match CSS) */}
             {shop && (
               <div className="pdp-shop-header">
                 <div className="pdp-shop-avatar">{avatarLetter}</div>
                 <div className="pdp-shop-meta">
                   <p className="pdp-shop-name">
-                    <span
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/shops/${shop.id}`)}
-                      title="Xem shop"
-                    >
+                    <span style={{ cursor: 'pointer' }} onClick={() => navigate(`/shops/${shop.id}`)} title="Xem shop">
                       {shop.name}
                     </span>
                   </p>
@@ -305,12 +342,9 @@ export default function ProductDetailPage() {
 
             <div className="pdp-price-box">
               <div className="pdp-current-price">{formatCurrency(displayPrice)}</div>
-              {product.compareAtPrice && (
-                <div className="pdp-compare-price">{formatCurrency(product.compareAtPrice)}</div>
-              )}
+              {product.compareAtPrice && <div className="pdp-compare-price">{formatCurrency(product.compareAtPrice)}</div>}
             </div>
 
-            {/* OPTIONS */}
             {optionSchema.map((opt) => (
               <div className="pdp-option-group" key={opt.name}>
                 <div className="pdp-option-label">{opt.name}</div>
@@ -344,7 +378,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* QUANTITY + ACTION */}
             <div className="pdp-actions">
               <div className="pdp-quantity-group">
                 <span>Số lượng</span>
@@ -381,21 +414,11 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="pdp-action-buttons">
-                <button
-                  type="button"
-                  className="pdp-btn-cart"
-                  disabled={!canPurchase}
-                  onClick={handleAddToCart}
-                >
-                  Thêm vào giỏ
+                <button type="button" className="pdp-btn-cart" disabled={!canPurchase || adding} onClick={handleAddToCart}>
+                  {adding ? 'Đang thêm...' : 'Thêm vào giỏ'}
                 </button>
 
-                <button
-                  type="button"
-                  className="pdp-btn-buy"
-                  disabled={!canPurchase}
-                  onClick={handleBuyNow}
-                >
+                <button type="button" className="pdp-btn-buy" disabled={!canPurchase || adding} onClick={handleBuyNow}>
                   {canPurchase
                     ? 'Mua ngay'
                     : optionSchema.length && !isFullOptionsSelected
@@ -404,10 +427,16 @@ export default function ProductDetailPage() {
                 </button>
               </div>
             </div>
+
+            {(actionError || actionMsg) && (
+              <div style={{ marginTop: 10, fontSize: 14 }}>
+                {actionError && <div style={{ color: '#b42318' }}>{actionError}</div>}
+                {actionMsg && <div style={{ color: '#027a48' }}>{actionMsg}</div>}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* DESCRIPTION (match CSS) */}
         {product.description && (
           <div className="pdp-description-section">
             <h3>Mô tả</h3>

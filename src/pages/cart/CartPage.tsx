@@ -1,5 +1,5 @@
 // src/pages/cart/CartPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CartApi } from '../../api/cart.api';
 import type { Cart, CartItem } from '../../api/types';
@@ -12,6 +12,17 @@ export default function CartPage() {
   const [updating, setUpdating] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+
+  const backendBaseUrl = useMemo(() => {
+    const fromEnv =
+      import.meta.env.VITE_BACKEND_BASE_URL ||
+      (import.meta.env.VITE_API_BASE_URL?.startsWith('http')
+        ? new URL(import.meta.env.VITE_API_BASE_URL).origin
+        : window.location.origin);
+
+    return String(fromEnv).replace(/\/$/, '');
+  }, []);
 
   const loadCart = async () => {
     setLoading(true);
@@ -26,9 +37,7 @@ export default function CartPage() {
       }
     } catch (err: any) {
       console.error(err);
-      setError(
-        err?.response?.data?.message || 'Không tải được giỏ hàng. Vui lòng đăng nhập.',
-      );
+      setError(err?.response?.data?.message || 'Không tải được giỏ hàng. Vui lòng đăng nhập.');
     } finally {
       setLoading(false);
     }
@@ -49,19 +58,13 @@ export default function CartPage() {
       const res = await CartApi.updateItem(itemId, { quantity: newQuantity });
       if (res.success) {
         setCart(res.data);
-        if (newQuantity === 0) {
-          setMessage('Đã xóa sản phẩm khỏi giỏ hàng.');
-        } else {
-          setMessage('Đã cập nhật số lượng.');
-        }
+        setMessage(newQuantity === 0 ? 'Đã xóa sản phẩm khỏi giỏ hàng.' : 'Đã cập nhật số lượng.');
       } else {
         setError(res.message || 'Cập nhật thất bại.');
       }
     } catch (err: any) {
       console.error(err);
-      setError(
-        err?.response?.data?.message || 'Cập nhật số lượng thất bại. Vui lòng thử lại.',
-      );
+      setError(err?.response?.data?.message || 'Cập nhật số lượng thất bại. Vui lòng thử lại.');
     } finally {
       setUpdating((prev) => {
         const next = new Set(prev);
@@ -97,9 +100,7 @@ export default function CartPage() {
   };
 
   const handleClearCart = async () => {
-    if (!confirm('Bạn có chắc muốn xóa tất cả sản phẩm trong giỏ hàng?')) {
-      return;
-    }
+    if (!confirm('Bạn có chắc muốn xóa tất cả sản phẩm trong giỏ hàng?')) return;
 
     setUpdating((prev) => new Set(prev).add(-1));
     setError(null);
@@ -125,18 +126,48 @@ export default function CartPage() {
     }
   };
 
-  const getItemImageUrl = (item: CartItem): string | null => {
-    if (!item.imageId) return null;
-    const backendBaseUrl =
-      import.meta.env.VITE_BACKEND_BASE_URL ||
-      (import.meta.env.VITE_API_BASE_URL?.startsWith('http')
-        ? new URL(import.meta.env.VITE_API_BASE_URL).origin
-        : window.location.origin);
-    return `${backendBaseUrl}/uploads/products/${item.imageId}.jpg`;
+  const getVariantLabel = (item: CartItem) => {
+    // BE mới: variantId luôn có
+    if (item.variantName) return item.variantName;
+
+    const values = [item.value1, item.value2, item.value3, item.value4, item.value5].filter(
+      (v): v is string => Boolean(v && v.trim()),
+    );
+    if (values.length) return values.join(' / ');
+
+    return `#${item.variantId}`;
   };
 
+const getBackendOrigin = () => {
+  const backendBaseUrl =
+    import.meta.env.VITE_BACKEND_BASE_URL ||
+    (import.meta.env.VITE_API_BASE_URL?.startsWith('http')
+      ? new URL(import.meta.env.VITE_API_BASE_URL).origin
+      : window.location.origin);
+
+  return backendBaseUrl.replace(/\/$/, '');
+};
+
+const normalizeUrl = (u: string | null | undefined): string | null => {
+  if (!u) return null;
+  if (u.startsWith('http://') || u.startsWith('https://')) return u;
+  const origin = getBackendOrigin();
+  return `${origin}${u.startsWith('/') ? '' : '/'}${u}`;
+};
+
+const getItemImageUrl = (item: CartItem): string | null => {
+  // ✅ Ưu tiên snapshot url từ BE
+  if (item.imageUrl) return normalizeUrl(item.imageUrl);
+
+  // fallback legacy
+  if (!item.imageId) return null;
+  return `${getBackendOrigin()}/uploads/products/${item.imageId}.jpg`;
+};
+
+
   const formatPrice = (price: string): string => {
-    const num = parseFloat(price);
+    const num = Number(price);
+    if (Number.isNaN(num)) return price;
     return new Intl.NumberFormat('vi-VN').format(num);
   };
 
@@ -190,34 +221,36 @@ export default function CartPage() {
               <div className="cart-items-list">
                 {cart.items.map((item) => {
                   const imageUrl = getItemImageUrl(item);
-                  const itemTotal = parseFloat(item.price) * item.quantity;
+                  const itemTotal = Number(item.price) * item.quantity;
                   const isUpdating = updating.has(item.id);
 
                   return (
                     <div key={item.id} className="cart-item">
                       <div className="cart-item-image">
-                        {imageUrl ? (
-                          <img src={imageUrl} alt={item.title} />
+                        {imageUrl && !brokenImages.has(item.id) ? (
+                          <img
+                            src={imageUrl}
+                            alt={item.title}
+                            onError={() =>
+                              setBrokenImages((prev) => new Set(prev).add(item.id))
+                            }
+                          />
                         ) : (
                           <div className="cart-item-image-placeholder">📦</div>
                         )}
                       </div>
 
                       <div className="cart-item-info">
-                        <Link
-                          to={`/products/${item.productId}`}
-                          className="cart-item-title"
-                        >
+                        <Link to={`/products/${item.productId}`} className="cart-item-title">
                           {item.title}
                         </Link>
-                        {item.variantName && (
-                          <div className="cart-item-variant">
-                            Biến thể: {item.variantName}
-                          </div>
-                        )}
-                        {item.sku && (
-                          <div className="cart-item-sku">SKU: {item.sku}</div>
-                        )}
+
+                        <div className="cart-item-variant">
+                          Biến thể: {getVariantLabel(item)}
+                        </div>
+
+                        {item.sku && <div className="cart-item-sku">SKU: {item.sku}</div>}
+
                         <div className="cart-item-price">
                           {formatPrice(item.price)} {cart.currency} / sản phẩm
                         </div>
@@ -226,18 +259,18 @@ export default function CartPage() {
                       <div className="cart-item-quantity">
                         <button
                           onClick={() =>
-                            handleUpdateQuantity(item.id, item.quantity - 1)
+                            handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))
                           }
-                          disabled={isUpdating || item.quantity <= 1}
+                          disabled={isUpdating}
                           className="cart-quantity-button"
                         >
                           −
                         </button>
+
                         <span className="cart-quantity-value">{item.quantity}</span>
+
                         <button
-                          onClick={() =>
-                            handleUpdateQuantity(item.id, item.quantity + 1)
-                          }
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                           disabled={isUpdating}
                           className="cart-quantity-button"
                         >
@@ -283,6 +316,7 @@ export default function CartPage() {
                   {formatPrice(cart.subtotal)} {cart.currency}
                 </span>
               </div>
+
               <button className="cart-checkout-button" disabled>
                 Thanh toán (Sắp có)
               </button>
@@ -293,4 +327,3 @@ export default function CartPage() {
     </div>
   );
 }
-
