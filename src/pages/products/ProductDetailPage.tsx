@@ -186,12 +186,6 @@ export default function ProductDetailPage() {
   const displayPrice = currentVariant?.price ?? product?.price;
   const displayStock = currentVariant?.stock ?? product?.stock ?? 0;
 
-  const basePrice = product?.price;
-  const hasVariantPrice =
-    currentVariant &&
-    currentVariant.price !== undefined &&
-    Number(currentVariant.price) !== Number(basePrice ?? 0);
-
   const numericStock = Number(displayStock ?? 0);
   const inStock = numericStock > 0;
 

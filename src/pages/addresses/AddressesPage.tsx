@@ -1,9 +1,22 @@
 // src/pages/addresses/AddressesPage.tsx
-import { useEffect, useState } from 'react';
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AddressesApi } from '../../api/addresses.api';
-import type { Address, CreateAddressDto, UpdateAddressDto, ApiResponse } from '../../api/types';
+import type {
+  Address,
+  CreateAddressDto,
+  UpdateAddressDto,
+} from '../../api/types';
 import './AddressesPage.css';
+
+// Import 2 component chọn địa chỉ của bạn
+import VietnamAddressSelector from '../../components/VietnamAddressSelector';
+import LocationPicker from '../../components/LocationPicker';
 
 export default function AddressesPage() {
   const navigate = useNavigate();
@@ -12,6 +25,8 @@ export default function AddressesPage() {
   const [updating, setUpdating] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Form controls
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -26,7 +41,7 @@ export default function AddressesPage() {
   });
 
   useEffect(() => {
-    loadAddresses();
+    void loadAddresses();
   }, []);
 
   const loadAddresses = async () => {
@@ -38,34 +53,71 @@ export default function AddressesPage() {
       if (res.success) {
         setAddresses(res.data);
       } else {
-        setError(res.message || 'Không tải được danh sách địa chỉ.');
+        setError(
+          res.message || 'Không tải được danh sách địa chỉ.',
+        );
       }
     } catch (err: any) {
       console.error(err);
       setError(
-        err?.response?.data?.message || 'Không tải được danh sách địa chỉ. Vui lòng đăng nhập.',
+        err?.response?.data?.message ||
+          'Không tải được danh sách địa chỉ. Vui lòng đăng nhập.',
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value, type, checked } = e.target;
     if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
-    } else if (name === 'lat' || name === 'lng') {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value ? parseFloat(value) : undefined,
-      }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // --- XỬ LÝ SỰ KIỆN TỪ COMPONENT CON ---
+
+  // 1. Khi chọn Tỉnh/Huyện/Xã -> Cập nhật chuỗi địa chỉ
+  const handleAddressSelectorChange = (fullAddress: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      formattedAddress: fullAddress,
+    }));
+  };
+
+  // 2. Khi Selector gợi ý tọa độ (từ Nominatim)
+  const handleSelectorLatLngChange = (
+    latStr: string,
+    lngStr: string,
+  ) => {
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setFormData((prev) => ({ ...prev, lat, lng }));
+    }
+  };
+
+  // 3. Khi kéo thả/click trên bản đồ LocationPicker
+  const handleMapLocationChange = (coords: {
+    lat?: string;
+    lng?: string;
+  }) => {
+    if (coords.lat && coords.lng) {
+      const lat = parseFloat(coords.lat);
+      const lng = parseFloat(coords.lng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setFormData((prev) => ({ ...prev, lat, lng }));
+      }
+    }
+  };
+
+  // ----------------------------------------
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (editingId) {
       await handleUpdate();
@@ -75,6 +127,17 @@ export default function AddressesPage() {
   };
 
   const handleCreate = async () => {
+    // Validate cơ bản
+    if (
+      !formData.formattedAddress ||
+      formData.formattedAddress.length < 5
+    ) {
+      setError(
+        'Vui lòng chọn địa chỉ đầy đủ (Tỉnh/Huyện/Xã + địa chỉ chi tiết).',
+      );
+      return;
+    }
+
     setUpdating((prev) => new Set(prev).add(-1));
     setError(null);
     setMessage(null);
@@ -91,7 +154,10 @@ export default function AddressesPage() {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err?.response?.data?.message || 'Thêm địa chỉ thất bại. Vui lòng thử lại.');
+      setError(
+        err?.response?.data?.message ||
+          'Thêm địa chỉ thất bại. Vui lòng thử lại.',
+      );
     } finally {
       setUpdating((prev) => {
         const next = new Set(prev);
@@ -126,11 +192,16 @@ export default function AddressesPage() {
         resetForm();
         await loadAddresses();
       } else {
-        setError(res.message || 'Cập nhật địa chỉ thất bại.');
+        setError(
+          res.message || 'Cập nhật địa chỉ thất bại.',
+        );
       }
     } catch (err: any) {
       console.error(err);
-      setError(err?.response?.data?.message || 'Cập nhật địa chỉ thất bại. Vui lòng thử lại.');
+      setError(
+        err?.response?.data?.message ||
+          'Cập nhật địa chỉ thất bại. Vui lòng thử lại.',
+      );
     } finally {
       setUpdating((prev) => {
         const next = new Set(prev);
@@ -154,17 +225,16 @@ export default function AddressesPage() {
     setShowForm(true);
     setError(null);
     setMessage(null);
+
+    // Lưu ý: VietnamAddressSelector hiện tại chỉ nhận output chuỗi,
+    // nên khi Edit, dropdown Tỉnh/Huyện sẽ chưa tự select lại ID cũ
+    // (logic 1 chiều). Người dùng vẫn thấy địa chỉ text và có thể chọn lại nếu cần.
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) {
-      return;
-    }
+    if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
 
     setUpdating((prev) => new Set(prev).add(id));
-    setError(null);
-    setMessage(null);
-
     try {
       const res = await AddressesApi.remove(id);
       if (res.success) {
@@ -174,8 +244,9 @@ export default function AddressesPage() {
         setError(res.message || 'Xóa địa chỉ thất bại.');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || 'Xóa địa chỉ thất bại. Vui lòng thử lại.');
+      setError(
+        err?.response?.data?.message || 'Xóa thất bại.',
+      );
     } finally {
       setUpdating((prev) => {
         const next = new Set(prev);
@@ -187,20 +258,16 @@ export default function AddressesPage() {
 
   const handleSetDefault = async (id: number) => {
     setUpdating((prev) => new Set(prev).add(id));
-    setError(null);
-    setMessage(null);
-
     try {
       const res = await AddressesApi.setDefault(id);
       if (res.success) {
         setMessage('Đã đặt địa chỉ làm mặc định.');
         await loadAddresses();
-      } else {
-        setError(res.message || 'Đặt mặc định thất bại.');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || 'Đặt mặc định thất bại. Vui lòng thử lại.');
+      setError(
+        err?.response?.data?.message || 'Lỗi đặt mặc định.',
+      );
     } finally {
       setUpdating((prev) => {
         const next = new Set(prev);
@@ -235,23 +302,48 @@ export default function AddressesPage() {
     return (
       <div className="addresses-container">
         <div className="addresses-card">
-          <div className="addresses-loading">Đang tải danh sách địa chỉ...</div>
+          <div className="addresses-loading">
+            Đang tải danh sách địa chỉ...
+          </div>
         </div>
       </div>
     );
   }
 
+  const currentUpdatingKey = editingId ?? -1;
+
   return (
     <div className="addresses-container">
       <div className="addresses-card">
+        {/* Top bar */}
+        <div className="addresses-topbar">
+          <button
+            type="button"
+            className="addresses-back-button"
+            onClick={() => navigate(-1)}
+          >
+            ← Quay lại
+          </button>
+        </div>
+
+        {/* Header */}
         <div className="addresses-header">
           <div className="addresses-icon">📍</div>
           <h1 className="addresses-title">Địa chỉ của tôi</h1>
+          <p className="addresses-subtitle">
+            Quản lý địa chỉ giao hàng để đặt hàng nhanh hơn và chính
+            xác hơn.
+          </p>
         </div>
 
-        {error && <div className="addresses-error">{error}</div>}
-        {message && <div className="addresses-message">{message}</div>}
+        {error && (
+          <div className="addresses-error">{error}</div>
+        )}
+        {message && (
+          <div className="addresses-message">{message}</div>
+        )}
 
+        {/* Nút thêm mới */}
         {!showForm && (
           <button
             onClick={() => {
@@ -264,92 +356,98 @@ export default function AddressesPage() {
           </button>
         )}
 
+        {/* Form thêm / sửa */}
         {showForm && (
           <div className="addresses-form-section">
             <h2 className="addresses-form-title">
               {editingId ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}
             </h2>
-            <form onSubmit={handleSubmit} className="addresses-form">
-              <div className="addresses-form-group">
-                <label className="addresses-form-label">Họ và tên *</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  required
-                  maxLength={120}
-                  className="addresses-form-input"
-                  placeholder="Nhập họ và tên"
-                />
-              </div>
 
-              <div className="addresses-form-group">
-                <label className="addresses-form-label">Số điện thoại *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  required
-                  pattern="^(?:\+?84|0)\d{9,10}$"
-                  className="addresses-form-input"
-                  placeholder="0912345678"
-                />
-              </div>
-
-              <div className="addresses-form-group">
-                <label className="addresses-form-label">Địa chỉ *</label>
-                <textarea
-                  name="formattedAddress"
-                  value={formData.formattedAddress}
-                  onChange={handleInputChange}
-                  required
-                  maxLength={300}
-                  rows={3}
-                  className="addresses-form-textarea"
-                  placeholder="Nhập địa chỉ đầy đủ"
-                />
-              </div>
-
+            <form
+              onSubmit={handleSubmit}
+              className="addresses-form"
+            >
+              {/* Họ tên & Phone */}
               <div className="addresses-form-row">
                 <div className="addresses-form-group">
-                  <label className="addresses-form-label">Vĩ độ (Lat)</label>
+                  <label className="addresses-form-label">
+                    Họ và tên *
+                  </label>
                   <input
-                    type="number"
-                    name="lat"
-                    value={formData.lat || ''}
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleInputChange}
-                    step="any"
+                    required
+                    maxLength={120}
                     className="addresses-form-input"
-                    placeholder="10.762622"
+                    placeholder="Nguyễn Văn A"
                   />
                 </div>
-
                 <div className="addresses-form-group">
-                  <label className="addresses-form-label">Kinh độ (Lng)</label>
+                  <label className="addresses-form-label">
+                    Số điện thoại *
+                  </label>
                   <input
-                    type="number"
-                    name="lng"
-                    value={formData.lng || ''}
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleInputChange}
-                    step="any"
+                    required
+                    pattern="^(?:\+?84|0)\d{9,10}$"
                     className="addresses-form-input"
-                    placeholder="106.660172"
+                    placeholder="0912..."
                   />
                 </div>
               </div>
 
+              {/* Tích hợp Selector */}
               <div className="addresses-form-group">
-                <label className="addresses-form-label">Place ID</label>
-                <input
-                  type="text"
-                  name="placeId"
-                  value={formData.placeId}
-                  onChange={handleInputChange}
-                  className="addresses-form-input"
-                  placeholder="ChIJ..."
+                <label className="addresses-form-label">
+                  Địa chỉ nhận hàng *
+                </label>
+
+                <VietnamAddressSelector
+                  fullAddress={formData.formattedAddress}
+                  onFullAddressChange={handleAddressSelectorChange}
+                  onLatLngChange={handleSelectorLatLngChange}
                 />
+
+                <div className="addresses-selected-address">
+                  Địa chỉ đã chọn:{' '}
+                  <span>
+                    {formData.formattedAddress || '(Chưa chọn)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Map */}
+              <div className="addresses-form-group">
+                <label className="addresses-form-label">
+                  Vị trí trên bản đồ
+                </label>
+                <div className="addresses-map-wrapper">
+                  <LocationPicker
+                    address={formData.formattedAddress}
+                    lat={
+                      formData.lat !== undefined &&
+                      formData.lat !== null
+                        ? String(formData.lat)
+                        : ''
+                    }
+                    lng={
+                      formData.lng !== undefined &&
+                      formData.lng !== null
+                        ? String(formData.lng)
+                        : ''
+                    }
+                    onChange={handleMapLocationChange}
+                  />
+                </div>
+                <div className="addresses-map-hint">
+                  Bạn có thể kéo marker để chỉnh lại vị trí chính
+                  xác hơn.
+                </div>
               </div>
 
               {!editingId && (
@@ -370,19 +468,19 @@ export default function AddressesPage() {
               <div className="addresses-form-actions">
                 <button
                   type="submit"
-                  disabled={updating.has(editingId || -1)}
+                  disabled={updating.has(currentUpdatingKey)}
                   className="addresses-form-submit"
                 >
-                  {updating.has(editingId || -1)
+                  {updating.has(currentUpdatingKey)
                     ? 'Đang xử lý...'
                     : editingId
-                      ? 'Cập nhật'
-                      : 'Thêm mới'}
+                    ? 'Cập nhật'
+                    : 'Thêm mới'}
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelForm}
-                  disabled={updating.has(editingId || -1)}
+                  disabled={updating.has(currentUpdatingKey)}
                   className="addresses-form-cancel"
                 >
                   Hủy
@@ -392,10 +490,11 @@ export default function AddressesPage() {
           </div>
         )}
 
+        {/* Danh sách địa chỉ */}
         {addresses.length === 0 && !showForm && (
           <div className="addresses-empty">
             <p>Bạn chưa có địa chỉ nào.</p>
-            <p>Hãy thêm địa chỉ để nhận hàng.</p>
+            <small>Hãy thêm một địa chỉ để bắt đầu mua sắm.</small>
           </div>
         )}
 
@@ -403,23 +502,34 @@ export default function AddressesPage() {
           <div className="addresses-list">
             {addresses.map((address) => {
               const isUpdating = updating.has(address.id);
-
               return (
                 <div
                   key={address.id}
-                  className={`addresses-item ${address.isDefault ? 'addresses-item-default' : ''}`}
+                  className={`addresses-item ${
+                    address.isDefault
+                      ? 'addresses-item-default'
+                      : ''
+                  }`}
                 >
                   {address.isDefault && (
-                    <div className="addresses-item-badge">Mặc định</div>
+                    <div className="addresses-item-badge">
+                      Mặc định
+                    </div>
                   )}
 
                   <div className="addresses-item-content">
-                    <div className="addresses-item-name">{address.fullName}</div>
-                    <div className="addresses-item-phone">{address.phone}</div>
-                    <div className="addresses-item-address">{address.formattedAddress}</div>
-                    {address.lat && address.lng && (
+                    <div className="addresses-item-name">
+                      {address.fullName}
+                    </div>
+                    <div className="addresses-item-phone">
+                      {address.phone}
+                    </div>
+                    <div className="addresses-item-address">
+                      {address.formattedAddress}
+                    </div>
+                    {(address.lat || address.lng) && (
                       <div className="addresses-item-coords">
-                        📍 {address.lat}, {address.lng}
+                        lat: {address.lat} – lng: {address.lng}
                       </div>
                     )}
                   </div>
@@ -427,7 +537,9 @@ export default function AddressesPage() {
                   <div className="addresses-item-actions">
                     {!address.isDefault && (
                       <button
-                        onClick={() => handleSetDefault(address.id)}
+                        onClick={() =>
+                          void handleSetDefault(address.id)
+                        }
                         disabled={isUpdating}
                         className="addresses-action-button addresses-action-default"
                       >
@@ -442,7 +554,9 @@ export default function AddressesPage() {
                       Sửa
                     </button>
                     <button
-                      onClick={() => handleDelete(address.id)}
+                      onClick={() =>
+                        void handleDelete(address.id)
+                      }
                       disabled={isUpdating}
                       className="addresses-action-button addresses-action-delete"
                     >
@@ -458,4 +572,3 @@ export default function AddressesPage() {
     </div>
   );
 }
-

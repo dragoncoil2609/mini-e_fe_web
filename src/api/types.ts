@@ -268,18 +268,25 @@ export interface CartItem {
   id: number;
   cartId: number;
   productId: number;
-  variantId: number | null;
+
+  // ✅ BE mới: bắt buộc phải có variant
+  variantId: number;
+
   title: string;
   variantName: string | null;
   sku: string | null;
+
   imageId: number | null;
+
   price: string; // "150000.00"
   quantity: number;
+
   value1: string | null;
   value2: string | null;
   value3: string | null;
   value4: string | null;
   value5: string | null;
+
   createdAt?: string;
   updatedAt?: string;
 }
@@ -297,7 +304,10 @@ export interface Cart {
 // DTO để thêm item vào cart
 export interface AddItemDto {
   productId: number;
-  variantId?: number;
+
+  // ✅ bắt buộc
+  variantId: number;
+
   quantity?: number; // mặc định 1
 }
 
