@@ -1,4 +1,3 @@
-// src/router/index.tsx
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
@@ -27,10 +26,12 @@ import AddressesPage from '../pages/addresses/AddressesPage';
 import ProductCreatePage from '../pages/products/ProductCreatePage';
 import ShopDetailsPage from '../pages/shops/ShopDetailsPage';
 
+import CheckoutPage from '../pages/checkout/CheckoutPage';
+import PaymentResultPage from '../payments/PaymentResultPage';
+
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Mở root "/" sẽ về login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
@@ -39,45 +40,39 @@ export function AppRoutes() {
       <Route path="/verify-account" element={<VerifyAccountPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route path="/auth/account/recover/request" element={<RecoverRequestPage />}/>
-      <Route path="/auth/account/recover/confirm" element={<RecoverConfirmPage />}/>
+      <Route path="/auth/account/recover/request" element={<RecoverRequestPage />} />
+      <Route path="/auth/account/recover/confirm" element={<RecoverConfirmPage />} />
 
       <Route path="/home" element={<HomePage />} />
       <Route path="/admin" element={<HomePageAdmin />} />
-      <Route path="/me" element={<MeProfilePage />} />   
+      <Route path="/me" element={<MeProfilePage />} />
       <Route path="/admin/users" element={<UsersListPage />} />
-      <Route path="/admin/users/deleted" element={<DeletedUsersPage/>} />
+      <Route path="/admin/users/deleted" element={<DeletedUsersPage />} />
 
-      {/* --- SHOP (user/seller) --- */}
       <Route path="/shops/register" element={<ShopRegisterPage />} />
-      <Route path="/shops/me" element={<MyShopPage/>} />
+      <Route path="/shops/me" element={<MyShopPage />} />
       <Route path="/shops/:id" element={<ShopDetailsPage />} />
 
-      {/* PUBLIC PRODUCT */}
       <Route path="/products" element={<ProductsListPage />} />
       <Route path="/products/:id" element={<ProductDetailPage />} />
 
-      {/* SELLER / ADMIN PRODUCT (quản lý của mình) */}
       <Route path="/me/products" element={<MyProductsPage />} />
       <Route path="/me/products/new" element={<ProductCreatePage />} />
       <Route path="/me/products/:id/edit" element={<ProductEditPage />} />
       <Route path="/me/products/:id/variants" element={<ProductVariantsPage />} />
 
-
-      {/* --- ADMIN: Quản lý shop --- */}
       <Route path="/admin/shops" element={<AdminShopsListPage />} />
 
-      {/* --- CART --- */}
       <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
 
-      {/* --- ORDERS --- */}
       <Route path="/orders" element={<OrdersPage />} />
       <Route path="/orders/:id" element={<OrderDetailPage />} />
 
-      {/* --- ADDRESSES --- */}
       <Route path="/addresses" element={<AddressesPage />} />
 
-      {/* Route không tồn tại → quay về /login */}
+      <Route path="/payment-result" element={<PaymentResultPage />} />
+
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

@@ -33,8 +33,8 @@ export interface AuthUser {
 
 // Login / register / refresh response
 export interface LoginResponse {
-  access_token: string;     // JWT 15m
-  refresh_token: string;    // JWT 7d (nhưng nằm trong cookie httpOnly)
+  access_token: string; // JWT 15m
+  refresh_token: string; // JWT 7d (nhưng nằm trong cookie httpOnly)
   user: AuthUser;
 }
 
@@ -45,7 +45,7 @@ export interface RefreshResponse {
 
 export interface ForgotPasswordResponse {
   email: string;
-  otp?: string;        // dev mode có thể nhận OTP
+  otp?: string; // dev mode có thể nhận OTP
   expiresAt?: string;
 }
 
@@ -111,14 +111,14 @@ export interface Shop {
   email: string | null;
   description: string | null;
   status: ShopStatus;
-  
+
   // --- THÊM 2 DÒNG NÀY ---
   logoUrl?: string | null;
   coverUrl?: string | null;
   // -----------------------
 
   shopAddress: string | null;
-  shopLat: string | null;      
+  shopLat: string | null;
   shopLng: string | null;
   shopPlaceId: string | null;
   shopPhone: string | null;
@@ -144,8 +144,8 @@ export interface ProductImage {
 
 // [MỚI] Định nghĩa cấu trúc Option Schema (Fix lỗi implicit any)
 export interface ProductOptionSchema {
-  name: string;      // Ví dụ: "Màu sắc"
-  values: string[];  // Ví dụ: ["Đỏ", "Xanh"]
+  name: string; // Ví dụ: "Màu sắc"
+  values: string[]; // Ví dụ: ["Đỏ", "Xanh"]
 }
 
 // Item trong list /products
@@ -153,15 +153,15 @@ export interface ProductListItem {
   id: number;
   title: string;
   slug: string;
-  price: string;      // "150000.00"
-  currency: string;   // "VND"
+  price: string; // "150000.00"
+  currency: string; // "VND"
   status: ProductStatus;
   createdAt: string;
   updatedAt?: string;
 
   // Danh sách ảnh của sản phẩm (BE trả về từ product_images)
   images?: ProductImage[];
-  
+
   // URL ảnh chính/thumbnail của sản phẩm (deprecated - dùng images với isMain thay thế)
   thumbnailUrl?: string | null;
 }
@@ -173,18 +173,18 @@ export interface ProductDetail {
   title: string;
   slug: string;
   description: string | null;
-  
+
   // Đã sửa type từ 'any' sang mảng cụ thể
-  optionSchema?: ProductOptionSchema[] | null; 
-  
-  price: string;            // "150000.00"
-  
+  optionSchema?: ProductOptionSchema[] | null;
+
+  price: string; // "150000.00"
+
   // Thêm trường giá gốc (gạch ngang)
-  compareAtPrice?: string | null; 
-  
-  currency: string;         // "VND"
+  compareAtPrice?: string | null;
+
+  currency: string; // "VND"
   stock: number;
-  
+
   // Thêm trường số lượng đã bán
   sold: number;
 
@@ -192,7 +192,7 @@ export interface ProductDetail {
   createdAt: string;
   updatedAt: string;
   images?: ProductImage[];
-  
+
   // Có thể dùng nếu BE trả về mainImageUrl riêng
   mainImageUrl?: string | null;
 }
@@ -201,15 +201,15 @@ export interface ProductDetail {
 
 export interface ProductVariantOption {
   option: string; // "Màu"
-  value: string;  // "Trắng"
+  value: string; // "Trắng"
 }
 
 export interface ProductVariant {
   id: number;
   productId: number;
   sku: string;
-  name: string;     // "Trắng / S"
-  price: string;    // "150000.00"
+  name: string; // "Trắng / S"
+  price: string; // "150000.00"
   stock: number;
   imageId: number | null;
   options?: ProductVariantOption[];
@@ -219,8 +219,8 @@ export interface ProductVariant {
 
 // Định nghĩa option để generate variants
 export interface ProductOptionDefinition {
-  name: string;      // "Màu"
-  values: string[];  // ["Trắng", "Đen"]
+  name: string; // "Màu"
+  values: string[]; // ["Trắng", "Đen"]
 }
 
 export type GenerateVariantsMode = 'replace' | 'add';
@@ -356,67 +356,133 @@ export interface UpdateAddressDto {
 }
 
 // ================== ORDERS ==================
+export type PaymentMethod = 'COD' | 'VNPAY';
+export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
+export type ShippingStatus =
+  | 'PENDING'
+  | 'PICKED'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'RETURNED'
+  | 'CANCELED';
 
-// Order Status
 export type OrderStatus =
-  | 'PENDING' // Chờ xử lý
-  | 'CONFIRMED' // Đã xác nhận
-  | 'PROCESSING' // Đang xử lý
-  | 'SHIPPING' // Đang giao hàng
-  | 'DELIVERED' // Đã giao hàng
-  | 'CANCELLED' // Đã hủy
-  | 'REFUNDED'; // Đã hoàn tiền
+  | 'PENDING'
+  | 'PAID'
+  | 'PROCESSING'
+  | 'SHIPPED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  // giữ thêm các status cũ nếu nơi khác còn dùng:
+  | 'CONFIRMED'
+  | 'SHIPPING'
+  | 'DELIVERED'
+  | 'REFUNDED';
 
-// Order Item (sản phẩm trong đơn hàng)
 export interface OrderItem {
-  id: number;
-  orderId: number;
+  id: string;
+  orderId: string;
   productId: number;
-  variantId: number | null;
-  title: string;
-  variantName: string | null;
-  sku: string | null;
-  imageId: number | null;
-  price: string; // "150000.00"
+  productVariantId: number | null;
+
+  nameSnapshot: string;
+  imageSnapshot: string | null;
+
+  price: string;
   quantity: number;
+  totalLine: string;
+
   value1: string | null;
   value2: string | null;
   value3: string | null;
   value4: string | null;
   value5: string | null;
+
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Order (đơn hàng)
-export interface Order {
-  id: number;
-  userId: number;
-  orderNumber: string; // Mã đơn hàng (unique)
-  status: OrderStatus;
-  addressId: number | null; // ID địa chỉ giao hàng
+export interface AddressSnapshot {
   fullName: string;
   phone: string;
   formattedAddress: string;
-  itemsCount: number;
-  itemsQuantity: number;
-  subtotal: string; // "150000.00"
-  shippingFee: string; // "30000.00"
-  total: string; // "180000.00"
-  currency: string; // "VND"
-  notes: string | null;
-  items: OrderItem[];
-  createdAt?: string;
-  updatedAt?: string;
+  placeId?: string | null;
+  lat?: string | null;
+  lng?: string | null;
 }
 
-// DTO để tạo đơn hàng từ giỏ hàng
-export interface CreateOrderDto {
-  addressId: number; // ID địa chỉ giao hàng
-  notes?: string; // Ghi chú đơn hàng
-}
+export interface Order {
+  id: string;
+  userId: number;
+  code: string;
 
-// DTO để cập nhật trạng thái đơn hàng
-export interface UpdateOrderStatusDto {
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  shippingStatus: ShippingStatus;
+  paymentMethod: PaymentMethod;
+
+  paymentRef: string | null;
+  paymentMeta: any | null;
+
+  addressSnapshot: AddressSnapshot;
+
+  subtotal: string;
+  discount: string;
+  shippingFee: string;
+  total: string;
+
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  items?: OrderItem[];
 }
+
+// Preview
+export interface PreviewOrderDto {
+  addressId?: number;
+  itemIds?: number[];
+}
+
+export interface PreviewOrderResponse {
+  address: {
+    id: number;
+    fullName: string;
+    phone: string;
+    formattedAddress: string;
+  };
+  orders: Array<{
+    product: { id: number; title: string };
+    items: Array<{
+      id: number;
+      variantId: number | null;
+      name: string;
+      imageUrl: string | null;
+      price: number;
+      quantity: number;
+      totalLine: number;
+    }>;
+    distanceKm: number;
+    subtotal: number;
+    shippingFee: number;
+    total: number;
+  }>;
+  summary: { subtotal: number; shippingFee: number; total: number };
+}
+
+// Create
+export interface CreateOrderDto {
+  paymentMethod: PaymentMethod;
+  addressId?: number;
+  itemIds?: number[];
+  note?: string;
+}
+
+export type CreateOrderResponse =
+  | {
+      orders: Array<{ orderId: string; code: string; total: number }>;
+    }
+  | {
+      session: { code: string; amount: number; status: string };
+      paymentUrl: string;
+    };
