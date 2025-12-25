@@ -54,6 +54,26 @@ export async function getMyShopOrders(params?: { page?: number; limit?: number }
   return res.data;
 }
 
+export async function getMyShopOrderDetail(id: string): Promise<ApiResponse<Order>> {
+  const res = await http.get<ApiResponse<Order>>(`/shops/me/orders/${id}`);
+  return res.data;
+}
+
+export async function updateMyShopOrderShippingStatus(id: string, shippingStatus: ShippingStatus): Promise<ApiResponse<Order>> {
+  const res = await http.patch<ApiResponse<Order>>(`/shops/me/orders/${id}/shipping-status`, { shippingStatus });
+  return res.data;
+}
+
+export async function confirmReceived(id: string): Promise<ApiResponse<Order>> {
+  const res = await http.post<ApiResponse<Order>>(`/orders/${id}/confirm-received`, {});
+  return res.data;
+}
+
+export async function requestReturn(id: string): Promise<ApiResponse<Order>> {
+  const res = await http.post<ApiResponse<Order>>(`/orders/${id}/request-return`, {});
+  return res.data;
+}
+
 export const OrdersApi = {
   previewOrder,
   createOrder,
@@ -61,4 +81,8 @@ export const OrdersApi = {
   getOrderDetail,
   updateOrderStatus,
   getMyShopOrders,
+  getMyShopOrderDetail,
+  updateMyShopOrderShippingStatus,
+  confirmReceived,
+  requestReturn,
 };

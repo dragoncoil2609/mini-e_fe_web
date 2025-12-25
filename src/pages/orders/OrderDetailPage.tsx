@@ -103,17 +103,17 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     if (!order) return;
-    if (order.shippingStatus === 'DELIVERED') {
+    if (order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED') {
       void loadReview(order.id);
     } else {
       setReview(null);
       setReviewError(null);
     }
-  }, [order?.id, order?.shippingStatus]);
+  }, [order?.id, order?.shippingStatus, order?.status]);
 
   const submitReview = async () => {
     if (!order) return;
-    if (order.shippingStatus !== 'DELIVERED') return;
+    if (!(order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED')) return;
     if (!rating || rating < 1 || rating > 5) {
       alert('Vui lòng chọn số sao (1-5)');
       return;
@@ -124,7 +124,7 @@ export default function OrderDetailPage() {
       const res = await ReviewsApi.createProductReview({
         orderId: order.id,
         rating,
-        content: content?.trim() ? content.trim() : undefined,
+        comment: content?.trim() ? content.trim() : undefined,
       });
       if (!res.success) {
         alert(res.message || 'Tạo review thất bại');
@@ -138,16 +138,19 @@ export default function OrderDetailPage() {
     }
   };
 
-  const labelStatus = (s: Order['status']) => {
+  const labelFlow = (o: Order) => {
+    // hiển thị theo luồng bạn yêu cầu
+    if (o.status === 'COMPLETED' && o.shippingStatus === 'DELIVERED') return 'Đã nhận hàng';
+    if (o.status === 'COMPLETED' && o.shippingStatus === 'RETURNED') return 'Hoàn hàng';
     const map: Record<string, string> = {
-      PENDING: 'Chờ xử lý',
-      PAID: 'Đã thanh toán',
-      PROCESSING: 'Đang xử lý',
-      SHIPPED: 'Đang giao',
-      COMPLETED: 'Hoàn thành',
-      CANCELLED: 'Đã huỷ',
+      PENDING: 'Đã nhận đơn',
+      IN_TRANSIT: 'Đang giao',
+      DELIVERED: 'Đã giao',
+      RETURNED: 'Hoàn hàng',
+      CANCELED: 'Đã huỷ',
+      PICKED: 'Đã nhận đơn',
     };
-    return map[String(s)] || String(s);
+    return map[String(o.shippingStatus)] || String(o.shippingStatus);
   };
 
   const statusClass = (s: Order['status']) => {
@@ -166,7 +169,9 @@ export default function OrderDetailPage() {
     if (error) return <div className="order-detail-state">{error}</div>;
     if (!order) return null;
 
-    const canReview = order.shippingStatus === 'DELIVERED';
+    const canReview = order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED';
+    const canConfirmReceived = order.shippingStatus === 'DELIVERED' && order.status !== 'COMPLETED';
+    const canRequestReturn = order.shippingStatus === 'DELIVERED' && order.status !== 'COMPLETED';
 
     return (
       <>
@@ -191,11 +196,11 @@ export default function OrderDetailPage() {
           </div>
           <div className="order-detail-info-row">
             <span className="order-detail-label">Trạng thái:</span>
-            <span className={statusClass(order.status)}>{labelStatus(order.status)}</span>
+            <span className={statusClass(order.status)}>{labelFlow(order)}</span>
           </div>
           <div className="order-detail-info-row">
             <span className="order-detail-label">Giao hàng:</span>
-            <span className="order-detail-value">{order.shippingStatus}</span>
+            <span className="order-detail-value">{labelFlow(order)}</span>
           </div>
           <div className="order-detail-info-row">
             <span className="order-detail-label">Thanh toán:</span>
@@ -204,6 +209,73 @@ export default function OrderDetailPage() {
           <div className="order-detail-info-row">
             <span className="order-detail-label">Ngày đặt:</span>
             <span className="order-detail-value">{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
+          </div>
+        </div>
+
+        <div className="order-detail-section">
+          <h2 className="order-detail-section-title">Theo dõi đơn hàng</h2>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="order-detail-back-button"
+              style={{ background: '#fff', border: '1px solid #e5e7eb' }}
+            >
+              🔄 Cập nhật trạng thái
+            </button>
+
+            {canConfirmReceived && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!id) return;
+                  if (!window.confirm('Xác nhận bạn đã nhận hàng?')) return;
+                  try {
+                    const res = await OrdersApi.confirmReceived(id);
+                    if (!res.success) {
+                      alert(res.message || 'Xác nhận thất bại');
+                      return;
+                    }
+                    await load();
+                    alert('Đã xác nhận nhận hàng.');
+                  } catch (e: any) {
+                    alert(e?.response?.data?.message || 'Xác nhận thất bại');
+                  }
+                }}
+                className="order-detail-back-button"
+                style={{ background: '#111827', color: '#fff', border: '1px solid #111827' }}
+              >
+                ✅ Xác nhận đã nhận hàng
+              </button>
+            )}
+
+            {canRequestReturn && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!id) return;
+                  if (!window.confirm('Bạn muốn yêu cầu hoàn hàng cho đơn này?')) return;
+                  try {
+                    const res = await OrdersApi.requestReturn(id);
+                    if (!res.success) {
+                      alert(res.message || 'Hoàn hàng thất bại');
+                      return;
+                    }
+                    await load();
+                    alert('Đã cập nhật trạng thái: Hoàn hàng.');
+                  } catch (e: any) {
+                    alert(e?.response?.data?.message || 'Hoàn hàng thất bại');
+                  }
+                }}
+                className="order-detail-back-button"
+                style={{ background: '#fff', color: '#b42318', border: '1px solid #fca5a5' }}
+              >
+                ↩️ Hoàn hàng
+              </button>
+            )}
+          </div>
+          <div style={{ marginTop: 10, fontSize: 13, opacity: 0.8 }}>
+            Luồng: Đã nhận đơn → Đang giao → Đã giao → (Bạn xác nhận nhận hàng / hoàn hàng) → Kết thúc.
           </div>
         </div>
 
@@ -250,7 +322,7 @@ export default function OrderDetailPage() {
 
           {!canReview && (
             <div style={{ fontSize: 14, opacity: 0.85 }}>
-              Bạn chỉ có thể đánh giá khi shop cập nhật trạng thái giao hàng thành <b>DELIVERED</b>.
+              Bạn chỉ có thể đánh giá sau khi <b>xác nhận đã nhận hàng</b>.
             </div>
           )}
 

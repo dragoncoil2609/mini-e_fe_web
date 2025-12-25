@@ -51,12 +51,13 @@ export default function OrdersPage() {
 
   const labelShipping = (s: ShippingStatus) => {
     const map: Record<string, string> = {
-      PENDING: 'Chờ lấy hàng',
-      PICKED: 'Đã lấy hàng',
+      PENDING: 'Đã nhận đơn',
       IN_TRANSIT: 'Đang giao',
       DELIVERED: 'Đã giao',
       RETURNED: 'Hoàn hàng',
       CANCELED: 'Đã huỷ',
+      // tương thích dữ liệu cũ
+      PICKED: 'Đã nhận đơn',
     };
     return map[s] || s;
   };
@@ -96,9 +97,19 @@ export default function OrdersPage() {
                 <h1 className="orders-title">Đơn hàng của tôi</h1>
                 <p className="orders-subtitle">Theo dõi trạng thái và xem chi tiết từng đơn.</p>
               </div>
-              <Link to="/products" className="orders-primary">
-                Mua thêm
-              </Link>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="orders-primary"
+                  onClick={() => void load()}
+                  style={{ textDecoration: 'none' }}
+                >
+                  🔄 Tải lại
+                </button>
+                <Link to="/products" className="orders-primary">
+                  Mua thêm
+                </Link>
+              </div>
             </div>
 
             {loading && <div className="orders-loading">Đang tải...</div>}
@@ -118,7 +129,7 @@ export default function OrdersPage() {
                     <div className="orders-item-header">
                       <div className="orders-item-info">
                         <span className="orders-item-number">Mã đơn: {o.code}</span>
-                        <span className={statusClass(o.status)}>{labelStatus(o.status)}</span>
+                        <span className={statusClass(o.status)}>{labelShipping(o.shippingStatus)}</span>
                       </div>
                       <div className="orders-item-date">
                         {new Date(o.createdAt).toLocaleString('vi-VN')}
@@ -131,7 +142,7 @@ export default function OrdersPage() {
                         <br />
                         {o.addressSnapshot?.formattedAddress}
                         <div style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
-                          <b>Giao hàng:</b> {labelShipping(o.shippingStatus)}
+                          <b>Trạng thái:</b> {labelShipping(o.shippingStatus)}
                         </div>
                       </div>
 

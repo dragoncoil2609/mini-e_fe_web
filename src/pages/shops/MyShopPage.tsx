@@ -68,6 +68,10 @@ const MyShopPage = () => {
   const [shopOrdersLimit] = useState(10);
   const [shopOrdersTotal, setShopOrdersTotal] = useState(0);
 
+  const [orderDetailOpen, setOrderDetailOpen] = useState(false);
+  const [orderDetailLoading, setOrderDetailLoading] = useState(false);
+  const [orderDetail, setOrderDetail] = useState<Order | null>(null);
+
   const formatCurrency = (val: number | string | undefined) => {
     const num = Number(val);
     if (isNaN(num)) return '0 ₫';
@@ -152,30 +156,59 @@ const MyShopPage = () => {
 
   const labelShipping = (s: ShippingStatus) => {
     const map: Record<string, string> = {
-      PENDING: 'Chờ lấy hàng',
-      PICKED: 'Đã lấy hàng',
+      PENDING: 'Đã nhận đơn',
       IN_TRANSIT: 'Đang giao',
       DELIVERED: 'Đã giao',
-      RETURNED: 'Hoàn hàng',
       CANCELED: 'Đã huỷ',
+      // dữ liệu cũ
+      PICKED: 'Đã nhận đơn',
+      RETURNED: 'Hoàn hàng',
     };
     return map[s] || s;
   };
 
-  const markDelivered = async (orderId: string) => {
+  const nextShippingOptions = (current: ShippingStatus): ShippingStatus[] => {
+    const map: Record<string, ShippingStatus[]> = {
+      // shop chỉ đi theo 3 trạng thái: đã nhận đơn -> đang giao -> đã giao
+      PENDING: ['IN_TRANSIT', 'CANCELED'],
+      PICKED: ['IN_TRANSIT', 'CANCELED'],
+      IN_TRANSIT: ['DELIVERED', 'CANCELED'],
+      DELIVERED: [],
+      RETURNED: [],
+      CANCELED: [],
+    };
+    return map[String(current)] || [];
+  };
+
+  const updateShipping = async (orderId: string, next: ShippingStatus) => {
     try {
-      const res = await OrdersApi.updateOrderStatus(orderId, { shippingStatus: 'DELIVERED' });
+      const res = await OrdersApi.updateMyShopOrderShippingStatus(orderId, next);
       if (!res.success) {
         alert(res.message || 'Cập nhật thất bại');
         return;
       }
-      setSuccessMsg('Đã cập nhật trạng thái: DELIVERED');
-      // update local
-      setShopOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, shippingStatus: 'DELIVERED' } : o)),
-      );
+      setSuccessMsg(`Đã cập nhật trạng thái: ${next}`);
+      setShopOrders((prev) => prev.map((o) => (o.id === orderId ? ({ ...o, ...res.data } as any) : o)));
     } catch (e: any) {
       alert(e?.response?.data?.message || 'Lỗi cập nhật trạng thái đơn');
+    }
+  };
+
+  const openOrderDetail = async (orderId: string) => {
+    setOrderDetailOpen(true);
+    setOrderDetailLoading(true);
+    setOrderDetail(null);
+    try {
+      const res = await OrdersApi.getMyShopOrderDetail(orderId);
+      if (!res.success) {
+        alert(res.message || 'Không tải được chi tiết đơn');
+        return;
+      }
+      setOrderDetail(res.data);
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Không tải được chi tiết đơn');
+    } finally {
+      setOrderDetailLoading(false);
     }
   };
 
@@ -604,14 +637,46 @@ const MyShopPage = () => {
                           </span>
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            className="btn-secondary btn-secondary--small"
-                            disabled={o.shippingStatus === 'DELIVERED'}
-                            onClick={() => markDelivered(o.id)}
-                          >
-                            {o.shippingStatus === 'DELIVERED' ? 'Đã giao' : 'Đánh dấu đã giao'}
-                          </button>
+                          {nextShippingOptions(o.shippingStatus).length === 0 ? (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="btn-secondary btn-secondary--small"
+                                onClick={() => void openOrderDetail(o.id)}
+                              >
+                                Xem
+                              </button>
+                              <button type="button" className="btn-secondary btn-secondary--small" disabled>
+                                Đã kết thúc
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="btn-secondary btn-secondary--small"
+                                onClick={() => void openOrderDetail(o.id)}
+                              >
+                                Xem
+                              </button>
+                              <select
+                                className="shop-status-select"
+                                defaultValue=""
+                                onChange={(e) => {
+                                  const v = e.target.value as ShippingStatus;
+                                  if (v) void updateShipping(o.id, v);
+                                  e.currentTarget.value = '';
+                                }}
+                              >
+                                <option value="">Cập nhật...</option>
+                                {nextShippingOptions(o.shippingStatus).map((s) => (
+                                  <option key={s} value={s}>
+                                    {labelShipping(s)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -738,6 +803,80 @@ const MyShopPage = () => {
           )}
         </div>
       </div>
+
+      {orderDetailOpen && (
+        <div
+          className="shop-order-modal-overlay"
+          onClick={() => {
+            setOrderDetailOpen(false);
+            setOrderDetail(null);
+          }}
+        >
+          <div className="shop-order-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="shop-order-modal-header">
+              <div>
+                <div className="shop-order-modal-title">Chi tiết đơn hàng</div>
+                <div className="shop-order-modal-subtitle">{orderDetail?.code ? `Mã: ${orderDetail.code}` : ''}</div>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary btn-secondary--small"
+                onClick={() => {
+                  setOrderDetailOpen(false);
+                  setOrderDetail(null);
+                }}
+              >
+                Đóng
+              </button>
+            </div>
+
+            {orderDetailLoading && <div style={{ padding: 14 }}>Đang tải...</div>}
+
+            {!orderDetailLoading && orderDetail && (
+              <div className="shop-order-modal-body">
+                <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
+                  <div>
+                    <b>Khách:</b> {orderDetail.addressSnapshot?.fullName || '-'} • {orderDetail.addressSnapshot?.phone || '-'}
+                  </div>
+                  <div>
+                    <b>Địa chỉ:</b> {orderDetail.addressSnapshot?.formattedAddress || '-'}
+                  </div>
+                  <div>
+                    <b>Trạng thái:</b> {labelShipping(orderDetail.shippingStatus)}
+                  </div>
+                  <div>
+                    <b>Tổng:</b> {new Intl.NumberFormat('vi-VN').format(Number(orderDetail.total))} VND
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, fontWeight: 800 }}>Sản phẩm</div>
+                <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                  {(orderDetail.items || []).map((it) => (
+                    <div key={it.id} className="shop-order-item-row">
+                      <div className="shop-order-item-img">
+                        {it.imageSnapshot ? (
+                          <img src={it.imageSnapshot} alt="" />
+                        ) : (
+                          <div className="shop-order-item-img-ph">📦</div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>{it.nameSnapshot}</div>
+                        <div style={{ fontSize: 12, opacity: 0.8, marginTop: 3 }}>
+                          {new Intl.NumberFormat('vi-VN').format(Number(it.price))} VND × {it.quantity}
+                        </div>
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: 13 }}>
+                        {new Intl.NumberFormat('vi-VN').format(Number(it.totalLine))} VND
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

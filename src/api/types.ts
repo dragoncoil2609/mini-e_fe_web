@@ -556,7 +556,7 @@ export interface ProductReview {
 export interface CreateProductReviewDto {
   orderId: string;
   rating: number;
-  content?: string;
+  comment?: string;
 }
 
 export interface ProductReviewsList {
