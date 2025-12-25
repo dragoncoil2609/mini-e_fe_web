@@ -4,25 +4,64 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
 import { getShopDetail } from '../../api/shop.api';
-import { getProductReviews } from '../../api/reviews.api';
 import { CartApi } from '../../api/cart.api';
+import { http } from '../../api/http';
 
-import type {
-  ApiResponse,
-  ProductDetail,
-  ProductVariant,
-  Shop,
-  ProductReview,
-  ProductReviewsList,
-} from '../../api/types';
+import type { ApiResponse, ProductDetail, ProductVariant, Shop } from '../../api/types';
 
 import { getAllImages, getMainImageUrl } from '../../utils/productImage';
 import './style/ProductDetailPage.css';
+
+type ReviewUserPublic = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+};
+
+type ProductReview = {
+  id: string;
+  orderId: string;
+  userId: number;
+  productId: number;
+  rating: number;
+  comment: string | null;
+  images: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+  user: ReviewUserPublic | null;
+};
+
+type ProductReviewsList = {
+  summary: { count: number; avg: number };
+  items: ProductReview[];
+  page: number;
+  limit: number;
+  total: number;
+};
 
 const formatCurrency = (value: number | string | undefined | null) => {
   const num = Number(value ?? 0);
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 };
+
+function formatDateVi(input: string) {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return input;
+  return d.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function Stars({ rating }: { rating: number }) {
+  const r = Math.max(0, Math.min(5, Math.round(Number(rating || 0))));
+  return (
+    <span className="pdp-stars" aria-label={`${r} trên 5`}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span key={i} className={`pdp-star ${i < r ? 'filled' : ''}`}>
+          ★
+        </span>
+      ))}
+    </span>
+  );
+}
 
 function variantOptionsToRecord(v: ProductVariant): Record<string, string> {
   const raw: unknown = (v as any).options;
@@ -61,23 +100,15 @@ function variantOptionsToRecord(v: ProductVariant): Record<string, string> {
   return {};
 }
 
-function formatDateVi(input: string) {
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return input;
-  return d.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
-}
+function ReviewAvatar({ user }: { user: ReviewUserPublic | null }) {
+  const name = user?.name?.trim() || 'Người mua';
+  const first = (name[0] || 'U').toUpperCase();
 
-function Stars({ rating }: { rating: number }) {
-  const r = Math.max(0, Math.min(5, Math.round(Number(rating || 0))));
-  return (
-    <span className="pdp-stars" aria-label={`${r} trên 5`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={`pdp-star ${i < r ? 'filled' : ''}`}>
-          ★
-        </span>
-      ))}
-    </span>
-  );
+  if (user?.avatarUrl) {
+    return <img className="pdp-review-avatar-img" src={user.avatarUrl} alt={name} />;
+  }
+
+  return <div className="pdp-review-avatar">{first}</div>;
 }
 
 export default function ProductDetailPage() {
@@ -104,7 +135,7 @@ export default function ProductDetailPage() {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewSummary, setReviewSummary] = useState<{ count: number; avg: number }>({ count: 0, avg: 0 });
   const [reviewPage, setReviewPage] = useState(1);
-  const [reviewLimit] = useState(6);
+  const reviewLimit = 6;
   const [reviewTotal, setReviewTotal] = useState(0);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -215,7 +246,6 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!numericId) return;
 
-    // reset khi đổi sản phẩm
     setReviews([]);
     setReviewSummary({ count: 0, avg: 0 });
     setReviewPage(1);
@@ -227,14 +257,17 @@ export default function ProductDetailPage() {
     (async () => {
       setReviewLoading(true);
       try {
-        const res = await getProductReviews(numericId, { page: 1, limit: reviewLimit });
-        const data = res.data as unknown as ProductReviewsList;
+        const res = await http.get<ApiResponse<ProductReviewsList>>(`/products/${numericId}/reviews`, {
+          params: { page: 1, limit: reviewLimit },
+        });
+
+        const payload = res.data?.data as unknown as ProductReviewsList;
 
         if (cancelled) return;
 
-        setReviewSummary(data?.summary || { count: 0, avg: 0 });
-        setReviewTotal(Number(data?.total ?? 0));
-        setReviews(Array.isArray(data?.items) ? data.items : []);
+        setReviewSummary(payload?.summary || { count: 0, avg: 0 });
+        setReviewTotal(Number(payload?.total ?? 0));
+        setReviews(Array.isArray(payload?.items) ? payload.items : []);
       } catch (e) {
         console.error(e);
         if (!cancelled) setReviewError('Không tải được đánh giá.');
@@ -246,7 +279,7 @@ export default function ProductDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [numericId, reviewLimit]);
+  }, [numericId]);
 
   const loadMoreReviews = async () => {
     if (!numericId) return;
@@ -255,13 +288,16 @@ export default function ProductDetailPage() {
     setReviewLoading(true);
     setReviewError(null);
     try {
-      const res = await getProductReviews(numericId, { page: next, limit: reviewLimit });
-      const data = res.data as unknown as ProductReviewsList;
+      const res = await http.get<ApiResponse<ProductReviewsList>>(`/products/${numericId}/reviews`, {
+        params: { page: next, limit: reviewLimit },
+      });
 
-      const more = Array.isArray(data?.items) ? data.items : [];
+      const payload = res.data?.data as unknown as ProductReviewsList;
+      const more = Array.isArray(payload?.items) ? payload.items : [];
+
       setReviews((prev) => [...prev, ...more]);
-      setReviewSummary(data?.summary || reviewSummary);
-      setReviewTotal(Number(data?.total ?? reviewTotal));
+      setReviewSummary(payload?.summary || reviewSummary);
+      setReviewTotal(Number(payload?.total ?? reviewTotal));
       setReviewPage(next);
     } catch (e) {
       console.error(e);
@@ -480,12 +516,7 @@ export default function ProductDetailPage() {
                 <span>Số lượng</span>
 
                 <div className="pdp-quantity-control">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => clampQty(q - 1))}
-                    aria-label="decrease"
-                    disabled={!inStock}
-                  >
+                  <button type="button" onClick={() => setQuantity((q) => clampQty(q - 1))} disabled={!inStock}>
                     –
                   </button>
 
@@ -499,12 +530,7 @@ export default function ProductDetailPage() {
                     inputMode="numeric"
                   />
 
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => clampQty(q + 1))}
-                    aria-label="increase"
-                    disabled={!inStock}
-                  >
+                  <button type="button" onClick={() => setQuantity((q) => clampQty(q + 1))} disabled={!inStock}>
                     +
                   </button>
                 </div>
@@ -541,7 +567,7 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-        {/* ===== REVIEWS SECTION ===== */}
+        {/* ===== REVIEWS ===== */}
         <div className="pdp-reviews-section">
           <div className="pdp-reviews-header">
             <h3>Đánh giá</h3>
@@ -564,31 +590,38 @@ export default function ProductDetailPage() {
 
           {reviews.length > 0 && (
             <div className="pdp-review-list">
-              {reviews.map((r) => (
-                <div key={r.id} className="pdp-review-item">
-                  <div className="pdp-review-top">
-                    <div className="pdp-review-user">Người mua</div>
-                    <div className="pdp-review-date">{formatDateVi(r.createdAt)}</div>
-                  </div>
+              {reviews.map((r) => {
+                const displayName = r.user?.name?.trim() || 'Người mua';
+                return (
+                  <div key={r.id} className="pdp-review-item">
+                    <div className="pdp-review-top">
+                      <div className="pdp-review-user">
+                        <ReviewAvatar user={r.user} />
+                        <span className="pdp-review-user-name">{displayName}</span>
+                      </div>
 
-                  <div className="pdp-review-rating">
-                    <Stars rating={r.rating} />
-                    <span className="pdp-review-score">{r.rating}/5</span>
-                  </div>
-
-                  {r.comment && <div className="pdp-review-comment">{r.comment}</div>}
-
-                  {Array.isArray(r.images) && r.images.length > 0 && (
-                    <div className="pdp-review-images">
-                      {r.images.map((url, idx) => (
-                        <a key={idx} href={url} target="_blank" rel="noreferrer" className="pdp-review-img">
-                          <img src={url} alt="review" />
-                        </a>
-                      ))}
+                      <div className="pdp-review-date">{formatDateVi(r.createdAt)}</div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    <div className="pdp-review-rating">
+                      <Stars rating={r.rating} />
+                      <span className="pdp-review-score">{r.rating}/5</span>
+                    </div>
+
+                    {r.comment && <div className="pdp-review-comment">{r.comment}</div>}
+
+                    {Array.isArray(r.images) && r.images.length > 0 && (
+                      <div className="pdp-review-images">
+                        {r.images.map((url, idx) => (
+                          <a key={idx} href={url} target="_blank" rel="noreferrer" className="pdp-review-img">
+                            <img src={url} alt="review" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

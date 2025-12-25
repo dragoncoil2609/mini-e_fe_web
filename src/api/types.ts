@@ -516,6 +516,13 @@ export type CreateOrderResponse =
 
 
 // ================== REVIEWS ==================
+
+export interface ReviewUserPublic {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+}
+
 export interface ProductReview {
   id: string;
   orderId: string;
@@ -526,6 +533,7 @@ export interface ProductReview {
   images: string[] | null;
   createdAt: string;
   updatedAt: string;
+  user: ReviewUserPublic | null;
 }
 
 export interface CreateProductReviewDto {
