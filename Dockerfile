@@ -11,7 +11,7 @@
     
     RUN npm run build
     # (Kết quả build sẽ nằm trong folder /app/dist)
-    
+    #kêt quả
     # --- Giai đoạn 2: Chạy Nginx ---
     FROM nginx:alpine
     
