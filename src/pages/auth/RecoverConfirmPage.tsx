@@ -1,10 +1,11 @@
-import {useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 import './RecoverConfirmPage.css';
 
 interface RecoverConfirmState {
-  email?: string;
+  identifier?: string;
+  email?: string; // backward compatible
 }
 
 export function RecoverConfirmPage() {
@@ -12,12 +13,12 @@ export function RecoverConfirmPage() {
   const location = useLocation();
   const state = location.state as RecoverConfirmState | null;
 
-  const initialEmail = state?.email || '';
+  const initialIdentifier = (state?.identifier ?? state?.email ?? '').trim();
 
-  const [email] = useState(initialEmail);
-  const [otp, setOtp] = useState('950759');
-  const [newPassword, setNewPassword] = useState('@Ngulon123');
-  const [confirmPassword, setConfirmPassword] = useState('@Ngulon123');
+  const [identifier] = useState(initialIdentifier);
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +30,8 @@ export function RecoverConfirmPage() {
     setSuccess(null);
     setLoading(true);
 
-    if (!email) {
-      setError('Thiếu email. Vui lòng quay lại bước yêu cầu khôi phục.');
+    if (!identifier) {
+      setError('Thiếu thông tin tài khoản. Vui lòng quay lại bước yêu cầu khôi phục.');
       setLoading(false);
       return;
     }
@@ -43,7 +44,7 @@ export function RecoverConfirmPage() {
 
     try {
       await AuthApi.recoverConfirm({
-        email,
+        email: identifier, // BE dùng field email
         otp,
         newPassword,
         confirmPassword,
@@ -80,16 +81,11 @@ export function RecoverConfirmPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email</label>
-            <input
-              type="email"
-              value={email}
-              readOnly
-              className="inputReadonly"
-            />
-            {!email && (
+            <label className="label">Email hoặc SĐT</label>
+            <input type="text" value={identifier} readOnly className="inputReadonly" />
+            {!identifier && (
               <div className="errorSmall">
-                Không có email. Vui lòng quay lại bước yêu cầu khôi phục.
+                Không có thông tin tài khoản. Vui lòng quay lại bước yêu cầu khôi phục.
               </div>
             )}
           </div>

@@ -5,7 +5,8 @@ import { AuthApi } from '../../api/auth.api';
 import './RecoverRequestPage.css';
 
 interface RecoverRequestState {
-  email?: string;
+  identifier?: string;
+  email?: string; // backward compatible
 }
 
 export function RecoverRequestPage() {
@@ -13,7 +14,7 @@ export function RecoverRequestPage() {
   const location = useLocation();
   const state = location.state as RecoverRequestState | null;
 
-  const [email, setEmail] = useState(state?.email || 'quochiep1610@gmail.com');
+  const [identifier, setIdentifier] = useState((state?.identifier ?? state?.email ?? '').trim());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -25,16 +26,15 @@ export function RecoverRequestPage() {
     setLoading(true);
 
     try {
-      await AuthApi.recoverRequest(email);
+      await AuthApi.recoverRequest(identifier);
 
       setSuccess(
-        'Đã gửi yêu cầu khôi phục tài khoản. Vui lòng kiểm tra email để lấy OTP.'
+        'Đã gửi yêu cầu khôi phục tài khoản. Vui lòng kiểm tra Email/SMS để lấy OTP.',
       );
 
-      // Sau khi gửi xong → sang bước confirm, mang theo email
       setTimeout(() => {
         navigate('/auth/account/recover/confirm', {
-          state: { email },
+          state: { identifier },
         });
       }, 1000);
     } catch (err: any) {
@@ -59,19 +59,19 @@ export function RecoverRequestPage() {
         <h1 className="title">Khôi phục tài khoản</h1>
 
         <p className="description">
-          Tài khoản của bạn đã bị vô hiệu hoá. Vui lòng nhập email để nhận mã OTP
-          khôi phục tài khoản.
+          Tài khoản của bạn đã bị vô hiệu hoá. Vui lòng nhập Email hoặc SĐT để nhận mã OTP khôi phục tài khoản.
         </p>
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email</label>
+            <label className="label">Email hoặc SĐT</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               className="input"
+              placeholder="user@gmail.com hoặc 09xx..."
             />
           </div>
 

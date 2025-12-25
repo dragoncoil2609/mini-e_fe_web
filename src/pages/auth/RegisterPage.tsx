@@ -8,7 +8,8 @@ export function RegisterPage() {
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(''); // optional
+  const [phone, setPhone] = useState(''); // optional
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -22,28 +23,49 @@ export function RegisterPage() {
     setSuccess(null);
     setLoading(true);
 
-    if (password !== confirmPassword) {
-      setError('Mật khẩu và xác nhận mật khẩu không khớp.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      await AuthApi.register({
-        name,
-        email,
+      const nameTrim = name.trim();
+      const emailTrim = email.trim();
+      const phoneTrim = phone.trim();
+
+      if (!nameTrim) {
+        setError('Vui lòng nhập họ tên.');
+        return;
+      }
+
+      // ✅ ít nhất 1 trong 2
+      if (!emailTrim && !phoneTrim) {
+        setError('Vui lòng nhập Email hoặc Số điện thoại (ít nhất 1).');
+        return;
+      }
+
+      if (password.length < 6) {
+        setError('Mật khẩu tối thiểu 6 ký tự.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Mật khẩu nhập lại không khớp.');
+        return;
+      }
+
+      const payload: any = {
+        name: nameTrim,
         password,
         confirmPassword,
-      });
+      };
+
+      // ✅ chỉ gửi field nếu có giá trị (tránh gửi "" làm BE validate fail)
+      if (emailTrim) payload.email = emailTrim.toLowerCase();
+      if (phoneTrim) payload.phone = phoneTrim;
+
+      await AuthApi.register(payload);
 
       setSuccess('Đăng ký thành công! Bạn có thể đăng nhập.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 1000);
+      setTimeout(() => navigate('/login'), 1000);
     } catch (err: any) {
       const msg =
-        err?.response?.data?.message ||
-        'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.';
+        err?.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -53,68 +75,75 @@ export function RegisterPage() {
   return (
     <div className="container">
       <div className="card">
-        <h1 className="title">Đăng ký tài khoản</h1>
+        <h1 className="title">Register</h1>
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Họ và tên</label>
+            <label className="label">Họ tên</label>
             <input
-              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              type="text"
               required
               className="input"
             />
           </div>
 
           <div className="formGroup">
-            <label className="label">Email</label>
+            <label className="label">Email (không bắt buộc)</label>
             <input
-              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              type="email"
               className="input"
+              placeholder="vd: user@gmail.com"
             />
           </div>
 
           <div className="formGroup">
-            <label className="label">Mật khẩu</label>
+            <label className="label">Số điện thoại (không bắt buộc)</label>
             <input
-              type="password"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              type="tel"
+              className="input"
+              placeholder="vd: 0353xxxxxx"
+            />
+          </div>
+
+          <div className="formGroup">
+            <label className="label">Password</label>
+            <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              type="password"
               required
               className="input"
             />
           </div>
 
           <div className="formGroupLast">
-            <label className="label">Nhập lại mật khẩu</label>
+            <label className="label">Confirm Password</label>
             <input
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              type="password"
               required
               className="input"
             />
           </div>
 
           {error && <div className="error">{error}</div>}
-
           {success && <div className="success">{success}</div>}
 
           <button type="submit" disabled={loading} className="button">
-            {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+            {loading ? 'Đang đăng ký...' : 'Register'}
           </button>
         </form>
 
         <div className="links">
           <Link to="/login" className="link">
-            Đã có tài khoản? Đăng nhập
-          </Link>
-          <Link to="/forgot-password" className="link">
-            Quên mật khẩu?
+            Already have an account? Login
           </Link>
         </div>
       </div>

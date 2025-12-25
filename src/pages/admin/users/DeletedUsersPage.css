@@ -1,91 +1,176 @@
-.deleted-users-container {
-  padding: 16px;
-  position: relative;
+/* src/pages/admin/DeletedUsersPage.css */
+/* Dùng chung style với UsersListPage (nếu dự án của bạn load css theo page thì file này có đủ class cần thiết) */
+
+.admin-users {
+  padding: 18px;
 }
 
-.home-button {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 10px 20px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s, transform 0.2s;
-  z-index: 10;
+.admin-users__topbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
 }
 
-.home-button:hover {
-  background: #5568d3;
-  transform: translateY(-2px);
+.admin-users__titlewrap {
+  flex: 1;
+  min-width: 240px;
 }
 
-.deleted-users-title {
+.admin-users__title {
   font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #1a1a1a;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
 }
 
-.deleted-users-search-wrapper {
-  margin: 16px 0;
+.admin-users__subtitle {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 13px;
 }
 
-.deleted-users-search-form {
+.admin-users__top-actions {
   display: flex;
   gap: 8px;
-}
-
-.deleted-users-search-input {
-  padding: 6px;
-  min-width: 260px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s;
-}
-
-.deleted-users-search-input:focus {
-  border-color: #667eea;
-}
-
-.deleted-users-search-button {
-  padding: 6px 12px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.deleted-users-search-button:hover {
-  background: #5568d3;
-}
-
-.deleted-users-loading {
-  padding: 12px;
-  color: #666;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.deleted-users-loading::before {
+.admin-card {
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.04);
+  overflow: hidden;
+}
+
+.admin-toolbar {
+  padding: 12px;
+  border-bottom: 1px solid #eef0f4;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-toolbar__search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-toolbar__filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.input,
+.select {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 0 10px;
+  outline: none;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input {
+  min-width: 280px;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s, border-color 0.2s, opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+.btn--primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.btn--ghost {
+  background: #fff;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+.btn--ghost:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.btn--danger {
+  background: #dc2626;
+  color: #fff;
+}
+.btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn--sm {
+  height: 30px;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Loading */
+.admin-loading {
+  padding: 16px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-loading::before {
   content: '';
-  width: 32px;
-  height: 32px;
+  width: 18px;
+  height: 18px;
   border: 3px solid #e5e7eb;
-  border-top-color: #667eea;
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -96,118 +181,219 @@
   }
 }
 
-.deleted-users-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.deleted-users-table th {
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-  padding: 8px;
+/* Bulk bar */
+.bulkbar {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef0f4;
   background: #f9fafb;
-  font-weight: 600;
-  font-size: 14px;
-  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.deleted-users-table td {
-  border-bottom: 1px solid #eee;
-  padding: 4px 0;
-  font-size: 14px;
-  color: #374151;
-}
-
-.deleted-users-table tbody tr {
-  transition: all 0.2s;
-}
-
-.deleted-users-table tbody tr:hover {
-  background: #f3f4f6;
-  transform: scale(1.01);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.deleted-users-table-empty {
-  padding: 8px;
-  text-align: center;
-  color: #666;
-}
-
-.deleted-users-action-buttons {
+.bulkbar__right {
   display: flex;
   gap: 8px;
-}
-
-.deleted-users-restore-button {
-  padding: 6px 12px;
-  background: #16a34a;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.deleted-users-restore-button:hover {
-  background: #15803d;
-}
-
-.deleted-users-delete-button {
-  padding: 6px 12px;
-  background: #dc2626;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.deleted-users-delete-button:hover {
-  background: #b91c1c;
-}
-
-.deleted-users-pagination {
-  margin-top: 12px;
-  display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
 }
 
-.deleted-users-pagination-info {
-  color: #555;
-  font-size: 14px;
+/* Table */
+.table-wrap {
+  overflow: auto;
 }
 
-.deleted-users-pagination-buttons {
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+}
+
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 2;
+  border-bottom: 1px solid #eef0f4;
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  color: #374151;
+  padding: 10px 12px;
+}
+
+.admin-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 12px;
+  color: #111827;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.col-checkbox {
+  width: 44px;
+}
+
+.col-actions {
+  width: 240px;
+}
+
+.actions {
   display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid transparent;
+}
+
+.badge--gray {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+.badge--blue {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-color: #bfdbfe;
+}
+.badge--red {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border-color: #fecaca;
+}
+
+/* Pager */
+.pager {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #eef0f4;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pager__btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Modal */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  padding: 16px;
+}
+
+.admin-modal {
+  width: 520px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.admin-modal__header {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef0f4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.admin-modal__body {
+  padding: 14px;
+  color: #374151;
+}
+
+.admin-modal__actions {
+  padding: 12px 14px;
+  border-top: 1px solid #eef0f4;
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 
-.deleted-users-pagination-button {
-  padding: 6px 12px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
+/* Toast */
+.admin-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 80;
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 420px;
+}
+
+.admin-toast__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #93c5fd;
+}
+
+.admin-toast--success .admin-toast__dot {
+  background: #34d399;
+}
+.admin-toast--error .admin-toast__dot {
+  background: #f87171;
+}
+.admin-toast--info .admin-toast__dot {
+  background: #60a5fa;
+}
+
+.admin-toast__text {
+  font-weight: 800;
+  color: #111827;
   font-size: 13px;
-  font-weight: 500;
+  flex: 1;
+}
+
+.admin-toast__close {
+  border: none;
+  background: transparent;
   cursor: pointer;
-  transition: background 0.3s;
+  font-size: 16px;
+  color: #6b7280;
 }
-
-.deleted-users-pagination-button:hover:not(:disabled) {
-  background: #5568d3;
-}
-
-.deleted-users-pagination-button:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
-

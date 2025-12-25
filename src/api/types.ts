@@ -1,5 +1,3 @@
-// src/api/types.ts
-
 // ================== COMMON ==================
 
 // Response chuẩn của BE
@@ -25,7 +23,8 @@ export interface PaginatedResult<T> {
 export interface AuthUser {
   id: number;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: 'USER' | 'SELLER' | 'ADMIN';
   isVerified: boolean;
   createdAt?: string;
@@ -44,13 +43,27 @@ export interface RefreshResponse {
 }
 
 export interface ForgotPasswordResponse {
-  email: string;
+  // Backward compatible: BE cũ trả email
+  email?: string | null;
+
+  // Luồng mới: có thể gửi qua phone hoặc email
+  phone?: string | null;
+  via?: 'email' | 'phone';
+  target?: string;
+
   otp?: string; // dev mode có thể nhận OTP
   expiresAt?: string;
 }
 
 export interface RequestVerifyResponse {
-  email: string;
+  // Backward compatible: BE cũ trả email
+  email?: string | null;
+
+  // Luồng mới: có thể gửi OTP qua SMS nếu có phone
+  phone?: string | null;
+  via?: 'email' | 'phone';
+  target?: string;
+
   otp?: string;
   expiresAt?: string;
   isVerified?: boolean;
@@ -73,7 +86,7 @@ export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 export interface User {
   id: number;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   avatarUrl: string | null;
   birthday: string | null; // YYYY-MM-DD
@@ -156,7 +169,6 @@ export interface UpdateCategoryDto {
   sortOrder?: number;
   isActive?: boolean;
 }
-
 // ================== PRODUCT ==================
 
 // Trạng thái sản phẩm

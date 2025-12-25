@@ -5,18 +5,33 @@ import { AuthApi } from '../../api/auth.api';
 import './LoginPage.css';
 
 interface RecoverInfo {
-  email: string;
-  via?: string;
+  identifier: string;
+  via?: string; // 'email' | 'phone' | ...
+}
+
+function looksLikeEmail(v: string) {
+  // đủ dùng cho phân biệt FE
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function normalizePhone(raw: string) {
+  // normalize nhẹ để match kiểu +84... (không bắt buộc, nhưng giúp login ổn định)
+  let v = raw.trim().replace(/[\s.-]/g, '');
+  if (!v) return v;
+  if (v.startsWith('+')) return v;
+  if (v.startsWith('0')) return `+84${v.slice(1)}`;
+  if (v.startsWith('84')) return `+${v}`;
+  return v;
 }
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+
+  const [identifier, setIdentifier] = useState(''); // ✅ email hoặc sđt
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Thông tin khôi phục nếu tài khoản bị vô hiệu hoá
   const [recoverInfo, setRecoverInfo] = useState<RecoverInfo | null>(null);
 
   async function handleSubmit(e: FormEvent) {
@@ -24,8 +39,27 @@ export function LoginPage() {
     setError(null);
     setRecoverInfo(null);
     setLoading(true);
+
     try {
-      const data = await AuthApi.login({ email, password });
+      const id = identifier.trim();
+
+      if (!id) {
+        setError('Vui lòng nhập Email hoặc Số điện thoại.');
+        return;
+      }
+
+      const payload = looksLikeEmail(id)
+        ? { email: id.toLowerCase(), password }
+        : { phone: normalizePhone(id), password };
+
+      const data = await AuthApi.login(payload);
+
+      // ✅ lưu user luôn (kể cả chưa verify) để FE khỏi mất state
+      try {
+        localStorage.setItem('current_user', JSON.stringify(data.user));
+      } catch (e) {
+        console.error('Cannot save user to localStorage', e);
+      }
 
       // Nếu chưa verify → đi verify trước
       if (!data.user.isVerified) {
@@ -33,21 +67,9 @@ export function LoginPage() {
         return;
       }
 
-      // ✅ Đã verify: lưu thông tin user để Home / Admin dùng
-      try {
-        localStorage.setItem('current_user', JSON.stringify(data.user));
-      } catch (e) {
-        console.error('Cannot save user to localStorage', e);
-      }
-
-      // ✅ Điều hướng theo role
-      if (data.user.role === 'ADMIN') {
-        // Trang home admin
-        navigate('/admin');
-      } else {
-        // USER hoặc SELLER
-        navigate('/home');
-      }
+      // Điều hướng theo role
+      if (data.user.role === 'ADMIN') navigate('/admin');
+      else navigate('/home');
     } catch (err: any) {
       const status = err?.response?.status;
       const payload = err?.response?.data;
@@ -62,18 +84,10 @@ export function LoginPage() {
             'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.',
         );
 
-        if (identifier) {
-          setRecoverInfo({
-            email: identifier,
-            via,
-          });
-        } else {
-          setRecoverInfo(null);
-        }
+        if (identifier) setRecoverInfo({ identifier, via });
+        else setRecoverInfo(null);
       } else {
-        // Lỗi bình thường
-        const msg =
-          payload?.message || 'Đăng nhập thất bại, vui lòng kiểm tra lại.';
+        const msg = payload?.message || 'Đăng nhập thất bại, vui lòng kiểm tra lại.';
         setError(msg);
         setRecoverInfo(null);
       }
@@ -83,9 +97,15 @@ export function LoginPage() {
   }
 
   function handleRecoverAccount() {
-    if (!recoverInfo?.email) return;
+    // luồng recover hiện tại của bạn đang dùng email → chỉ cho bấm nếu via=email
+    if (!recoverInfo?.identifier) return;
+    if (recoverInfo.via && recoverInfo.via !== 'email') {
+      setError('Khôi phục hiện tại chỉ hỗ trợ qua email.');
+      return;
+    }
+
     navigate('/auth/account/recover/request', {
-      state: { email: recoverInfo.email },
+      state: { email: recoverInfo.identifier },
     });
   }
 
@@ -96,11 +116,12 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email</label>
+            <label className="label">Email hoặc Số điện thoại</label>
             <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              type="text" // ✅ quan trọng: không dùng type="email" nữa
+              placeholder="vd: user@gmail.com hoặc 0353xxxxxx"
               required
               className="input"
             />

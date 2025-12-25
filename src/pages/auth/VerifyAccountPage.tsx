@@ -24,15 +24,13 @@ export function VerifyAccountPage() {
       const data = await AuthApi.requestVerify();
       setInfo(data);
 
-      // Nếu BE báo đã verified rồi ⇒ cho vào Home luôn
       if (data.isVerified) {
         setVerified(true);
         navigate('/home');
       }
     } catch (err: any) {
       const msg =
-        err?.response?.data?.message ||
-        'Không gửi được OTP. Vui lòng thử lại.';
+        err?.response?.data?.message || 'Không gửi được OTP. Vui lòng thử lại.';
       setError(msg);
     } finally {
       setLoadingRequest(false);
@@ -49,19 +47,18 @@ export function VerifyAccountPage() {
       const data = await AuthApi.verifyAccount(otp);
       setVerified(data.verified);
 
-      if (data.verified) {
-        // ✅ verify thành công → vào Home
-        navigate('/home');
-      }
+      if (data.verified) navigate('/home');
     } catch (err: any) {
       const msg =
-        err?.response?.data?.message ||
-        'Xác minh thất bại. Vui lòng kiểm tra lại OTP.';
+        err?.response?.data?.message || 'Xác minh thất bại. Vui lòng kiểm tra lại OTP.';
       setError(msg);
     } finally {
       setLoadingVerify(false);
     }
   }
+
+  const sentTo =
+    info?.phone ? `SĐT: ${info.phone}` : info?.email ? `Email: ${info.email}` : null;
 
   return (
     <div className="container">
@@ -75,8 +72,7 @@ export function VerifyAccountPage() {
         <h1 className="title">Xác minh tài khoản</h1>
 
         <p className="description">
-          Vui lòng gửi OTP và nhập mã OTP để xác minh tài khoản
-          (yêu cầu bạn đã đăng nhập).
+          Vui lòng gửi OTP và nhập mã OTP để xác minh tài khoản (yêu cầu bạn đã đăng nhập).
         </p>
 
         <button
@@ -90,23 +86,20 @@ export function VerifyAccountPage() {
 
         {info && (
           <div className="infoBox">
-            <p className="infoText">
-              Email: <strong className="infoTextStrong">{info.email}</strong>
-            </p>
+            {sentTo && <p className="infoText">{sentTo}</p>}
+
             {info.isVerified && (
-              <p className="infoTextSuccess">
-                Tài khoản đã được xác minh.
-              </p>
+              <p className="infoTextSuccess">Tài khoản đã được xác minh.</p>
             )}
+
             {info.otp && (
               <p className="infoText">
                 OTP (dev): <code className="infoCode">{info.otp}</code>
               </p>
             )}
+
             {info.expiresAt && (
-              <p className="infoText">
-                Hết hạn lúc: {info.expiresAt}
-              </p>
+              <p className="infoText">Hết hạn lúc: {info.expiresAt}</p>
             )}
           </div>
         )}
@@ -126,22 +119,14 @@ export function VerifyAccountPage() {
           {error && <div className="error">{error}</div>}
 
           {verified === true && (
-            <div className="verified">
-              Xác minh thành công! Đang chuyển vào Home...
-            </div>
+            <div className="verified">Xác minh thành công! Đang chuyển vào Home...</div>
           )}
 
           {verified === false && (
-            <div className="notVerified">
-              Xác minh thất bại. Vui lòng kiểm tra lại OTP.
-            </div>
+            <div className="notVerified">Xác minh thất bại. Vui lòng kiểm tra lại OTP.</div>
           )}
 
-          <button
-            type="submit"
-            disabled={loadingVerify}
-            className="button"
-          >
+          <button type="submit" disabled={loadingVerify} className="button">
             {loadingVerify ? 'Đang xác minh...' : 'Xác minh tài khoản'}
           </button>
         </form>

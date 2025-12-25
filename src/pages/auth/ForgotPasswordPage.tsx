@@ -6,7 +6,7 @@ import './ForgotPasswordPage.css';
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('quochiep1610@gmail.com');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,13 +16,10 @@ export function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      // Gửi yêu cầu OTP
-      await AuthApi.forgotPassword(email);
+      await AuthApi.forgotPassword(identifier);
 
-      // 👉 Sau khi gửi OTP thành công, chuyển sang /reset-password
-      // và truyền kèm email đã nhập
       navigate('/reset-password', {
-        state: { email },
+        state: { identifier },
       });
     } catch (err: any) {
       const msg =
@@ -46,18 +43,19 @@ export function ForgotPasswordPage() {
         <h1 className="title">Quên mật khẩu</h1>
 
         <p className="description">
-          Nhập email đã đăng ký để nhận mã OTP đặt lại mật khẩu.
+          Nhập email hoặc số điện thoại đã đăng ký để nhận mã OTP đặt lại mật khẩu.
         </p>
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email</label>
+            <label className="label">Email hoặc SĐT</label>
             <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              type="text"
               required
               className="input"
+              placeholder="user@gmail.com hoặc 09xx..."
             />
           </div>
 

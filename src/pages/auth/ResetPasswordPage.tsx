@@ -4,7 +4,8 @@ import { AuthApi } from '../../api/auth.api';
 import './ResetPasswordPage.css';
 
 interface ResetLocationState {
-  email?: string;
+  identifier?: string;
+  email?: string; // backward compatible
 }
 
 export function ResetPasswordPage() {
@@ -12,13 +13,12 @@ export function ResetPasswordPage() {
   const location = useLocation();
   const state = location.state as ResetLocationState | null;
 
-  // Lấy email từ state (truyền từ ForgotPasswordPage)
-  const initialEmail = state?.email || '';
+  const initialIdentifier = (state?.identifier ?? state?.email ?? '').trim();
 
-  const [email] = useState(initialEmail); // không cho sửa
+  const [identifier] = useState(initialIdentifier); // không cho sửa
   const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('@Ngulon123');
-  const [confirmPassword, setConfirmPassword] = useState('@Ngulon123');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,8 @@ export function ResetPasswordPage() {
     setSuccess(null);
     setLoading(true);
 
-    if (!email) {
-      setError('Thiếu email. Vui lòng quay lại bước Quên mật khẩu.');
+    if (!identifier) {
+      setError('Thiếu thông tin tài khoản. Vui lòng quay lại bước Quên mật khẩu.');
       setLoading(false);
       return;
     }
@@ -44,7 +44,7 @@ export function ResetPasswordPage() {
 
     try {
       const data = await AuthApi.resetPassword({
-        email,
+        email: identifier, // BE đang dùng field email
         otp,
         password,
         confirmPassword,
@@ -85,16 +85,16 @@ export function ResetPasswordPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email</label>
+            <label className="label">Email hoặc SĐT</label>
             <input
-              type="email"
-              value={email}
+              type="text"
+              value={identifier}
               readOnly
               className="inputReadonly"
             />
-            {!email && (
+            {!identifier && (
               <div className="errorSmall">
-                Không có email. Vui lòng quay lại bước Quên mật khẩu.
+                Không có thông tin tài khoản. Vui lòng quay lại bước Quên mật khẩu.
               </div>
             )}
           </div>
