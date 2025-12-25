@@ -3,7 +3,7 @@
 // Response chuẩn của BE
 export interface ApiResponse<T> {
   success: boolean;
-  statusCode: number;
+  statusCode?: number;
   data: T;
   message?: string;
   error?: string; // ví dụ "Bad Request", "Unauthorized"
@@ -144,6 +144,7 @@ export interface Category {
   name: string;
   slug: string;
   parentId: number | null;
+  description?: string | null;
 
   sortOrder?: number;
   isActive?: boolean;
@@ -158,6 +159,8 @@ export interface Category {
 
 export interface CreateCategoryDto {
   name: string;
+  slug?: string;
+  description?: string;
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;
@@ -165,6 +168,8 @@ export interface CreateCategoryDto {
 
 export interface UpdateCategoryDto {
   name?: string;
+  slug?: string;
+  description?: string;
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;

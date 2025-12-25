@@ -2,7 +2,9 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import './RecoverRequestPage.css';
+import { getBeMessage } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 interface RecoverRequestState {
   identifier?: string;
@@ -18,11 +20,13 @@ export function RecoverRequestPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setFieldError(null);
     setLoading(true);
 
     try {
@@ -38,10 +42,12 @@ export function RecoverRequestPage() {
         });
       }, 1000);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Không gửi được yêu cầu khôi phục. Vui lòng thử lại.';
+      const msg = getBeMessage(err, 'Không gửi được yêu cầu khôi phục. Vui lòng thử lại.');
       setError(msg);
+      const beField = guessAuthFieldFromMessage(msg);
+      const mapped =
+        beField === 'email' || beField === 'phone' || beField === 'identifier' ? 'identifier' : null;
+      setFieldError(mapped ? msg : null);
     } finally {
       setLoading(false);
     }
@@ -69,10 +75,10 @@ export function RecoverRequestPage() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldError ? 'inputError' : ''}`}
               placeholder="user@gmail.com hoặc 09xx..."
             />
+            {fieldError && <div className="fieldError">{fieldError}</div>}
           </div>
 
           {error && <div className="error">{error}</div>}

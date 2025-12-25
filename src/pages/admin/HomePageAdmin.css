@@ -110,3 +110,11 @@
   background-color: #15803d;
 }
 
+.admin-home-button--category {
+  background-color: #f59e0b;
+}
+
+.admin-home-button--category:hover {
+  background-color: #d97706;
+}
+

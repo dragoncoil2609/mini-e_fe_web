@@ -12,6 +12,7 @@ import MeProfilePage from '../pages/me/MeProfilePage';
 import UsersListPage from '../pages/admin/users/UsersListPage';
 import DeletedUsersPage from '../pages/admin/users/DeletedUsersPage';
 import AdminShopsListPage from '../pages/admin/shops/AdminShopsListPage';
+import AdminCategoriesPage from '../pages/admin/categories/AdminCategoriesPage';
 import ShopRegisterPage from '../pages/shops/ShopRegisterPage';
 import MyShopPage from '../pages/shops/MyShopPage';
 import ProductsListPage from '../pages/products/ProductsListPage';
@@ -48,6 +49,7 @@ export function AppRoutes() {
       <Route path="/me" element={<MeProfilePage />} />
       <Route path="/admin/users" element={<UsersListPage />} />
       <Route path="/admin/users/deleted" element={<DeletedUsersPage />} />
+      <Route path="/admin/categories" element={<AdminCategoriesPage />} />
 
       <Route path="/shops/register" element={<ShopRegisterPage />} />
       <Route path="/shops/me" element={<MyShopPage />} />

@@ -10,7 +10,7 @@ import type {
   Category,
 } from '../api/types';
 import { getPublicProducts, getProductVariants } from '../api/products.api';
-import { getPublicCategories } from '../api/categories.api';
+import { getPublicCategoryTree } from '../api/categories.api';
 import { CartApi } from '../api/cart.api';
 import { getMe } from '../api/users.api';
 import { AuthApi } from '../api/auth.api';
@@ -42,9 +42,10 @@ export function HomePage() {
   const [activeTab, setActiveTab] = useState<TopTabKey>('hot');
 
   // ✅ categories
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryTree, setCategoryTree] = useState<Category[]>([]);
   const [loadingCats, setLoadingCats] = useState(false);
-  const [activeCategoryId, setActiveCategoryId] = useState<number>(0); // 0 = all
+  const [activeParentId, setActiveParentId] = useState<number>(0); // 0 = all
+  const [activeCategoryId, setActiveCategoryId] = useState<number>(0); // leaf or parent without children
 
   // cache variant mặc định theo productId để không gọi lại nhiều lần
   const defaultVariantCache = useRef<Map<number, number>>(new Map());
@@ -91,15 +92,16 @@ export function HomePage() {
   const loadCategories = async () => {
     setLoadingCats(true);
     try {
-      const res = await getPublicCategories({ isActive: true });
+      const res = await getPublicCategoryTree();
       if (res.success) {
-        setCategories(Array.isArray(res.data) ? res.data : []);
+        const tree = Array.isArray(res.data) ? res.data : [];
+        setCategoryTree(tree);
       } else {
-        setCategories([]);
+        setCategoryTree([]);
       }
     } catch (e) {
       console.error(e);
-      setCategories([]);
+      setCategoryTree([]);
     } finally {
       setLoadingCats(false);
     }
@@ -233,12 +235,55 @@ export function HomePage() {
     [],
   );
 
-  const displayCategories = useMemo(() => {
-    // ưu tiên parentId null (top-level). Nếu BE không có parentId thì vẫn ok.
-    const top = categories.filter((c) => !c.parentId);
-    const list = (top.length ? top : categories).slice(0, 8);
-    return list;
-  }, [categories]);
+  const parentCategories = useMemo(() => categoryTree ?? [], [categoryTree]);
+
+  const activeParent = useMemo(() => {
+    if (!activeParentId) return null;
+    return parentCategories.find((p) => p.id === activeParentId) ?? null;
+  }, [activeParentId, parentCategories]);
+
+  const activeChildren = useMemo(() => {
+    const kids = activeParent?.children;
+    return Array.isArray(kids) ? kids : [];
+  }, [activeParent]);
+
+  const resolveCategoryName = useMemo(() => {
+    if (!activeCategoryId) return 'Tất cả sản phẩm';
+    const stack: Category[] = [];
+    parentCategories.forEach((p) => {
+      stack.push(p);
+      (p.children ?? []).forEach((c) => stack.push(c));
+    });
+    const found = stack.find((c) => c.id === activeCategoryId);
+    return found?.name ?? 'Sản phẩm';
+  }, [activeCategoryId, parentCategories]);
+
+  const handlePickParent = (parentId: number) => {
+    setPage(1);
+    setSearchQuery('');
+    defaultVariantCache.current.clear();
+
+    if (!parentId) {
+      setActiveParentId(0);
+      setActiveCategoryId(0);
+      return;
+    }
+
+    const p = parentCategories.find((x) => x.id === parentId);
+    const kids = (p?.children ?? []) as Category[];
+    setActiveParentId(parentId);
+    if (kids.length) {
+      setActiveCategoryId(kids[0].id);
+    } else {
+      setActiveCategoryId(parentId);
+    }
+  };
+
+  const handlePickChild = (childId: number) => {
+    setPage(1);
+    defaultVariantCache.current.clear();
+    setActiveCategoryId(childId);
+  };
 
   const renderProductCard = (product: ProductListItem) => {
     const isAdding = addingToCart.has(product.id);
@@ -435,6 +480,55 @@ export function HomePage() {
       {/* MAIN */}
       <main className="home-main">
         <div className="home-content">
+          {/* CATEGORY NAV */}
+          <section className="home-catnav">
+            <div className="home-catnav__title">Danh mục</div>
+            <div className="home-catnav__row" role="tablist" aria-label="Danh mục cha">
+              <button
+                type="button"
+                className={`home-catnav__pill ${activeParentId === 0 ? 'home-catnav__pill--active' : ''}`}
+                onClick={() => handlePickParent(0)}
+                aria-pressed={activeParentId === 0}
+              >
+                Tất cả
+              </button>
+
+              {loadingCats ? (
+                <div className="home-catnav__loading">Đang tải danh mục...</div>
+              ) : (
+                parentCategories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`home-catnav__pill ${activeParentId === c.id ? 'home-catnav__pill--active' : ''}`}
+                    onClick={() => handlePickParent(c.id)}
+                    aria-pressed={activeParentId === c.id}
+                    title={c.name}
+                  >
+                    {c.name}
+                  </button>
+                ))
+              )}
+            </div>
+
+            {activeChildren.length > 0 && (
+              <div className="home-catnav__row home-catnav__row--sub" role="tablist" aria-label="Danh mục con">
+                {activeChildren.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`home-catnav__chip ${activeCategoryId === c.id ? 'home-catnav__chip--active' : ''}`}
+                    onClick={() => handlePickChild(c.id)}
+                    aria-pressed={activeCategoryId === c.id}
+                    title={c.name}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
           {error && <div className="home-error">{error}</div>}
           {message && <div className="home-message">{message}</div>}
 
@@ -481,48 +575,17 @@ export function HomePage() {
                 {/* CATEGORIES */}
                 <div className="home-section">
                   <div className="home-section-header">
-                    <h2 className="home-section-title">Danh Mục Sản Phẩm</h2>
-                    <button type="button" className="home-section-link" onClick={() => setActiveCategoryId(0)}>
-                      Tất cả →
-                    </button>
-                  </div>
-
-                  <div className="home-categories-row">
+                    <h2 className="home-section-title">Đang xem: {resolveCategoryName}</h2>
                     <button
                       type="button"
-                      className="home-category-card"
+                      className="home-section-link"
                       onClick={() => {
-                        setActiveCategoryId(0);
-                        setPage(1);
+                        handlePickParent(0);
                         setActiveTab('products');
                       }}
-                      aria-pressed={activeCategoryId === 0}
                     >
-                      <div className="home-category-icon">⭐</div>
-                      <div className="home-category-name">Tất cả</div>
+                      Xem tất cả →
                     </button>
-
-                    {loadingCats ? (
-                      <div style={{ padding: 8 }}>Đang tải danh mục...</div>
-                    ) : (
-                      displayCategories.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          className="home-category-card"
-                          onClick={() => {
-                            setActiveCategoryId(c.id);
-                            setPage(1);
-                            setActiveTab('products');
-                          }}
-                          aria-pressed={activeCategoryId === c.id}
-                          title={c.name}
-                        >
-                          <div className="home-category-icon">📦</div>
-                          <div className="home-category-name">{c.name}</div>
-                        </button>
-                      ))
-                    )}
                   </div>
                 </div>
 
@@ -591,7 +654,7 @@ export function HomePage() {
 
       {/* FOOTER */}
       <footer className="home-footer">
-        <div className="home-footer-inner">
+          <div className="home-footer-inner">
           <div className="home-footer-column">
             <div className="home-footer-heading">Home</div>
             <button className="home-footer-link" onClick={() => navigate('/home')}>
@@ -607,12 +670,12 @@ export function HomePage() {
 
           <div className="home-footer-column">
             <div className="home-footer-heading">Categories</div>
-            {(displayCategories.slice(0, 3) || []).map((c) => (
+              {(parentCategories.slice(0, 3) || []).map((c) => (
               <button
                 key={c.id}
                 className="home-footer-link"
                 onClick={() => {
-                  setActiveCategoryId(c.id);
+                    handlePickParent(c.id);
                   setPage(1);
                 }}
               >

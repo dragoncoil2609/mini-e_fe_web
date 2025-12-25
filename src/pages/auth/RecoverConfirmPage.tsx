@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import './RecoverConfirmPage.css';
+import { getBeMessage } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 interface RecoverConfirmState {
   identifier?: string;
@@ -23,21 +25,21 @@ export function RecoverConfirmPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<'otp' | 'newPassword' | 'confirmPassword' | 'identifier', string>>
+  >({});
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setFieldErrors({});
     setLoading(true);
 
     if (!identifier) {
-      setError('Thiếu thông tin tài khoản. Vui lòng quay lại bước yêu cầu khôi phục.');
-      setLoading(false);
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Mật khẩu mới và xác nhận mật khẩu không khớp.');
+      const msg = 'Thiếu thông tin tài khoản. Vui lòng quay lại bước yêu cầu khôi phục.';
+      setError(msg);
+      setFieldErrors({ identifier: msg });
       setLoading(false);
       return;
     }
@@ -55,10 +57,18 @@ export function RecoverConfirmPage() {
         navigate('/login');
       }, 1500);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Khôi phục tài khoản thất bại. Vui lòng kiểm tra lại OTP / mật khẩu.';
+      const msg = getBeMessage(err, 'Khôi phục tài khoản thất bại. Vui lòng kiểm tra lại OTP / mật khẩu.');
       setError(msg);
+      const beField = guessAuthFieldFromMessage(msg);
+      const mapped =
+        beField === 'otp' || beField === 'newPassword' || beField === 'confirmPassword'
+          ? beField
+          : beField === 'password'
+            ? 'newPassword'
+            : beField === 'email' || beField === 'phone' || beField === 'identifier'
+              ? 'identifier'
+              : null;
+      setFieldErrors(mapped ? { [mapped]: msg } : {});
     } finally {
       setLoading(false);
     }
@@ -96,9 +106,9 @@ export function RecoverConfirmPage() {
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldErrors.otp ? 'inputError' : ''}`}
             />
+            {fieldErrors.otp && <div className="fieldError">{fieldErrors.otp}</div>}
           </div>
 
           <div className="formGroup">
@@ -107,9 +117,9 @@ export function RecoverConfirmPage() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldErrors.newPassword ? 'inputError' : ''}`}
             />
+            {fieldErrors.newPassword && <div className="fieldError">{fieldErrors.newPassword}</div>}
           </div>
 
           <div className="formGroupLast">
@@ -118,9 +128,11 @@ export function RecoverConfirmPage() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldErrors.confirmPassword ? 'inputError' : ''}`}
             />
+            {fieldErrors.confirmPassword && (
+              <div className="fieldError">{fieldErrors.confirmPassword}</div>
+            )}
           </div>
 
           {error && <div className="error">{error}</div>}

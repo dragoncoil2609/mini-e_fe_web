@@ -3,7 +3,9 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 import type { RequestVerifyResponse } from '../../api/types';
-import './VerifyAccountPage.css';
+import { getBeMessage } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 export function VerifyAccountPage() {
   const navigate = useNavigate();
@@ -12,11 +14,13 @@ export function VerifyAccountPage() {
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [loadingRequest, setLoadingRequest] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [info, setInfo] = useState<RequestVerifyResponse | null>(null);
   const [verified, setVerified] = useState<boolean | null>(null);
 
   async function handleRequestOtp() {
     setError(null);
+    setFieldError(null);
     setVerified(null);
     setLoadingRequest(true);
 
@@ -29,8 +33,7 @@ export function VerifyAccountPage() {
         navigate('/home');
       }
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message || 'Không gửi được OTP. Vui lòng thử lại.';
+      const msg = getBeMessage(err, 'Không gửi được OTP. Vui lòng thử lại.');
       setError(msg);
     } finally {
       setLoadingRequest(false);
@@ -40,6 +43,7 @@ export function VerifyAccountPage() {
   async function handleVerify(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldError(null);
     setVerified(null);
     setLoadingVerify(true);
 
@@ -49,9 +53,10 @@ export function VerifyAccountPage() {
 
       if (data.verified) navigate('/home');
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message || 'Xác minh thất bại. Vui lòng kiểm tra lại OTP.';
+      const msg = getBeMessage(err, 'Xác minh thất bại. Vui lòng kiểm tra lại OTP.');
       setError(msg);
+      const beField = guessAuthFieldFromMessage(msg);
+      setFieldError(beField === 'otp' ? msg : null);
     } finally {
       setLoadingVerify(false);
     }
@@ -111,9 +116,9 @@ export function VerifyAccountPage() {
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldError ? 'inputError' : ''}`}
             />
+            {fieldError && <div className="fieldError">{fieldError}</div>}
           </div>
 
           {error && <div className="error">{error}</div>}

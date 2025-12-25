@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import './ForgotPasswordPage.css';
+import { getBeMessage } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -9,10 +11,12 @@ export function ForgotPasswordPage() {
   const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldError(null);
     setLoading(true);
 
     try {
@@ -22,10 +26,12 @@ export function ForgotPasswordPage() {
         state: { identifier },
       });
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Không gửi được OTP. Vui lòng thử lại.';
+      const msg = getBeMessage(err, 'Không gửi được OTP. Vui lòng thử lại.');
       setError(msg);
+      const beField = guessAuthFieldFromMessage(msg);
+      const mapped =
+        beField === 'email' || beField === 'phone' || beField === 'identifier' ? 'identifier' : null;
+      setFieldError(mapped ? msg : null);
     } finally {
       setLoading(false);
     }
@@ -53,10 +59,10 @@ export function ForgotPasswordPage() {
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               type="text"
-              required
-              className="input"
+              className={`input ${fieldError ? 'inputError' : ''}`}
               placeholder="user@gmail.com hoặc 09xx..."
             />
+            {fieldError && <div className="fieldError">{fieldError}</div>}
           </div>
 
           {error && <div className="error">{error}</div>}

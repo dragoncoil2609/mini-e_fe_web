@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import './ResetPasswordPage.css';
+import { getBeMessage } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 interface ResetLocationState {
   identifier?: string;
@@ -23,21 +25,21 @@ export function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<'otp' | 'password' | 'confirmPassword' | 'identifier', string>>
+  >({});
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setFieldErrors({});
     setLoading(true);
 
     if (!identifier) {
-      setError('Thiếu thông tin tài khoản. Vui lòng quay lại bước Quên mật khẩu.');
-      setLoading(false);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Mật khẩu và xác nhận mật khẩu không khớp.');
+      const msg = 'Thiếu thông tin tài khoản. Vui lòng quay lại bước Quên mật khẩu.';
+      setError(msg);
+      setFieldErrors({ identifier: msg });
       setLoading(false);
       return;
     }
@@ -59,10 +61,16 @@ export function ResetPasswordPage() {
         setError('Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
       }
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.';
+      const msg = getBeMessage(err, 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.');
       setError(msg);
+      const beField = guessAuthFieldFromMessage(msg);
+      const mapped =
+        beField === 'otp' || beField === 'password' || beField === 'confirmPassword'
+          ? beField
+          : beField === 'email' || beField === 'phone' || beField === 'identifier'
+            ? 'identifier'
+            : null;
+      setFieldErrors(mapped ? { [mapped]: msg } : {});
     } finally {
       setLoading(false);
     }
@@ -105,9 +113,9 @@ export function ResetPasswordPage() {
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldErrors.otp ? 'inputError' : ''}`}
             />
+            {fieldErrors.otp && <div className="fieldError">{fieldErrors.otp}</div>}
           </div>
 
           <div className="formGroup">
@@ -116,9 +124,9 @@ export function ResetPasswordPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldErrors.password ? 'inputError' : ''}`}
             />
+            {fieldErrors.password && <div className="fieldError">{fieldErrors.password}</div>}
           </div>
 
           <div className="formGroupLast">
@@ -127,9 +135,11 @@ export function ResetPasswordPage() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="input"
+              className={`input ${fieldErrors.confirmPassword ? 'inputError' : ''}`}
             />
+            {fieldErrors.confirmPassword && (
+              <div className="fieldError">{fieldErrors.confirmPassword}</div>
+            )}
           </div>
 
           {error && <div className="error">{error}</div>}

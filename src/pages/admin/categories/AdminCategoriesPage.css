@@ -1,0 +1,264 @@
+.admin-cats {
+  padding: 18px;
+}
+
+.admin-cats__topbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.admin-cats__titlewrap {
+  flex: 1;
+  min-width: 240px;
+}
+
+.admin-cats__title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+
+.admin-cats__subtitle {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.admin-card {
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.04);
+  overflow: hidden;
+}
+
+.admin-toolbar {
+  padding: 12px;
+  border-bottom: 1px solid #eef0f4;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-toolbar__left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-toolbar__right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.input,
+.select,
+.textarea {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 0 10px;
+  outline: none;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input,
+.select {
+  height: 36px;
+}
+
+.textarea {
+  padding: 10px;
+  min-height: 84px;
+  resize: vertical;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s, border-color 0.2s, opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: #667eea;
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: #5568d3;
+}
+
+.btn--ghost {
+  background: #fff;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+
+.btn--ghost:hover {
+  background: #f3f4f6;
+}
+
+.btn--danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn--danger:hover {
+  background: #b91c1c;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef0f4;
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.admin-table th {
+  background: #f9fafb;
+  font-weight: 900;
+  color: #111827;
+  text-align: left;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid transparent;
+}
+
+.badge--on {
+  background: rgba(22, 163, 74, 0.08);
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.18);
+}
+
+.badge--off {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 2000;
+}
+
+.admin-modal {
+  width: min(640px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 18px 60px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+}
+
+.admin-modal__header {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef0f4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.admin-modal__body {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-modal__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-modal__row--full {
+  grid-column: 1 / -1;
+}
+
+.admin-modal__label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #374151;
+}
+
+.admin-modal__actions {
+  padding: 12px 14px;
+  border-top: 1px solid #eef0f4;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  font-size: 14px;
+}
+
+

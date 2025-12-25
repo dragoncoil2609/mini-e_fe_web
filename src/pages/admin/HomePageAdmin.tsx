@@ -31,6 +31,10 @@ export function HomePageAdmin() {
     navigate('/admin/shops');
   };
 
+  const handleGoCategoryManage = () => {
+    navigate('/admin/categories');
+  };
+
   return (
     <div className="admin-home-container">
       <header className="admin-home-header">
@@ -69,6 +73,14 @@ export function HomePageAdmin() {
           className="admin-home-button admin-home-button--shop"
         >
           Quản lý shop
+        </button>
+
+        <button
+          type="button"
+          onClick={handleGoCategoryManage}
+          className="admin-home-button admin-home-button--category"
+        >
+          Quản lý danh mục
         </button>
       </main>
     </div>
