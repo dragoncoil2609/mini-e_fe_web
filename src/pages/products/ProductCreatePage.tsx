@@ -11,14 +11,12 @@ export default function ProductCreatePage() {
   const [form, setForm] = useState<{
     title: string;
     price: string;
-    stock: string;
     description: string;
     categoryId: string; // '' = chưa chọn
     images: FileList | null;
   }>({
     title: '',
     price: '',
-    stock: '',
     description: '',
     categoryId: '',
     images: null,
@@ -54,7 +52,7 @@ export default function ProductCreatePage() {
   }, [form.images]);
 
   const handleChangeInput =
-    (field: 'title' | 'price' | 'stock' | 'description') =>
+    (field: 'title' | 'price' | 'description') =>
     (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const value = e.target.value;
       setForm((prev) => ({ ...prev, [field]: value }));
@@ -77,7 +75,6 @@ export default function ProductCreatePage() {
       const fd = new FormData();
       fd.append('title', form.title);
       fd.append('price', form.price);
-      fd.append('stock', form.stock || '0');
       fd.append('description', form.description);
 
       // ✅ categoryId (FormData chỉ nhận string|Blob)
@@ -169,17 +166,6 @@ export default function ProductCreatePage() {
                 onChange={handleChangeInput('price')}
                 min={0}
                 required
-                className="pc-input"
-              />
-            </div>
-
-            <div className="pc-field">
-              <label className="pc-label">Tồn kho</label>
-              <input
-                type="number"
-                value={form.stock}
-                onChange={handleChangeInput('stock')}
-                min={0}
                 className="pc-input"
               />
             </div>

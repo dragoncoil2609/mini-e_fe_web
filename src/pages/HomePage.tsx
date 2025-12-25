@@ -9,9 +9,8 @@ import type {
   ProductVariant,
   Category,
 } from '../api/types';
-import { getPublicProducts, getProductVariants } from '../api/products.api';
+import { getPublicProducts } from '../api/products.api';
 import { getPublicCategoryTree } from '../api/categories.api';
-import { CartApi } from '../api/cart.api';
 import { getMe } from '../api/users.api';
 import { AuthApi } from '../api/auth.api';
 import { getMainImageUrl } from '../utils/productImage';
@@ -28,7 +27,6 @@ export function HomePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
-  const [addingToCart, setAddingToCart] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -47,7 +45,7 @@ export function HomePage() {
   const [activeParentId, setActiveParentId] = useState<number>(0); // 0 = all
   const [activeCategoryId, setActiveCategoryId] = useState<number>(0); // leaf or parent without children
 
-  // cache variant mặc định theo productId để không gọi lại nhiều lần
+  // cache variant mặc định theo productId để không gọi lại nhiều lần (deprecated: không add từ Home nữa)
   const defaultVariantCache = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
@@ -141,71 +139,10 @@ export function HomePage() {
     void loadProducts();
   };
 
-  const pickDefaultVariantId = async (productId: number): Promise<number | null> => {
-    const cached = defaultVariantCache.current.get(productId);
-    if (cached) return cached;
-
-    try {
-      const res = await getProductVariants(productId);
-      const list = (res as unknown as ApiResponse<ProductVariant[]>).data;
-      const variants = Array.isArray(list) ? list : [];
-
-      const inStock = variants.find((v) => Number((v as any).stock ?? 0) > 0) ?? variants[0];
-      if (!inStock) return null;
-
-      const vid = Number((inStock as any).id);
-      if (!Number.isFinite(vid)) return null;
-
-      defaultVariantCache.current.set(productId, vid);
-      return vid;
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
-  };
-
   const handleAddToCart = async (productId: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    setAddingToCart((prev) => new Set(prev).add(productId));
-    setError(null);
-    setMessage(null);
-
-    try {
-      const variantId = await pickDefaultVariantId(productId);
-      if (!variantId) {
-        setError('Không xác định được biến thể mặc định. Vui lòng vào chi tiết sản phẩm để chọn biến thể.');
-        return;
-      }
-
-      const res = await CartApi.addItem({ productId, variantId, quantity: 1 });
-
-      if (res.success) {
-        setMessage('Đã thêm sản phẩm (biến thể mặc định) vào giỏ hàng!');
-        setTimeout(() => setMessage(null), 2500);
-      } else {
-        setError(res.message || 'Thêm vào giỏ hàng thất bại.');
-      }
-    } catch (err: any) {
-      console.error(err);
-      const status = err?.response?.status;
-      if (status === 401) {
-        navigate('/login');
-        return;
-      }
-      setError(err?.response?.data?.message || 'Thêm vào giỏ hàng thất bại.');
-    } finally {
-      setAddingToCart((prev) => {
-        const next = new Set(prev);
-        next.delete(productId);
-        return next;
-      });
-    }
+    // ✅ yêu cầu mới: không add biến thể mặc định từ Home -> chuyển sang trang detail để chọn biến thể
+    navigate(`/products/${productId}`);
   };
 
   const handleProductClick = (productId: number) => navigate(`/products/${productId}`);
@@ -286,7 +223,6 @@ export function HomePage() {
   };
 
   const renderProductCard = (product: ProductListItem) => {
-    const isAdding = addingToCart.has(product.id);
     const imageUrl = getMainImageUrl(product);
 
     return (
@@ -315,10 +251,9 @@ export function HomePage() {
           <button
             type="button"
             onClick={(e) => void handleAddToCart(product.id, e)}
-            disabled={isAdding}
             className="home-product-add-button"
           >
-            {isAdding ? 'Đang thêm...' : '🛒 Thêm vào giỏ'}
+            Chọn biến thể
           </button>
         </div>
       </div>

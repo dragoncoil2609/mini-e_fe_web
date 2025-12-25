@@ -22,14 +22,12 @@ export default function ProductEditPage() {
     title: string;
     description: string;
     price: number;
-    stock: number;
     status: string;
     categoryId: number; // 0 = none
   }>({
     title: '',
     description: '',
     price: 0,
-    stock: 0,
     status: 'ACTIVE',
     categoryId: 0,
   });
@@ -114,7 +112,6 @@ export default function ProductEditPage() {
           title: detail.title,
           description: detail.description || '',
           price: Number(detail.price),
-          stock: detail.stock,
           status: detail.status,
           categoryId: Number(detail.categoryId ?? 0),
         });
@@ -143,7 +140,7 @@ export default function ProductEditPage() {
     setForm((prev) => ({
       ...prev,
       [name]:
-        name === 'price' || name === 'stock' || name === 'categoryId'
+        name === 'price' || name === 'categoryId'
           ? Number(value)
           : value,
     }));
@@ -162,7 +159,6 @@ export default function ProductEditPage() {
         title: form.title,
         description: form.description,
         price: form.price,
-        stock: form.stock,
         status: form.status,
 
         // ✅ nếu 0 thì set null (xóa danh mục)
@@ -284,18 +280,6 @@ export default function ProductEditPage() {
                   name="price"
                   type="number"
                   value={form.price}
-                  onChange={handleChange}
-                  min={0}
-                  className="product-edit-input"
-                />
-              </div>
-
-              <div className="product-edit-field">
-                <label className="product-edit-label">Tồn kho</label>
-                <input
-                  name="stock"
-                  type="number"
-                  value={form.stock}
                   onChange={handleChange}
                   min={0}
                   className="product-edit-input"

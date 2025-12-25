@@ -150,6 +150,11 @@ export default function ProductDetailPage() {
   const isFullOptionsSelected =
     optionSchema.length > 0 && Object.keys(selectedOptions).length === optionSchema.length;
 
+  const totalVariantStock = useMemo(() => {
+    if (!variants.length) return 0;
+    return variants.reduce((sum, v) => sum + Math.max(0, Number((v as any).stock ?? 0)), 0);
+  }, [variants]);
+
   const currentVariant = useMemo(() => {
     if (!product) return null;
     if (!variants.length) return null;
@@ -166,6 +171,17 @@ export default function ProductDetailPage() {
       }) || null
     );
   }, [product, variants, selectedOptions]);
+
+  const isOptionValueAvailable = (optionName: string, value: string): boolean => {
+    if (!variants.length) return true;
+    const next = { ...selectedOptions, [optionName]: value };
+    return variants.some((v) => {
+      const stock = Number((v as any).stock ?? 0);
+      if (stock <= 0) return false;
+      const rec = variantOptionsToRecord(v);
+      return Object.entries(next).every(([k, val]) => rec[k] === val);
+    });
+  };
 
   useEffect(() => {
     if (!numericId) return;
@@ -484,12 +500,14 @@ export default function ProductDetailPage() {
                 <div className="pdp-option-values">
                   {opt.values.map((val) => {
                     const selected = selectedOptions[opt.name] === val;
+                    const available = isOptionValueAvailable(opt.name, val);
                     return (
                       <button
                         key={val}
                         type="button"
                         className={`pdp-option-btn ${selected ? 'selected' : ''}`}
                         onClick={() => handleOptionClick(opt.name, val)}
+                        disabled={!available}
                       >
                         {val}
                       </button>
@@ -502,7 +520,9 @@ export default function ProductDetailPage() {
             <div className="pdp-meta-info">
               <div className="pdp-meta-item">
                 <div className="pdp-meta-label">Tồn kho</div>
-                <div className="pdp-meta-value">{numericStock}</div>
+                <div className="pdp-meta-value">
+                  {optionSchema.length ? numericStock : totalVariantStock}
+                </div>
               </div>
 
               <div className="pdp-meta-item">

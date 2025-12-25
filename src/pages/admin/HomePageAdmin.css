@@ -118,3 +118,11 @@
   background-color: #d97706;
 }
 
+.admin-home-button--product {
+  background-color: #0ea5e9;
+}
+
+.admin-home-button--product:hover {
+  background-color: #0284c7;
+}
+
