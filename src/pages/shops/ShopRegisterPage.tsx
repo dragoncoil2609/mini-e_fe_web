@@ -34,6 +34,7 @@ const ShopRegisterPage = () => {
   const [checkingName, setCheckingName] = useState(false);
   const [nameExists, setNameExists] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -77,7 +78,7 @@ const ShopRegisterPage = () => {
       const res = await registerShop(payload);
 
       if (res.success) {
-        navigate('/shops/me'); // Chuyển trang khi thành công
+        setSuccessOpen(true); // ✅ hiển thị thông báo chờ admin duyệt
       } else {
         setError(res.message || 'Đăng ký thất bại.');
       }
@@ -111,6 +112,39 @@ const ShopRegisterPage = () => {
         </div>
 
         {error && <div className="global-error">{error}</div>}
+
+        {successOpen && (
+          <div className="shop-success-overlay" onMouseDown={() => setSuccessOpen(false)}>
+            <div className="shop-success-modal" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="shop-success-title">Đăng ký shop thành công</div>
+              <div className="shop-success-text">
+                Bạn đã đăng ký shop thành công. Vui lòng chờ <b>ADMIN</b> phê duyệt để shop được kích hoạt.
+              </div>
+              <div className="shop-success-actions">
+                <button
+                  type="button"
+                  className="shop-success-btn shop-success-btn--ghost"
+                  onClick={() => {
+                    setSuccessOpen(false);
+                    navigate('/home');
+                  }}
+                >
+                  Về trang chủ
+                </button>
+                <button
+                  type="button"
+                  className="shop-success-btn shop-success-btn--primary"
+                  onClick={() => {
+                    setSuccessOpen(false);
+                    navigate('/shops/me');
+                  }}
+                >
+                  Xem shop của tôi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="shop-register-content">
