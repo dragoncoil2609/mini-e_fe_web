@@ -13,7 +13,8 @@ import {
   uploadShopCover,
 } from '../../api/shop.api';
 import { getProductsByShop } from '../../api/products.api';
-import type { Shop, ProductListItem } from '../../api/types';
+import { OrdersApi } from '../../api/orders.api';
+import type { Shop, ProductListItem, Order, ShippingStatus } from '../../api/types';
 import { getMainImageUrl } from '../../utils/productImage';
 import LocationPicker from '../../components/LocationPicker';
 import VietnamAddressSelector from '../../components/VietnamAddressSelector';
@@ -59,6 +60,14 @@ const MyShopPage = () => {
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
 
+  // ================== SHOP ORDERS (NEW) ==================
+  const [shopOrders, setShopOrders] = useState<Order[]>([]);
+  const [shopOrdersLoading, setShopOrdersLoading] = useState(false);
+  const [shopOrdersError, setShopOrdersError] = useState<string | null>(null);
+  const [shopOrdersPage, setShopOrdersPage] = useState(1);
+  const [shopOrdersLimit] = useState(10);
+  const [shopOrdersTotal, setShopOrdersTotal] = useState(0);
+
   const formatCurrency = (val: number | string | undefined) => {
     const num = Number(val);
     if (isNaN(num)) return '0 ₫';
@@ -81,7 +90,6 @@ const MyShopPage = () => {
     try {
       const res = await getProductsByShop(shopId, { page: 1, limit: 10 });
       const payload = unwrap<any>(res);
-      // payload có thể là {items,total} hoặc trực tiếp items
       const items = Array.isArray(payload) ? payload : (payload?.items ?? []);
       setProducts(items);
     } catch (err) {
@@ -114,11 +122,60 @@ const MyShopPage = () => {
         shopPhone: data.shopPhone || '',
       });
       void loadProducts(data.id);
+      void loadShopOrders(1); // ✅ load đơn hàng shop luôn
     } catch (err: any) {
       console.error(err);
       setError('Bạn chưa có shop hoặc lỗi kết nối.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadShopOrders = async (page = shopOrdersPage) => {
+    setShopOrdersLoading(true);
+    setShopOrdersError(null);
+    try {
+      const res = await OrdersApi.getMyShopOrders({ page, limit: shopOrdersLimit });
+      if (!res.success) {
+        setShopOrdersError(res.message || 'Không tải được đơn hàng của shop');
+        return;
+      }
+      setShopOrders(res.data.items || []);
+      setShopOrdersTotal(res.data.total || 0);
+      setShopOrdersPage(page);
+    } catch (e: any) {
+      setShopOrdersError(e?.response?.data?.message || 'Không tải được đơn hàng của shop');
+    } finally {
+      setShopOrdersLoading(false);
+    }
+  };
+
+  const labelShipping = (s: ShippingStatus) => {
+    const map: Record<string, string> = {
+      PENDING: 'Chờ lấy hàng',
+      PICKED: 'Đã lấy hàng',
+      IN_TRANSIT: 'Đang giao',
+      DELIVERED: 'Đã giao',
+      RETURNED: 'Hoàn hàng',
+      CANCELED: 'Đã huỷ',
+    };
+    return map[s] || s;
+  };
+
+  const markDelivered = async (orderId: string) => {
+    try {
+      const res = await OrdersApi.updateOrderStatus(orderId, { shippingStatus: 'DELIVERED' });
+      if (!res.success) {
+        alert(res.message || 'Cập nhật thất bại');
+        return;
+      }
+      setSuccessMsg('Đã cập nhật trạng thái: DELIVERED');
+      // update local
+      setShopOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, shippingStatus: 'DELIVERED' } : o)),
+      );
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Lỗi cập nhật trạng thái đơn');
     }
   };
 
@@ -225,6 +282,8 @@ const MyShopPage = () => {
       </div>
     );
   }
+
+  const shopOrdersTotalPages = Math.max(1, Math.ceil(shopOrdersTotal / shopOrdersLimit));
 
   // --- RENDER CHÍNH ---
   return (
@@ -348,7 +407,6 @@ const MyShopPage = () => {
               ✏️ Chỉnh sửa thông tin
             </button>
 
-            {/* Cột Trái: Thông tin liên hệ cơ bản */}
             <div className="info-column">
               <h3>Thông tin liên hệ</h3>
               <div className="info-row">
@@ -365,15 +423,12 @@ const MyShopPage = () => {
               </div>
             </div>
 
-            {/* Cột Phải: Chi tiết Shop (Mô tả & Địa chỉ) */}
             <div className="info-column">
               <h3>Chi tiết Shop</h3>
               <div className="info-row">
                 <span className="info-key">Mô tả:</span>
                 <span className="info-val">{shop.description || 'Chưa có mô tả.'}</span>
               </div>
-              
-              {/* --- ĐÃ SỬA: Hiện Địa chỉ thay vì Tọa độ --- */}
               <div className="info-row">
                 <span className="info-key">Địa chỉ:</span>
                 <span className="info-val" style={{ lineHeight: '1.4' }}>
@@ -482,12 +537,117 @@ const MyShopPage = () => {
           </div>
         )}
 
+        {/* ✅ NEW: QUẢN LÝ ĐƠN HÀNG */}
+        <div className="myshop-products-section" style={{ marginTop: 18 }}>
+          <div className="action-bar">
+            <h2 className="section-title">Quản lý đơn hàng</h2>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => loadShopOrders(1)}
+            >
+              Tải lại
+            </button>
+          </div>
+
+          {shopOrdersLoading && <p className="myshop-products-loading">Đang tải đơn hàng...</p>}
+          {shopOrdersError && <div className="myshop-error">{shopOrdersError}</div>}
+
+          {!shopOrdersLoading && !shopOrdersError && (
+            <div className="myshop-table-wrapper">
+              <table className="shop-table">
+                <thead>
+                  <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách</th>
+                    <th>Địa chỉ</th>
+                    <th>Tổng</th>
+                    <th>Giao hàng</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shopOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="shop-table-empty">
+                        Chưa có đơn hàng nào.
+                      </td>
+                    </tr>
+                  ) : (
+                    shopOrders.map((o) => (
+                      <tr key={o.id}>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <b>{o.code}</b>
+                            <span style={{ fontSize: 12, opacity: 0.7 }}>
+                              {new Date(o.createdAt).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span>{o.addressSnapshot?.fullName || '-'}</span>
+                            <span style={{ fontSize: 12, opacity: 0.7 }}>{o.addressSnapshot?.phone || '-'}</span>
+                          </div>
+                        </td>
+                        <td style={{ maxWidth: 340 }}>
+                          <div style={{ fontSize: 13, lineHeight: 1.35 }}>
+                            {o.addressSnapshot?.formattedAddress || '-'}
+                          </div>
+                        </td>
+                        <td className="shop-table-price">
+                          {new Intl.NumberFormat('vi-VN').format(Number(o.total))} VND
+                        </td>
+                        <td>
+                          <span className="shop-status-pill" data-status={o.shippingStatus}>
+                            {labelShipping(o.shippingStatus)}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-secondary--small"
+                            disabled={o.shippingStatus === 'DELIVERED'}
+                            onClick={() => markDelivered(o.id)}
+                          >
+                            {o.shippingStatus === 'DELIVERED' ? 'Đã giao' : 'Đánh dấu đã giao'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+
+              {shopOrdersTotalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
+                  <button
+                    className="btn-secondary btn-secondary--small"
+                    disabled={shopOrdersPage <= 1}
+                    onClick={() => loadShopOrders(Math.max(1, shopOrdersPage - 1))}
+                  >
+                    ← Trang trước
+                  </button>
+                  <div style={{ fontSize: 13, opacity: 0.8 }}>
+                    Trang {shopOrdersPage}/{shopOrdersTotalPages}
+                  </div>
+                  <button
+                    className="btn-secondary btn-secondary--small"
+                    disabled={shopOrdersPage >= shopOrdersTotalPages}
+                    onClick={() => loadShopOrders(Math.min(shopOrdersTotalPages, shopOrdersPage + 1))}
+                  >
+                    Trang sau →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* DANH SÁCH SẢN PHẨM */}
         <div className="myshop-products-section">
           <div className="action-bar">
             <h2 className="section-title">Danh sách sản phẩm</h2>
-
-            {/* ✅ đổi "+ Thêm sản phẩm" thành "Quản lý sản phẩm" */}
             <button
               type="button"
               className="btn-primary"

@@ -1,8 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { OrdersApi } from '../../api/orders.api';
-import type { Order } from '../../api/types';
+import { ReviewsApi } from '../../api/reviews.api';
+import type { Order, ProductReview } from '../../api/types';
 import './OrderDetailPage.css';
+
+function Stars({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange?: (v: number) => void;
+  disabled?: boolean;
+}) {
+  const stars = useMemo(() => [1, 2, 3, 4, 5], []);
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      {stars.map((s) => (
+        <button
+          key={s}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange?.(s)}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontSize: 20,
+            opacity: disabled ? 0.7 : 1,
+            padding: 0,
+          }}
+          aria-label={`rate-${s}`}
+        >
+          {s <= value ? '⭐' : '☆'}
+        </button>
+      ))}
+      <span style={{ fontSize: 13, opacity: 0.75, marginLeft: 6 }}>{value}/5</span>
+    </div>
+  );
+}
 
 export default function OrderDetailPage() {
   const { id } = useParams();
@@ -10,6 +47,14 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // review
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [review, setReview] = useState<ProductReview | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(5);
+  const [content, setContent] = useState<string>('');
+  const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -29,9 +74,69 @@ export default function OrderDetailPage() {
     }
   };
 
+  const loadReview = async (orderId: string) => {
+    setReviewLoading(true);
+    setReviewError(null);
+    try {
+      const res = await ReviewsApi.getMyReviewByOrder(orderId);
+      if (res.success) {
+        setReview(res.data || null);
+      } else {
+        setReview(null);
+      }
+    } catch (e: any) {
+      // nếu BE trả 404 khi chưa có review -> coi như chưa review
+      const status = e?.response?.status;
+      if (status === 404) {
+        setReview(null);
+      } else {
+        setReviewError(e?.response?.data?.message || 'Không tải được review');
+      }
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   useEffect(() => {
     void load();
   }, [id]);
+
+  useEffect(() => {
+    if (!order) return;
+    if (order.shippingStatus === 'DELIVERED') {
+      void loadReview(order.id);
+    } else {
+      setReview(null);
+      setReviewError(null);
+    }
+  }, [order?.id, order?.shippingStatus]);
+
+  const submitReview = async () => {
+    if (!order) return;
+    if (order.shippingStatus !== 'DELIVERED') return;
+    if (!rating || rating < 1 || rating > 5) {
+      alert('Vui lòng chọn số sao (1-5)');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await ReviewsApi.createProductReview({
+        orderId: order.id,
+        rating,
+        content: content?.trim() ? content.trim() : undefined,
+      });
+      if (!res.success) {
+        alert(res.message || 'Tạo review thất bại');
+        return;
+      }
+      setReview(res.data);
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Tạo review thất bại');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const labelStatus = (s: Order['status']) => {
     const map: Record<string, string> = {
@@ -61,15 +166,21 @@ export default function OrderDetailPage() {
     if (error) return <div className="order-detail-state">{error}</div>;
     if (!order) return null;
 
+    const canReview = order.shippingStatus === 'DELIVERED';
+
     return (
       <>
         <div className="order-detail-title-row">
           <div>
             <h1 className="order-detail-title">Chi tiết đơn hàng</h1>
-            <p className="order-detail-subtitle">Mã đơn <b>{order.code}</b> • {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+            <p className="order-detail-subtitle">
+              Mã đơn <b>{order.code}</b> • {new Date(order.createdAt).toLocaleString('vi-VN')}
+            </p>
           </div>
           <div className="order-detail-title-actions">
-            <button onClick={() => navigate('/orders')} className="order-detail-back-button">← Quay lại</button>
+            <button onClick={() => navigate('/orders')} className="order-detail-back-button">
+              ← Quay lại
+            </button>
           </div>
         </div>
 
@@ -81,6 +192,10 @@ export default function OrderDetailPage() {
           <div className="order-detail-info-row">
             <span className="order-detail-label">Trạng thái:</span>
             <span className={statusClass(order.status)}>{labelStatus(order.status)}</span>
+          </div>
+          <div className="order-detail-info-row">
+            <span className="order-detail-label">Giao hàng:</span>
+            <span className="order-detail-value">{order.shippingStatus}</span>
           </div>
           <div className="order-detail-info-row">
             <span className="order-detail-label">Thanh toán:</span>
@@ -129,6 +244,85 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
+        {/* ✅ REVIEW SECTION */}
+        <div className="order-detail-section">
+          <h2 className="order-detail-section-title">Đánh giá sản phẩm</h2>
+
+          {!canReview && (
+            <div style={{ fontSize: 14, opacity: 0.85 }}>
+              Bạn chỉ có thể đánh giá khi shop cập nhật trạng thái giao hàng thành <b>DELIVERED</b>.
+            </div>
+          )}
+
+          {canReview && (
+            <>
+              {reviewLoading && <div style={{ padding: '8px 0' }}>Đang tải review...</div>}
+              {reviewError && <div style={{ padding: '8px 0', color: '#b42318' }}>{reviewError}</div>}
+
+              {!reviewLoading && !review && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 6 }}>Số sao</div>
+                    <Stars value={rating} onChange={setRating} disabled={submitting} />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 6 }}>Nhận xét</div>
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      rows={4}
+                      placeholder="Viết cảm nhận của bạn về sản phẩm..."
+                      disabled={submitting}
+                      style={{
+                        width: '100%',
+                        borderRadius: 10,
+                        padding: 12,
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        outline: 'none',
+                        resize: 'vertical',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={submitReview}
+                      disabled={submitting}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: 'none',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        background: '#111827',
+                        color: '#fff',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!reviewLoading && review && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Stars value={review.rating} disabled />
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>
+                      {new Date(review.createdAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                    {review.comment || <span style={{ opacity: 0.7 }}>(Không có nhận xét)</span>}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {order.note && (
           <div className="order-detail-section">
             <h2 className="order-detail-section-title">Ghi chú</h2>
@@ -141,19 +335,24 @@ export default function OrderDetailPage() {
           <div className="order-detail-summary">
             <div className="order-detail-summary-row">
               <span className="order-detail-summary-label">Tạm tính:</span>
-              <span className="order-detail-summary-value">{new Intl.NumberFormat('vi-VN').format(Number(order.subtotal))} VND</span>
+              <span className="order-detail-summary-value">
+                {new Intl.NumberFormat('vi-VN').format(Number(order.subtotal))} VND
+              </span>
             </div>
             <div className="order-detail-summary-row">
               <span className="order-detail-summary-label">Phí ship:</span>
-              <span className="order-detail-summary-value">{new Intl.NumberFormat('vi-VN').format(Number(order.shippingFee))} VND</span>
+              <span className="order-detail-summary-value">
+                {new Intl.NumberFormat('vi-VN').format(Number(order.shippingFee))} VND
+              </span>
             </div>
             <div className="order-detail-summary-total">
               <span className="order-detail-summary-total-label">Tổng cộng:</span>
-              <span className="order-detail-summary-total-value">{new Intl.NumberFormat('vi-VN').format(Number(order.total))} VND</span>
+              <span className="order-detail-summary-total-value">
+                {new Intl.NumberFormat('vi-VN').format(Number(order.total))} VND
+              </span>
             </div>
           </div>
         </div>
-
       </>
     );
   };
@@ -162,7 +361,9 @@ export default function OrderDetailPage() {
     <div className="order-detail-container">
       <header className="order-detail-headerbar">
         <div className="order-detail-headerbar-content">
-          <button className="order-detail-brand" onClick={() => navigate('/home')}>Mini-E</button>
+          <button className="order-detail-brand" onClick={() => navigate('/home')}>
+            Mini-E
+          </button>
           <div className="order-detail-headerbar-right">
             <Link className="order-detail-chip" to="/products">🛍️ Sản phẩm</Link>
             <Link className="order-detail-chip" to="/cart">🛒 Giỏ hàng</Link>

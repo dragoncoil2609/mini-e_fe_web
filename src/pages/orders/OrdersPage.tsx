@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { OrdersApi } from '../../api/orders.api';
-import type { Order, OrderStatus } from '../../api/types';
+import type { Order, OrderStatus, ShippingStatus } from '../../api/types';
 import './OrdersPage.css';
 
 export default function OrdersPage() {
@@ -49,9 +49,20 @@ export default function OrdersPage() {
     return map[s] || s;
   };
 
+  const labelShipping = (s: ShippingStatus) => {
+    const map: Record<string, string> = {
+      PENDING: 'Chờ lấy hàng',
+      PICKED: 'Đã lấy hàng',
+      IN_TRANSIT: 'Đang giao',
+      DELIVERED: 'Đã giao',
+      RETURNED: 'Hoàn hàng',
+      CANCELED: 'Đã huỷ',
+    };
+    return map[s] || s;
+  };
+
   const statusClass = (s: OrderStatus) => {
     const key = String(s || '').toLowerCase();
-    // map lại vài trạng thái để match CSS (vd: SHIPPED -> shipping)
     const normalized: Record<string, string> = {
       shipped: 'shipping',
       completed: 'delivered',
@@ -90,15 +101,15 @@ export default function OrdersPage() {
               </Link>
             </div>
 
-        {loading && <div className="orders-loading">Đang tải...</div>}
-        {error && <div className="orders-error">{error}</div>}
+            {loading && <div className="orders-loading">Đang tải...</div>}
+            {error && <div className="orders-error">{error}</div>}
 
-        {!loading && !error && orders.length === 0 && (
-          <div className="orders-empty">
-            <p>Bạn chưa có đơn hàng nào.</p>
-            <Link to="/products" className="orders-empty-link">Xem sản phẩm</Link>
-          </div>
-        )}
+            {!loading && !error && orders.length === 0 && (
+              <div className="orders-empty">
+                <p>Bạn chưa có đơn hàng nào.</p>
+                <Link to="/products" className="orders-empty-link">Xem sản phẩm</Link>
+              </div>
+            )}
 
             {!loading && orders.length > 0 && (
               <div className="orders-list">
@@ -114,23 +125,26 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                <div className="orders-item-content">
-                  <div className="orders-item-address">
-                    <strong>Giao đến:</strong> {o.addressSnapshot?.fullName} - {o.addressSnapshot?.phone}
-                    <br />
-                    {o.addressSnapshot?.formattedAddress}
-                  </div>
+                    <div className="orders-item-content">
+                      <div className="orders-item-address">
+                        <strong>Giao đến:</strong> {o.addressSnapshot?.fullName} - {o.addressSnapshot?.phone}
+                        <br />
+                        {o.addressSnapshot?.formattedAddress}
+                        <div style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
+                          <b>Giao hàng:</b> {labelShipping(o.shippingStatus)}
+                        </div>
+                      </div>
 
-                  <div className="orders-item-summary">
-                    <div className="orders-item-total">
-                      Tổng: {new Intl.NumberFormat('vi-VN').format(Number(o.total))} VND
+                      <div className="orders-item-summary">
+                        <div className="orders-item-total">
+                          Tổng: {new Intl.NumberFormat('vi-VN').format(Number(o.total))} VND
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
                     <div className="orders-item-actions">
                       <Link to={`/orders/${o.id}`} className="orders-action-button">
-                        Xem chi tiết
+                        {o.shippingStatus === 'DELIVERED' ? 'Xem & Đánh giá' : 'Xem chi tiết'}
                       </Link>
                     </div>
                   </div>

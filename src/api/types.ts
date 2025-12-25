@@ -112,10 +112,8 @@ export interface Shop {
   description: string | null;
   status: ShopStatus;
 
-  // --- THÊM 2 DÒNG NÀY ---
   logoUrl?: string | null;
   coverUrl?: string | null;
-  // -----------------------
 
   shopAddress: string | null;
   shopLat: string | null;
@@ -124,6 +122,39 @@ export interface Shop {
   shopPhone: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ================== CATEGORIES ==================
+
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  parentId: number | null;
+
+  sortOrder?: number;
+  isActive?: boolean;
+
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+
+  // nếu BE trả dạng tree
+  children?: Category[];
+}
+
+export interface CreateCategoryDto {
+  name: string;
+  parentId?: number | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateCategoryDto {
+  name?: string;
+  parentId?: number | null;
+  sortOrder?: number;
+  isActive?: boolean;
 }
 
 // ================== PRODUCT ==================
@@ -159,6 +190,10 @@ export interface ProductListItem {
   createdAt: string;
   updatedAt?: string;
 
+  // ✅ category
+  categoryId?: number | null;
+  category?: Category | null;
+
   // Danh sách ảnh của sản phẩm (BE trả về từ product_images)
   images?: ProductImage[];
 
@@ -170,22 +205,22 @@ export interface ProductListItem {
 export interface ProductDetail {
   id: number;
   shopId: number;
+
+  // ✅ category
+  categoryId?: number | null;
+  category?: Category | null;
+
   title: string;
   slug: string;
   description: string | null;
 
-  // Đã sửa type từ 'any' sang mảng cụ thể
   optionSchema?: ProductOptionSchema[] | null;
 
   price: string; // "150000.00"
-
-  // Thêm trường giá gốc (gạch ngang)
   compareAtPrice?: string | null;
 
   currency: string; // "VND"
   stock: number;
-
-  // Thêm trường số lượng đã bán
   sold: number;
 
   status: ProductStatus;
@@ -193,7 +228,6 @@ export interface ProductDetail {
   updatedAt: string;
   images?: ProductImage[];
 
-  // Có thể dùng nếu BE trả về mainImageUrl riêng
   mainImageUrl?: string | null;
 }
 
@@ -239,6 +273,10 @@ export interface CreateProductJsonDto {
   price: number;
   stock?: number;
   slug?: string;
+
+  // ✅ category
+  categoryId?: number | null;
+
   images?: string[]; // URL ảnh nếu dùng JSON
 }
 
@@ -250,6 +288,9 @@ export interface UpdateProductDto {
   price?: number;
   stock?: number;
   status?: ProductStatus;
+
+  // ✅ category
+  categoryId?: number | null;
 }
 
 // Update 1 variant
@@ -263,13 +304,11 @@ export interface UpdateVariantDto {
 
 // ================== CART ==================
 
-// Cart Item (dòng trong giỏ hàng)
 export interface CartItem {
   id: number;
   cartId: number;
   productId: number;
 
-  // ✅ BE mới: bắt buộc phải có variant
   variantId: number;
 
   title: string;
@@ -279,7 +318,7 @@ export interface CartItem {
   imageId: number | null;
   imageUrl?: string | null;
 
-  price: string; // "150000.00"
+  price: string;
   quantity: number;
 
   value1: string | null;
@@ -292,34 +331,27 @@ export interface CartItem {
   updatedAt?: string;
 }
 
-// Cart (giỏ hàng)
 export interface Cart {
   id: number;
-  currency: string; // "VND"
-  itemsCount: number; // số lượng dòng items
-  itemsQuantity: number; // tổng số lượng sản phẩm
-  subtotal: string; // "150000.00"
+  currency: string;
+  itemsCount: number;
+  itemsQuantity: number;
+  subtotal: string;
   items: CartItem[];
 }
 
-// DTO để thêm item vào cart
 export interface AddItemDto {
   productId: number;
-
-  // ✅ bắt buộc
   variantId: number;
-
-  quantity?: number; // mặc định 1
+  quantity?: number;
 }
 
-// DTO để cập nhật item trong cart
 export interface UpdateItemDto {
-  quantity: number; // 0 = xóa item
+  quantity: number;
 }
 
 // ================== ADDRESSES ==================
 
-// Address (địa chỉ)
 export interface Address {
   id: number;
   userId: number;
@@ -327,14 +359,13 @@ export interface Address {
   phone: string;
   formattedAddress: string;
   placeId: string | null;
-  lat: string | null; // decimal từ DB trả về dạng string
-  lng: string | null; // decimal từ DB trả về dạng string
+  lat: string | null;
+  lng: string | null;
   isDefault: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// DTO để tạo địa chỉ mới
 export interface CreateAddressDto {
   fullName: string;
   phone: string;
@@ -345,7 +376,6 @@ export interface CreateAddressDto {
   isDefault?: boolean;
 }
 
-// DTO để cập nhật địa chỉ
 export interface UpdateAddressDto {
   fullName?: string;
   phone?: string;
@@ -373,7 +403,6 @@ export type OrderStatus =
   | 'SHIPPED'
   | 'COMPLETED'
   | 'CANCELLED'
-  // giữ thêm các status cũ nếu nơi khác còn dùng:
   | 'CONFIRMED'
   | 'SHIPPING'
   | 'DELIVERED'
@@ -438,7 +467,6 @@ export interface Order {
   items?: OrderItem[];
 }
 
-// Preview
 export interface PreviewOrderDto {
   addressId?: number;
   itemIds?: number[];
@@ -470,7 +498,6 @@ export interface PreviewOrderResponse {
   summary: { subtotal: number; shippingFee: number; total: number };
 }
 
-// Create
 export interface CreateOrderDto {
   paymentMethod: PaymentMethod;
   addressId?: number;
@@ -486,3 +513,31 @@ export type CreateOrderResponse =
       session: { code: string; amount: number; status: string };
       paymentUrl: string;
     };
+
+
+// ================== REVIEWS ==================
+export interface ProductReview {
+  id: string;
+  orderId: string;
+  userId: number;
+  productId: number;
+  rating: number; // 1..5
+  comment: string | null;
+  images: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductReviewDto {
+  orderId: string;
+  rating: number;
+  content?: string;
+}
+
+export interface ProductReviewsList {
+  summary: { count: number; avg: number };
+  items: ProductReview[];
+  page: number;
+  limit: number;
+  total: number;
+}

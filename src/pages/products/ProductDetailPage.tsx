@@ -4,9 +4,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { getPublicProductDetail, getProductVariants } from '../../api/products.api';
 import { getShopDetail } from '../../api/shop.api';
+import { getProductReviews } from '../../api/reviews.api';
 import { CartApi } from '../../api/cart.api';
 
-import type { ApiResponse, ProductDetail, ProductVariant, Shop } from '../../api/types';
+import type {
+  ApiResponse,
+  ProductDetail,
+  ProductVariant,
+  Shop,
+  ProductReview,
+  ProductReviewsList,
+} from '../../api/types';
 
 import { getAllImages, getMainImageUrl } from '../../utils/productImage';
 import './style/ProductDetailPage.css';
@@ -53,6 +61,25 @@ function variantOptionsToRecord(v: ProductVariant): Record<string, string> {
   return {};
 }
 
+function formatDateVi(input: string) {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return input;
+  return d.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function Stars({ rating }: { rating: number }) {
+  const r = Math.max(0, Math.min(5, Math.round(Number(rating || 0))));
+  return (
+    <span className="pdp-stars" aria-label={`${r} trên 5`}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span key={i} className={`pdp-star ${i < r ? 'filled' : ''}`}>
+          ★
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -72,6 +99,15 @@ export default function ProductDetailPage() {
   const [adding, setAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  // ===== REVIEWS =====
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewSummary, setReviewSummary] = useState<{ count: number; avg: number }>({ count: 0, avg: 0 });
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewLimit] = useState(6);
+  const [reviewTotal, setReviewTotal] = useState(0);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const optionSchema = product?.optionSchema || [];
 
@@ -175,6 +211,66 @@ export default function ProductDetailPage() {
     setPreviewImage(getMainImageUrl(product) || null);
   }, [currentVariant, allImages, product]);
 
+  // ===== LOAD REVIEWS (public) =====
+  useEffect(() => {
+    if (!numericId) return;
+
+    // reset khi đổi sản phẩm
+    setReviews([]);
+    setReviewSummary({ count: 0, avg: 0 });
+    setReviewPage(1);
+    setReviewTotal(0);
+    setReviewError(null);
+
+    let cancelled = false;
+
+    (async () => {
+      setReviewLoading(true);
+      try {
+        const res = await getProductReviews(numericId, { page: 1, limit: reviewLimit });
+        const data = res.data as unknown as ProductReviewsList;
+
+        if (cancelled) return;
+
+        setReviewSummary(data?.summary || { count: 0, avg: 0 });
+        setReviewTotal(Number(data?.total ?? 0));
+        setReviews(Array.isArray(data?.items) ? data.items : []);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setReviewError('Không tải được đánh giá.');
+      } finally {
+        if (!cancelled) setReviewLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [numericId, reviewLimit]);
+
+  const loadMoreReviews = async () => {
+    if (!numericId) return;
+    const next = reviewPage + 1;
+
+    setReviewLoading(true);
+    setReviewError(null);
+    try {
+      const res = await getProductReviews(numericId, { page: next, limit: reviewLimit });
+      const data = res.data as unknown as ProductReviewsList;
+
+      const more = Array.isArray(data?.items) ? data.items : [];
+      setReviews((prev) => [...prev, ...more]);
+      setReviewSummary(data?.summary || reviewSummary);
+      setReviewTotal(Number(data?.total ?? reviewTotal));
+      setReviewPage(next);
+    } catch (e) {
+      console.error(e);
+      setReviewError('Không tải thêm đánh giá.');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const handleOptionClick = (optionName: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [optionName]: value }));
   };
@@ -193,7 +289,6 @@ export default function ProductDetailPage() {
     return Math.max(min, Math.min(max, q));
   };
 
-  // ✅ return boolean để BuyNow điều hướng chuẩn
   const handleAddToCart = async (): Promise<boolean> => {
     setActionError(null);
     setActionMsg(null);
@@ -284,6 +379,8 @@ export default function ProductDetailPage() {
 
   const totalSold =
     (shop as any)?.totalSold ?? (shop as any)?.stats?.totalSold ?? (shop as any)?.stats?.total_sold ?? null;
+
+  const canLoadMore = reviews.length < (reviewTotal || 0);
 
   return (
     <div className="pdp-container">
@@ -443,6 +540,66 @@ export default function ProductDetailPage() {
             <div className="pdp-desc-content">{product.description}</div>
           </div>
         )}
+
+        {/* ===== REVIEWS SECTION ===== */}
+        <div className="pdp-reviews-section">
+          <div className="pdp-reviews-header">
+            <h3>Đánh giá</h3>
+
+            <div className="pdp-reviews-summary">
+              <div className="pdp-reviews-avg">
+                <strong>{Number(reviewSummary.avg || 0).toFixed(2)}</strong>
+                <span className="pdp-reviews-sub">/5</span>
+              </div>
+              <div className="pdp-reviews-count">{reviewSummary.count || 0} đánh giá</div>
+            </div>
+          </div>
+
+          {reviewLoading && reviews.length === 0 && <div className="pdp-reviews-loading">Đang tải đánh giá...</div>}
+          {reviewError && <div className="pdp-reviews-error">{reviewError}</div>}
+
+          {!reviewLoading && !reviewError && (reviewSummary.count || 0) === 0 && (
+            <div className="pdp-reviews-empty">Chưa có đánh giá nào cho sản phẩm này.</div>
+          )}
+
+          {reviews.length > 0 && (
+            <div className="pdp-review-list">
+              {reviews.map((r) => (
+                <div key={r.id} className="pdp-review-item">
+                  <div className="pdp-review-top">
+                    <div className="pdp-review-user">Người mua</div>
+                    <div className="pdp-review-date">{formatDateVi(r.createdAt)}</div>
+                  </div>
+
+                  <div className="pdp-review-rating">
+                    <Stars rating={r.rating} />
+                    <span className="pdp-review-score">{r.rating}/5</span>
+                  </div>
+
+                  {r.comment && <div className="pdp-review-comment">{r.comment}</div>}
+
+                  {Array.isArray(r.images) && r.images.length > 0 && (
+                    <div className="pdp-review-images">
+                      {r.images.map((url, idx) => (
+                        <a key={idx} href={url} target="_blank" rel="noreferrer" className="pdp-review-img">
+                          <img src={url} alt="review" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {canLoadMore && (
+            <div className="pdp-reviews-more">
+              <button type="button" className="pdp-btn-cart" onClick={loadMoreReviews} disabled={reviewLoading}>
+                {reviewLoading ? 'Đang tải...' : 'Tải thêm đánh giá'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

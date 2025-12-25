@@ -7,8 +7,10 @@ import type {
   PaginatedResult,
   ApiResponse,
   ProductVariant,
+  Category,
 } from '../api/types';
 import { getPublicProducts, getProductVariants } from '../api/products.api';
+import { getPublicCategories } from '../api/categories.api';
 import { CartApi } from '../api/cart.api';
 import { getMe } from '../api/users.api';
 import { AuthApi } from '../api/auth.api';
@@ -39,19 +41,24 @@ export function HomePage() {
 
   const [activeTab, setActiveTab] = useState<TopTabKey>('hot');
 
+  // ✅ categories
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCats, setLoadingCats] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<number>(0); // 0 = all
+
   // cache variant mặc định theo productId để không gọi lại nhiều lần
   const defaultVariantCache = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
     void loadUser();
+    void loadCategories();
   }, []);
 
   useEffect(() => {
     void loadProducts();
-    // scroll lên đầu khi đổi page/search
     window.scrollTo({ top: 0, behavior: 'smooth' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, page]);
+  }, [searchQuery, page, activeCategoryId]);
 
   // đóng menu khi click ra ngoài
   useEffect(() => {
@@ -81,6 +88,23 @@ export function HomePage() {
     }
   };
 
+  const loadCategories = async () => {
+    setLoadingCats(true);
+    try {
+      const res = await getPublicCategories({ isActive: true });
+      if (res.success) {
+        setCategories(Array.isArray(res.data) ? res.data : []);
+      } else {
+        setCategories([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setCategories([]);
+    } finally {
+      setLoadingCats(false);
+    }
+  };
+
   const loadProducts = async () => {
     setLoading(true);
     setError(null);
@@ -91,6 +115,7 @@ export function HomePage() {
         limit,
         q: searchQuery || undefined,
         status: 'ACTIVE',
+        categoryId: activeCategoryId || undefined, // ✅ filter
       });
 
       if (res.success) {
@@ -123,9 +148,7 @@ export function HomePage() {
       const list = (res as unknown as ApiResponse<ProductVariant[]>).data;
       const variants = Array.isArray(list) ? list : [];
 
-      const inStock =
-        variants.find((v) => Number((v as any).stock ?? 0) > 0) ?? variants[0];
-
+      const inStock = variants.find((v) => Number((v as any).stock ?? 0) > 0) ?? variants[0];
       if (!inStock) return null;
 
       const vid = Number((inStock as any).id);
@@ -152,12 +175,9 @@ export function HomePage() {
     setMessage(null);
 
     try {
-      // BE mới: phải có variantId
       const variantId = await pickDefaultVariantId(productId);
       if (!variantId) {
-        setError(
-          'Không xác định được biến thể mặc định. Vui lòng vào chi tiết sản phẩm để chọn biến thể.',
-        );
+        setError('Không xác định được biến thể mặc định. Vui lòng vào chi tiết sản phẩm để chọn biến thể.');
         return;
       }
 
@@ -206,31 +226,19 @@ export function HomePage() {
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  // “Sản phẩm nổi bật” (lấy 4 sản phẩm đầu)
   const featuredProducts = useMemo(() => products.slice(0, 4), [products]);
 
-  // mock danh mục theo ảnh phác thảo
-  const categories = useMemo(
-    () => [
-      { key: 'fashion', icon: '👕', name: 'Clothes' },
-      { key: 'electronics', icon: '🖥️', name: 'Electronics' },
-      { key: 'mobile', icon: '📱', name: 'Điện thoại' },
-      { key: 'home', icon: '🏠', name: 'Home' },
-    ],
+  const sidebarItems = useMemo(
+    () => ['Khuyến mãi hôm nay', 'Sản phẩm mới', 'Bán chạy', 'Giảm giá sốc', 'Thương hiệu', 'Gợi ý cho bạn'],
     [],
   );
 
-  const sidebarItems = useMemo(
-    () => [
-      'Khuyến mãi hôm nay',
-      'Sản phẩm mới',
-      'Bán chạy',
-      'Giảm giá sốc',
-      'Thương hiệu',
-      'Gợi ý cho bạn',
-    ],
-    [],
-  );
+  const displayCategories = useMemo(() => {
+    // ưu tiên parentId null (top-level). Nếu BE không có parentId thì vẫn ok.
+    const top = categories.filter((c) => !c.parentId);
+    const list = (top.length ? top : categories).slice(0, 8);
+    return list;
+  }, [categories]);
 
   const renderProductCard = (product: ProductListItem) => {
     const isAdding = addingToCart.has(product.id);
@@ -308,11 +316,7 @@ export function HomePage() {
 
             {user ? (
               <div className="home-user-menu" ref={menuRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowMenu((s) => !s)}
-                  className="home-user-button"
-                >
+                <button type="button" onClick={() => setShowMenu((s) => !s)} className="home-user-button">
                   {user.name || user.email}
                   <span className="home-user-arrow">▼</span>
                 </button>
@@ -457,15 +461,14 @@ export function HomePage() {
                   <div className="home-hero-text">
                     <div className="home-hero-badge">Khuyến mãi</div>
                     <div className="home-hero-title">Khuyến Mãi Mùa Hè</div>
-                    <div className="home-hero-sub">
-                      Săn deal mỗi ngày – thêm vào giỏ nhanh, giao hàng tiện lợi.
-                    </div>
+                    <div className="home-hero-sub">Săn deal mỗi ngày – thêm vào giỏ nhanh, giao hàng tiện lợi.</div>
                     <button
                       type="button"
                       className="home-hero-button"
                       onClick={() => {
                         setPage(1);
                         setSearchQuery('');
+                        setActiveCategoryId(0);
                       }}
                     >
                       Mua ngay
@@ -479,26 +482,47 @@ export function HomePage() {
                 <div className="home-section">
                   <div className="home-section-header">
                     <h2 className="home-section-title">Danh Mục Sản Phẩm</h2>
-                    <button type="button" className="home-section-link">
-                      Xem tất cả →
+                    <button type="button" className="home-section-link" onClick={() => setActiveCategoryId(0)}>
+                      Tất cả →
                     </button>
                   </div>
 
                   <div className="home-categories-row">
-                    {categories.map((c) => (
-                      <button
-                        key={c.key}
-                        type="button"
-                        className="home-category-card"
-                        onClick={() => {
-                          // hiện tại chưa có filter category BE, tạm set tab/search
-                          setActiveTab('products');
-                        }}
-                      >
-                        <div className="home-category-icon">{c.icon}</div>
-                        <div className="home-category-name">{c.name}</div>
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      className="home-category-card"
+                      onClick={() => {
+                        setActiveCategoryId(0);
+                        setPage(1);
+                        setActiveTab('products');
+                      }}
+                      aria-pressed={activeCategoryId === 0}
+                    >
+                      <div className="home-category-icon">⭐</div>
+                      <div className="home-category-name">Tất cả</div>
+                    </button>
+
+                    {loadingCats ? (
+                      <div style={{ padding: 8 }}>Đang tải danh mục...</div>
+                    ) : (
+                      displayCategories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="home-category-card"
+                          onClick={() => {
+                            setActiveCategoryId(c.id);
+                            setPage(1);
+                            setActiveTab('products');
+                          }}
+                          aria-pressed={activeCategoryId === c.id}
+                          title={c.name}
+                        >
+                          <div className="home-category-icon">📦</div>
+                          <div className="home-category-name">{c.name}</div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -506,7 +530,11 @@ export function HomePage() {
                 <div className="home-section">
                   <div className="home-section-header">
                     <h2 className="home-section-title">Sản Phẩm Nổi Bật</h2>
-                    <button type="button" className="home-section-link" onClick={() => navigate('/products')}>
+                    <button
+                      type="button"
+                      className="home-section-link"
+                      onClick={() => navigate('/products')}
+                    >
                       Xem thêm →
                     </button>
                   </div>
@@ -561,7 +589,7 @@ export function HomePage() {
         </div>
       </main>
 
-      {/* FOOTER giống phác thảo */}
+      {/* FOOTER */}
       <footer className="home-footer">
         <div className="home-footer-inner">
           <div className="home-footer-column">
@@ -579,9 +607,18 @@ export function HomePage() {
 
           <div className="home-footer-column">
             <div className="home-footer-heading">Categories</div>
-            <button className="home-footer-link">Thời trang</button>
-            <button className="home-footer-link">Điện tử</button>
-            <button className="home-footer-link">Gia dụng</button>
+            {(displayCategories.slice(0, 3) || []).map((c) => (
+              <button
+                key={c.id}
+                className="home-footer-link"
+                onClick={() => {
+                  setActiveCategoryId(c.id);
+                  setPage(1);
+                }}
+              >
+                {c.name}
+              </button>
+            ))}
           </div>
 
           <div className="home-footer-column">
