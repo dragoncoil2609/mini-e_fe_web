@@ -2,7 +2,9 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import './RegisterPage.css';
+import { getBeMessage } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -16,38 +18,21 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<'name' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'identifier', string>>
+  >({});
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setFieldErrors({});
     setLoading(true);
 
     try {
       const nameTrim = name.trim();
       const emailTrim = email.trim();
       const phoneTrim = phone.trim();
-
-      if (!nameTrim) {
-        setError('Vui lòng nhập họ tên.');
-        return;
-      }
-
-      // ✅ ít nhất 1 trong 2
-      if (!emailTrim && !phoneTrim) {
-        setError('Vui lòng nhập Email hoặc Số điện thoại (ít nhất 1).');
-        return;
-      }
-
-      if (password.length < 6) {
-        setError('Mật khẩu tối thiểu 6 ký tự.');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError('Mật khẩu nhập lại không khớp.');
-        return;
-      }
 
       const payload: any = {
         name: nameTrim,
@@ -64,9 +49,16 @@ export function RegisterPage() {
       setSuccess('Đăng ký thành công! Bạn có thể đăng nhập.');
       setTimeout(() => navigate('/login'), 1000);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      const msg = getBeMessage(err, 'Đăng ký thất bại. Vui lòng thử lại.');
       setError(msg);
+      const beField = guessAuthFieldFromMessage(msg);
+      const mappedField =
+        beField === 'email' || beField === 'phone' || beField === 'name' || beField === 'password' || beField === 'confirmPassword'
+          ? beField
+          : beField === 'identifier'
+            ? 'identifier'
+            : null;
+      setFieldErrors(mappedField ? { [mappedField]: msg } : {});
     } finally {
       setLoading(false);
     }
@@ -84,9 +76,9 @@ export function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               type="text"
-              required
-              className="input"
+              className={`input ${fieldErrors.name ? 'inputError' : ''}`}
             />
+            {fieldErrors.name && <div className="fieldError">{fieldErrors.name}</div>}
           </div>
 
           <div className="formGroup">
@@ -95,9 +87,12 @@ export function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              className="input"
+              className={`input ${fieldErrors.email || fieldErrors.identifier ? 'inputError' : ''}`}
               placeholder="vd: user@gmail.com"
             />
+            {(fieldErrors.email || fieldErrors.identifier) && (
+              <div className="fieldError">{fieldErrors.email ?? fieldErrors.identifier}</div>
+            )}
           </div>
 
           <div className="formGroup">
@@ -106,9 +101,12 @@ export function RegisterPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               type="tel"
-              className="input"
+              className={`input ${fieldErrors.phone || fieldErrors.identifier ? 'inputError' : ''}`}
               placeholder="vd: 0353xxxxxx"
             />
+            {(fieldErrors.phone || fieldErrors.identifier) && (
+              <div className="fieldError">{fieldErrors.phone ?? fieldErrors.identifier}</div>
+            )}
           </div>
 
           <div className="formGroup">
@@ -117,9 +115,9 @@ export function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
-              required
-              className="input"
+              className={`input ${fieldErrors.password ? 'inputError' : ''}`}
             />
+            {fieldErrors.password && <div className="fieldError">{fieldErrors.password}</div>}
           </div>
 
           <div className="formGroupLast">
@@ -128,9 +126,11 @@ export function RegisterPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               type="password"
-              required
-              className="input"
+              className={`input ${fieldErrors.confirmPassword ? 'inputError' : ''}`}
             />
+            {fieldErrors.confirmPassword && (
+              <div className="fieldError">{fieldErrors.confirmPassword}</div>
+            )}
           </div>
 
           {error && <div className="error">{error}</div>}

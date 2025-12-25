@@ -2,7 +2,9 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
-import './LoginPage.css';
+import { getBeMessage, getBeStatus } from '../../api/apiError';
+import { guessAuthFieldFromMessage } from './utils/authError';
+import './style/auth.css';
 
 interface RecoverInfo {
   identifier: string;
@@ -31,12 +33,16 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'identifier' | 'password', string>>>(
+    {},
+  );
 
   const [recoverInfo, setRecoverInfo] = useState<RecoverInfo | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setRecoverInfo(null);
     setLoading(true);
 
@@ -44,7 +50,9 @@ export function LoginPage() {
       const id = identifier.trim();
 
       if (!id) {
-        setError('Vui lòng nhập Email hoặc Số điện thoại.');
+        const msg = 'Vui lòng nhập Email hoặc Số điện thoại.';
+        setError(msg);
+        setFieldErrors({ identifier: msg });
         return;
       }
 
@@ -71,7 +79,7 @@ export function LoginPage() {
       if (data.user.role === 'ADMIN') navigate('/admin');
       else navigate('/home');
     } catch (err: any) {
-      const status = err?.response?.status;
+      const status = getBeStatus(err);
       const payload = err?.response?.data;
 
       // 🔒 Trường hợp tài khoản bị vô hiệu hoá (status 423)
@@ -79,16 +87,26 @@ export function LoginPage() {
         const identifier = payload.data.identifier as string | undefined;
         const via = payload.data.via as string | undefined;
 
-        setError(
-          payload?.message ||
-            'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.',
+        const msg = getBeMessage(
+          err,
+          'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.',
         );
+        setError(msg);
+        setFieldErrors({ identifier: msg });
 
         if (identifier) setRecoverInfo({ identifier, via });
         else setRecoverInfo(null);
       } else {
-        const msg = payload?.message || 'Đăng nhập thất bại, vui lòng kiểm tra lại.';
+        const msg = getBeMessage(err, 'Đăng nhập thất bại, vui lòng kiểm tra lại.');
         setError(msg);
+        const beField = guessAuthFieldFromMessage(msg);
+        const mappedField =
+          beField === 'email' || beField === 'phone' || beField === 'identifier'
+            ? 'identifier'
+            : beField === 'password'
+              ? 'password'
+              : null;
+        setFieldErrors(mappedField ? { [mappedField]: msg } : {});
         setRecoverInfo(null);
       }
     } finally {
@@ -99,13 +117,8 @@ export function LoginPage() {
   function handleRecoverAccount() {
     // luồng recover hiện tại của bạn đang dùng email → chỉ cho bấm nếu via=email
     if (!recoverInfo?.identifier) return;
-    if (recoverInfo.via && recoverInfo.via !== 'email') {
-      setError('Khôi phục hiện tại chỉ hỗ trợ qua email.');
-      return;
-    }
-
     navigate('/auth/account/recover/request', {
-      state: { email: recoverInfo.identifier },
+      state: { identifier: recoverInfo.identifier },
     });
   }
 
@@ -122,9 +135,9 @@ export function LoginPage() {
               onChange={(e) => setIdentifier(e.target.value)}
               type="text" // ✅ quan trọng: không dùng type="email" nữa
               placeholder="vd: user@gmail.com hoặc 0353xxxxxx"
-              required
-              className="input"
+              className={`input ${fieldErrors.identifier ? 'inputError' : ''}`}
             />
+            {fieldErrors.identifier && <div className="fieldError">{fieldErrors.identifier}</div>}
           </div>
 
           <div className="formGroupLast">
@@ -133,9 +146,9 @@ export function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
-              required
-              className="input"
+              className={`input ${fieldErrors.password ? 'inputError' : ''}`}
             />
+            {fieldErrors.password && <div className="fieldError">{fieldErrors.password}</div>}
           </div>
 
           {error && <div className="error">{error}</div>}
