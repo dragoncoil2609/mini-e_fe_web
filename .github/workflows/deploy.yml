@@ -1,46 +1,47 @@
-name: Deploy Frontend
+name: Deploy Frontend to EC2
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Login Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build & Push FE
-        uses: docker/build-push-action@v4
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # Đặt tên image rõ ràng
-          tags: huyhoang2609/my-project-frontend:latest
+          # Tên ảnh phải KHỚP với file docker-compose.yml trên server
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/mini-e-frontend:latest
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.0
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Remote Commands
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Vào thư mục chứa file docker-compose (do thằng BE tạo ra)
-            cd /home/${{ secrets.EC2_USER }}/app
+            cd ~/my-project
             
-            # Chỉ pull update thằng frontend
+            # Kéo ảnh frontend mới về
             docker compose pull frontend
             
-            # Chỉ khởi động lại thằng frontend (không đụng vào DB hay BE)
-            sudo docker compose pull frontend
+            # Restart frontend (Backend và DB không bị ảnh hưởng)
+            docker compose up -d frontend
             
-            sudo docker compose up -d --no-deps frontend
-            
-            sudo docker image prune -f
+            docker image prune -f
