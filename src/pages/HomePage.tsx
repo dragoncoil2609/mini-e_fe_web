@@ -1,57 +1,78 @@
 // src/pages/HomePage.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type {
-  User,
-  ProductListItem,
-  PaginatedResult,
-  ApiResponse,
-  ProductVariant,
-  Category,
-} from '../api/types';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { User, ProductListItem, PaginatedResult, ApiResponse, Category } from '../api/types';
 import { getPublicProducts } from '../api/products.api';
 import { getPublicCategoryTree } from '../api/categories.api';
 import { getMe } from '../api/users.api';
 import { AuthApi } from '../api/auth.api';
+import { getAccessToken, clearAccessToken } from '../api/authToken';
 import { getMainImageUrl } from '../utils/productImage';
 import './HomePage.css';
 
-type TopTabKey = 'hot' | 'products' | 'fashion' | 'home' | 'more';
+type QuickKey =
+  | 'Khuyến mãi hôm nay'
+  | 'Sản phẩm mới'
+  | 'Bán chạy'
+  | 'Giảm giá sốc'
+  | 'Thương hiệu'
+  | 'Gợi ý cho bạn';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState<User | null>(null);
 
   const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [searchInput, setSearchInput] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  // dropdown
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  // paging
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
 
-  const [activeTab, setActiveTab] = useState<TopTabKey>('hot');
+  // Quick menu (theo yêu cầu)
+  const sidebarItems = useMemo(
+    () =>
+      ['Khuyến mãi hôm nay', 'Sản phẩm mới', 'Bán chạy', 'Giảm giá sốc', 'Thương hiệu', 'Gợi ý cho bạn'] as QuickKey[],
+    [],
+  );
+  const [activeQuick, setActiveQuick] = useState<QuickKey>('Khuyến mãi hôm nay');
 
-  // ✅ categories
+  // categories tree từ API
   const [categoryTree, setCategoryTree] = useState<Category[]>([]);
   const [loadingCats, setLoadingCats] = useState(false);
-  const [activeParentId, setActiveParentId] = useState<number>(0); // 0 = all
-  const [activeCategoryId, setActiveCategoryId] = useState<number>(0); // leaf or parent without children
+  const [activeCategoryId, setActiveCategoryId] = useState<number>(0);
+  const [expandedParentId, setExpandedParentId] = useState<number>(0);
 
-  // cache variant mặc định theo productId để không gọi lại nhiều lần (deprecated: không add từ Home nữa)
-  const defaultVariantCache = useRef<Map<number, number>>(new Map());
+  // auth modal overlay
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authFrom, setAuthFrom] = useState<string>('/home');
 
   useEffect(() => {
     void loadUser();
     void loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // mở modal nếu router gửi state authRequired
+  useEffect(() => {
+    const st = location.state as any;
+    if (st?.authRequired) {
+      setAuthFrom(st.from || '/home');
+      setShowAuthModal(true);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     void loadProducts();
@@ -71,19 +92,21 @@ export function HomePage() {
   }, [showMenu]);
 
   const loadUser = async () => {
+    const token = getAccessToken();
+    if (!token) {
+      setUser(null);
+      localStorage.removeItem('current_user');
+      return;
+    }
+
     try {
       const me = await getMe();
       setUser(me);
       localStorage.setItem('current_user', JSON.stringify(me));
     } catch {
-      const raw = localStorage.getItem('current_user');
-      if (raw) {
-        try {
-          setUser(JSON.parse(raw) as User);
-        } catch {
-          // ignore
-        }
-      }
+      clearAccessToken();
+      setUser(null);
+      localStorage.removeItem('current_user');
     }
   };
 
@@ -94,6 +117,8 @@ export function HomePage() {
       if (res.success) {
         const tree = Array.isArray(res.data) ? res.data : [];
         setCategoryTree(tree);
+
+        if (tree.length) setExpandedParentId(tree[0].id);
       } else {
         setCategoryTree([]);
       }
@@ -115,7 +140,7 @@ export function HomePage() {
         limit,
         q: searchQuery || undefined,
         status: 'ACTIVE',
-        categoryId: activeCategoryId || undefined, // ✅ filter
+        categoryId: activeCategoryId || undefined,
       });
 
       if (res.success) {
@@ -133,19 +158,25 @@ export function HomePage() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    void loadProducts();
+    setSearchQuery(searchInput.trim());
   };
 
-  const handleAddToCart = async (productId: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    // ✅ yêu cầu mới: không add biến thể mặc định từ Home -> chuyển sang trang detail để chọn biến thể
-    navigate(`/products/${productId}`);
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setPage(1);
   };
 
   const handleProductClick = (productId: number) => navigate(`/products/${productId}`);
+
+  const handleAddToCart = async (productId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    // yêu cầu: từ Home không add default variant -> qua detail chọn biến thể
+    navigate(`/products/${productId}`);
+  };
 
   const handleLogout = async () => {
     try {
@@ -154,7 +185,9 @@ export function HomePage() {
       // ignore
     } finally {
       localStorage.removeItem('current_user');
-      navigate('/login');
+      clearAccessToken();
+      setUser(null);
+      navigate('/home');
     }
   };
 
@@ -165,24 +198,7 @@ export function HomePage() {
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  const featuredProducts = useMemo(() => products.slice(0, 4), [products]);
-
-  const sidebarItems = useMemo(
-    () => ['Khuyến mãi hôm nay', 'Sản phẩm mới', 'Bán chạy', 'Giảm giá sốc', 'Thương hiệu', 'Gợi ý cho bạn'],
-    [],
-  );
-
   const parentCategories = useMemo(() => categoryTree ?? [], [categoryTree]);
-
-  const activeParent = useMemo(() => {
-    if (!activeParentId) return null;
-    return parentCategories.find((p) => p.id === activeParentId) ?? null;
-  }, [activeParentId, parentCategories]);
-
-  const activeChildren = useMemo(() => {
-    const kids = activeParent?.children;
-    return Array.isArray(kids) ? kids : [];
-  }, [activeParent]);
 
   const resolveCategoryName = useMemo(() => {
     if (!activeCategoryId) return 'Tất cả sản phẩm';
@@ -195,20 +211,46 @@ export function HomePage() {
     return found?.name ?? 'Sản phẩm';
   }, [activeCategoryId, parentCategories]);
 
+  const userInitials = useMemo(() => {
+    const raw = (user?.name || user?.email || '').trim();
+    if (!raw) return 'U';
+    const parts = raw.split(/\s+/).slice(0, 2);
+    const initials = parts.map((p) => p[0]?.toUpperCase()).join('');
+    return initials || 'U';
+  }, [user]);
+
+  const quickIcon = (key: QuickKey) => {
+    switch (key) {
+      case 'Khuyến mãi hôm nay':
+        return '⚡';
+      case 'Sản phẩm mới':
+        return '🆕';
+      case 'Bán chạy':
+        return '🔥';
+      case 'Giảm giá sốc':
+        return '💸';
+      case 'Thương hiệu':
+        return '🏷️';
+      case 'Gợi ý cho bạn':
+        return '✨';
+      default:
+        return '•';
+    }
+  };
+
+  const handlePickAll = () => {
+    setPage(1);
+    setActiveCategoryId(0);
+  };
+
   const handlePickParent = (parentId: number) => {
     setPage(1);
-    setSearchQuery('');
-    defaultVariantCache.current.clear();
 
-    if (!parentId) {
-      setActiveParentId(0);
-      setActiveCategoryId(0);
-      return;
-    }
+    setExpandedParentId((cur) => (cur === parentId ? 0 : parentId));
 
     const p = parentCategories.find((x) => x.id === parentId);
     const kids = (p?.children ?? []) as Category[];
-    setActiveParentId(parentId);
+
     if (kids.length) {
       setActiveCategoryId(kids[0].id);
     } else {
@@ -218,7 +260,6 @@ export function HomePage() {
 
   const handlePickChild = (childId: number) => {
     setPage(1);
-    defaultVariantCache.current.clear();
     setActiveCategoryId(childId);
   };
 
@@ -230,6 +271,9 @@ export function HomePage() {
         key={product.id}
         className="home-product-card"
         onClick={() => handleProductClick(product.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') handleProductClick(product.id);
+        }}
         role="button"
         tabIndex={0}
       >
@@ -244,16 +288,14 @@ export function HomePage() {
         <div className="home-product-info">
           <h3 className="home-product-title">{product.title}</h3>
 
-          <div className="home-product-price">
-            {formatPrice(product.price)} {product.currency}
+          <div className="home-product-meta">
+            <div className="home-product-price">
+              {formatPrice(product.price)} {product.currency}
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => void handleAddToCart(product.id, e)}
-            className="home-product-add-button"
-          >
-            Chọn biến thể
+          <button type="button" onClick={(e) => void handleAddToCart(product.id, e)} className="home-product-add-button">
+            Xem & chọn biến thể
           </button>
         </div>
       </div>
@@ -265,40 +307,50 @@ export function HomePage() {
       {/* HEADER */}
       <header className="home-header">
         <div className="home-header-content">
-          <div className="home-header-left">
-            <h1 className="home-header-logo" onClick={() => navigate('/home')}>
-              🛍️ Mini E
-            </h1>
-          </div>
+          <button type="button" className="home-brand" onClick={() => navigate('/home')} aria-label="Mini E Home">
+            <span className="home-brand__logo">🛍️</span>
+            <span className="home-brand__text">
+              <span className="home-brand__name">Mini E</span>
+              <span className="home-brand__sub">Mua sắm nhanh • Giá tốt</span>
+            </span>
+          </button>
 
-          <form onSubmit={handleSearch} className="home-header-search">
+          <form onSubmit={handleSearchSubmit} className="home-search">
+            <span className="home-search__icon">🔎</span>
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search kim heo..."
-              className="home-search-input"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Tìm kiếm sản phẩm, shop, từ khóa..."
+              className="home-search__input"
             />
-            <button type="submit" className="home-search-button" aria-label="Search">
-              🔍
+            {searchInput.trim().length > 0 && (
+              <button type="button" className="home-search__clear" onClick={handleClearSearch} aria-label="Clear">
+                ✕
+              </button>
+            )}
+            <button type="submit" className="home-search__btn" aria-label="Search">
+              Tìm
             </button>
           </form>
 
-          <div className="home-header-right">
-            <div className="home-header-actions">
-              <button type="button" className="home-icon-button" onClick={() => navigate('/cart')}>
-                🛒
-              </button>
-              <button type="button" className="home-icon-button" onClick={() => navigate('/me')}>
-                👤
-              </button>
-            </div>
+          <div className="home-actions">
+            <button type="button" className="home-cart-btn" onClick={() => navigate('/cart')} aria-label="Cart">
+              <span className="home-cart-btn__icon">🛒</span>
+              <span className="home-cart-btn__text">Giỏ hàng</span>
+            </button>
 
             {user ? (
-              <div className="home-user-menu" ref={menuRef}>
-                <button type="button" onClick={() => setShowMenu((s) => !s)} className="home-user-button">
-                  {user.name || user.email}
-                  <span className="home-user-arrow">▼</span>
+              <div className="home-user" ref={menuRef}>
+                <button
+                  type="button"
+                  className="home-user__btn"
+                  onClick={() => setShowMenu((s) => !s)}
+                  aria-expanded={showMenu}
+                >
+                  <span className="home-user__avatar">{userInitials}</span>
+                  <span className="home-user__name">{user.name || user.email}</span>
+                  <span className="home-user__chev">▾</span>
                 </button>
 
                 {showMenu && (
@@ -372,98 +424,28 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* TOP NAV (tabs) */}
-        <div className="home-top-nav">
-          <button
-            type="button"
-            className={`home-top-nav-item ${activeTab === 'hot' ? 'home-top-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('hot')}
-          >
-            Sản hot
-          </button>
-          <button
-            type="button"
-            className={`home-top-nav-item ${activeTab === 'products' ? 'home-top-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('products')}
-          >
-            Sản phẩm
-          </button>
-          <button
-            type="button"
-            className={`home-top-nav-item ${activeTab === 'fashion' ? 'home-top-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('fashion')}
-          >
-            Về phẩm
-          </button>
-          <button
-            type="button"
-            className={`home-top-nav-item ${activeTab === 'home' ? 'home-top-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('home')}
-          >
-            Nội thất
-          </button>
-          <button
-            type="button"
-            className={`home-top-nav-item ${activeTab === 'more' ? 'home-top-nav-item--active' : ''}`}
-            onClick={() => setActiveTab('more')}
-          >
-            Dân cốt
-          </button>
+        {/* QUICK NAV */}
+        <div className="home-quicknav">
+          <div className="home-quicknav__inner">
+            {sidebarItems.map((it) => (
+              <button
+                key={it}
+                type="button"
+                className={`home-quicknav__item ${activeQuick === it ? 'home-quicknav__item--active' : ''}`}
+                onClick={() => setActiveQuick(it)}
+                aria-pressed={activeQuick === it}
+              >
+                <span className="home-quicknav__icon">{quickIcon(it)}</span>
+                <span className="home-quicknav__text">{it}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
       {/* MAIN */}
       <main className="home-main">
         <div className="home-content">
-          {/* CATEGORY NAV */}
-          <section className="home-catnav">
-            <div className="home-catnav__title">Danh mục</div>
-            <div className="home-catnav__row" role="tablist" aria-label="Danh mục cha">
-              <button
-                type="button"
-                className={`home-catnav__pill ${activeParentId === 0 ? 'home-catnav__pill--active' : ''}`}
-                onClick={() => handlePickParent(0)}
-                aria-pressed={activeParentId === 0}
-              >
-                Tất cả
-              </button>
-
-              {loadingCats ? (
-                <div className="home-catnav__loading">Đang tải danh mục...</div>
-              ) : (
-                parentCategories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`home-catnav__pill ${activeParentId === c.id ? 'home-catnav__pill--active' : ''}`}
-                    onClick={() => handlePickParent(c.id)}
-                    aria-pressed={activeParentId === c.id}
-                    title={c.name}
-                  >
-                    {c.name}
-                  </button>
-                ))
-              )}
-            </div>
-
-            {activeChildren.length > 0 && (
-              <div className="home-catnav__row home-catnav__row--sub" role="tablist" aria-label="Danh mục con">
-                {activeChildren.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`home-catnav__chip ${activeCategoryId === c.id ? 'home-catnav__chip--active' : ''}`}
-                    onClick={() => handlePickChild(c.id)}
-                    aria-pressed={activeCategoryId === c.id}
-                    title={c.name}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
           {error && <div className="home-error">{error}</div>}
           {message && <div className="home-message">{message}</div>}
 
@@ -471,85 +453,137 @@ export function HomePage() {
             <div className="home-loading">Đang tải sản phẩm...</div>
           ) : (
             <div className="home-layout">
-              {/* SIDEBAR (trái) */}
+              {/* SIDEBAR */}
               <aside className="home-sidebar">
-                <div className="home-sidebar-title">Danh mục nhanh</div>
-                <ul className="home-sidebar-list">
-                  {sidebarItems.map((it) => (
-                    <li key={it} className="home-sidebar-item">
-                      {it}
-                    </li>
-                  ))}
-                </ul>
+                <div className="home-sidebar-block">
+                  <div className="home-sidebar-title">Khám phá</div>
+                  <ul className="home-sidebar-quicklist">
+                    {sidebarItems.map((it) => (
+                      <li key={it}>
+                        <button
+                          type="button"
+                          className={`home-sidebar-quickitem ${activeQuick === it ? 'home-sidebar-quickitem--active' : ''}`}
+                          onClick={() => setActiveQuick(it)}
+                        >
+                          <span className="home-sidebar-quickitem__icon">{quickIcon(it)}</span>
+                          <span className="home-sidebar-quickitem__text">{it}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="home-sidebar-divider" />
+
+                <div className="home-sidebar-block">
+                  <div className="home-sidebar-title">Danh mục sản phẩm</div>
+
+                  <button
+                    type="button"
+                    className={`home-cat-item ${activeCategoryId === 0 ? 'home-cat-item--active' : ''}`}
+                    onClick={handlePickAll}
+                  >
+                    Tất cả
+                  </button>
+
+                  {loadingCats ? (
+                    <div className="home-sidebar-muted">Đang tải danh mục...</div>
+                  ) : (
+                    <div className="home-cat-tree">
+                      {parentCategories.map((p) => {
+                        const kids = (p.children ?? []) as Category[];
+                        const expanded = expandedParentId === p.id;
+
+                        return (
+                          <div key={p.id} className="home-cat-group">
+                            <button
+                              type="button"
+                              className="home-cat-parent"
+                              onClick={() => handlePickParent(p.id)}
+                              title={p.name}
+                            >
+                              <span className="home-cat-parent__name">{p.name}</span>
+                              <span className="home-cat-parent__chev">{kids.length ? (expanded ? '▾' : '▸') : ''}</span>
+                            </button>
+
+                            {expanded && kids.length > 0 && (
+                              <div className="home-cat-children">
+                                {kids.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className={`home-cat-child ${
+                                      activeCategoryId === c.id ? 'home-cat-child--active' : ''
+                                    }`}
+                                    onClick={() => handlePickChild(c.id)}
+                                    title={c.name}
+                                  >
+                                    {c.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </aside>
 
-              {/* MAIN COLUMN (phải) */}
+              {/* MAIN COLUMN */}
               <section className="home-main-column">
-                {/* HERO / BANNER */}
+                {/* HERO */}
                 <div className="home-hero">
                   <div className="home-hero-text">
-                    <div className="home-hero-badge">Khuyến mãi</div>
-                    <div className="home-hero-title">Khuyến Mãi Mùa Hè</div>
-                    <div className="home-hero-sub">Săn deal mỗi ngày – thêm vào giỏ nhanh, giao hàng tiện lợi.</div>
-                    <button
-                      type="button"
-                      className="home-hero-button"
-                      onClick={() => {
-                        setPage(1);
-                        setSearchQuery('');
-                        setActiveCategoryId(0);
-                      }}
-                    >
-                      Mua ngay
-                    </button>
+                    <div className="home-hero-badge">{activeQuick}</div>
+                    <div className="home-hero-title">Mua sắm tiện lợi, giá tốt mỗi ngày</div>
+                    <div className="home-hero-sub">
+                      Tìm sản phẩm nhanh • Xem chi tiết rõ ràng • Chọn biến thể dễ dàng • Thanh toán thuận tiện.
+                    </div>
+
+                    <div className="home-hero-actions">
+                      <button
+                        type="button"
+                        className="home-hero-button"
+                        onClick={() => {
+                          handlePickAll();
+                          setSearchInput('');
+                          setSearchQuery('');
+                        }}
+                      >
+                        Xem tất cả sản phẩm
+                      </button>
+
+                      <button
+                        type="button"
+                        className="home-hero-button home-hero-button--ghost"
+                        onClick={() => navigate('/products')}
+                      >
+                        Tới trang sản phẩm →
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="home-hero-illustration">🧴🧼🧴</div>
-                </div>
-
-                {/* CATEGORIES */}
-                <div className="home-section">
-                  <div className="home-section-header">
-                    <h2 className="home-section-title">Đang xem: {resolveCategoryName}</h2>
-                    <button
-                      type="button"
-                      className="home-section-link"
-                      onClick={() => {
-                        handlePickParent(0);
-                        setActiveTab('products');
-                      }}
-                    >
-                      Xem tất cả →
-                    </button>
+                  <div className="home-hero-illustration" aria-hidden>
+                    🧴🧼🛒
                   </div>
                 </div>
 
-                {/* FEATURED PRODUCTS */}
-                <div className="home-section">
-                  <div className="home-section-header">
-                    <h2 className="home-section-title">Sản Phẩm Nổi Bật</h2>
-                    <button
-                      type="button"
-                      className="home-section-link"
-                      onClick={() => navigate('/products')}
-                    >
-                      Xem thêm →
-                    </button>
-                  </div>
-
-                  <div className="home-featured-grid">
-                    {featuredProducts.map((p) => (
-                      <div key={p.id}>{renderProductCard(p)}</div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ALL PRODUCTS */}
+                {/* PRODUCTS */}
                 <div className="home-section">
                   <div className="home-products-header">
-                    <h2 className="home-products-title">Sản Phẩm</h2>
-                    <div className="home-products-count">
-                      {total} sản phẩm • Trang {page}/{totalPages}
+                    <div className="home-products-header-left">
+                      <h2 className="home-products-title">{resolveCategoryName}</h2>
+                      <div className="home-products-sub">
+                        {total} sản phẩm • Trang {page}/{totalPages}
+                      </div>
+                    </div>
+
+                    <div className="home-products-header-right">
+                      <button type="button" className="home-soft-btn" onClick={handleClearSearch} disabled={!searchQuery}>
+                        Xóa tìm kiếm
+                      </button>
                     </div>
                   </div>
 
@@ -589,49 +623,46 @@ export function HomePage() {
 
       {/* FOOTER */}
       <footer className="home-footer">
-          <div className="home-footer-inner">
+        <div className="home-footer-inner">
           <div className="home-footer-column">
-            <div className="home-footer-heading">Home</div>
+            <div className="home-footer-heading">Mini E</div>
             <button className="home-footer-link" onClick={() => navigate('/home')}>
               Trang chủ
             </button>
-            <button className="home-footer-link" onClick={() => navigate('/about')}>
-              About
+            <button className="home-footer-link" onClick={() => navigate('/products')}>
+              Sản phẩm
             </button>
+            <button className="home-footer-link" onClick={() => navigate('/cart')}>
+              Giỏ hàng
+            </button>
+          </div>
+
+          <div className="home-footer-column">
+            <div className="home-footer-heading">Tài khoản</div>
             <button className="home-footer-link" onClick={() => navigate('/me')}>
-              Thông tin
+              Thông tin cá nhân
+            </button>
+            <button className="home-footer-link" onClick={() => navigate('/orders')}>
+              Đơn hàng
+            </button>
+            <button className="home-footer-link" onClick={() => navigate('/addresses')}>
+              Địa chỉ
             </button>
           </div>
 
           <div className="home-footer-column">
-            <div className="home-footer-heading">Categories</div>
-              {(parentCategories.slice(0, 3) || []).map((c) => (
-              <button
-                key={c.id}
-                className="home-footer-link"
-                onClick={() => {
-                    handlePickParent(c.id);
-                  setPage(1);
-                }}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-
-          <div className="home-footer-column">
-            <div className="home-footer-heading">Contact</div>
-            <button className="home-footer-link">Liên kết</button>
-            <button className="home-footer-link">Hỗ trợ</button>
+            <div className="home-footer-heading">Hỗ trợ</div>
             <button className="home-footer-link">Hotline</button>
+            <button className="home-footer-link">Chính sách</button>
+            <button className="home-footer-link">Liên hệ</button>
           </div>
 
           <div className="home-footer-column">
-            <div className="home-footer-heading">Logon</div>
-            <button className="home-footer-link" onClick={() => navigate('/login')}>
+            <div className="home-footer-heading">Bắt đầu</div>
+            <button className="home-footer-link" onClick={() => navigate('/login', { state: { from: '/home' } })}>
               Đăng nhập
             </button>
-            <button className="home-footer-link" onClick={() => navigate('/register')}>
+            <button className="home-footer-link" onClick={() => navigate('/register', { state: { from: '/home' } })}>
               Đăng ký
             </button>
             <button className="home-footer-link" onClick={() => navigate('/shops/register')}>
@@ -640,6 +671,38 @@ export function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* AUTH MODAL OVERLAY */}
+      {showAuthModal && (
+        <div className="auth-overlay" role="dialog" aria-modal="true" onClick={() => setShowAuthModal(false)}>
+          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="auth-modal__title">Bạn cần đăng nhập</div>
+            <div className="auth-modal__desc">Trang này yêu cầu tài khoản. Đăng nhập/đăng ký để tiếp tục.</div>
+
+            <div className="auth-modal__actions">
+              <button
+                type="button"
+                className="auth-btn auth-btn--primary"
+                onClick={() => navigate('/login', { state: { from: authFrom } })}
+              >
+                Đăng nhập
+              </button>
+
+              <button
+                type="button"
+                className="auth-btn auth-btn--ghost"
+                onClick={() => navigate('/register', { state: { from: authFrom } })}
+              >
+                Đăng ký
+              </button>
+            </div>
+
+            <button type="button" className="auth-modal__close" onClick={() => setShowAuthModal(false)}>
+              Tiếp tục xem trang chủ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

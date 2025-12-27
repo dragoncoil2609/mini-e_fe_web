@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
@@ -31,53 +31,78 @@ import ShopDetailsPage from '../pages/shops/ShopDetailsPage';
 import CheckoutPage from '../pages/checkout/CheckoutPage';
 import PaymentResultPage from '../pages/payments/PaymentResultPage';
 
+import { getAccessToken } from '../api/authToken';
+
+function isAuthed(): boolean {
+  const token = getAccessToken();
+  return !!token && token !== 'undefined' && token !== 'null';
+}
+
+// Chưa đăng nhập -> về /home nhưng kèm state để Home hiện modal login/register
+function RequireAuthToHome() {
+  const location = useLocation();
+
+  if (!isAuthed()) {
+    const from = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to="/home" replace state={{ authRequired: true, from }} />;
+  }
+
+  return <Outlet />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* mặc định vào Home */}
+      <Route path="/" element={<Navigate to="/home" replace />} />
 
+      {/* PUBLIC auth */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verify-account" element={<VerifyAccountPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-
       <Route path="/auth/account/recover/request" element={<RecoverRequestPage />} />
       <Route path="/auth/account/recover/confirm" element={<RecoverConfirmPage />} />
 
+      {/* PUBLIC pages */}
       <Route path="/home" element={<HomePage />} />
-      <Route path="/admin" element={<HomePageAdmin />} />
-      <Route path="/me" element={<MeProfilePage />} />
-      <Route path="/admin/users" element={<UsersListPage />} />
-      <Route path="/admin/users/deleted" element={<DeletedUsersPage />} />
-      <Route path="/admin/categories" element={<AdminCategoriesPage />} />
-      <Route path="/admin/products" element={<AdminProductsPage />} />
-
-      <Route path="/shops/register" element={<ShopRegisterPage />} />
-      <Route path="/shops/me" element={<MyShopPage />} />
-      <Route path="/shops/:id" element={<ShopDetailsPage />} />
-
       <Route path="/products" element={<ProductsListPage />} />
       <Route path="/products/:id" element={<ProductDetailPage />} />
-
-      <Route path="/me/products" element={<MyProductsPage />} />
-      <Route path="/me/products/new" element={<ProductCreatePage />} />
-      <Route path="/me/products/:id/edit" element={<ProductEditPage />} />
-      <Route path="/me/products/:id/variants" element={<ProductVariantsPage />} />
-
-      <Route path="/admin/shops" element={<AdminShopsListPage />} />
-
-      <Route path="/cart" element={<CartPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
-
-      <Route path="/orders" element={<OrdersPage />} />
-      <Route path="/orders/:id" element={<OrderDetailPage />} />
-
-      <Route path="/addresses" element={<AddressesPage />} />
-
       <Route path="/payment-result" element={<PaymentResultPage />} />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* PRIVATE: chưa đăng nhập -> về Home + modal */}
+      <Route element={<RequireAuthToHome />}>
+        {/* me */}
+        <Route path="/me" element={<MeProfilePage />} />
+        <Route path="/me/products" element={<MyProductsPage />} />
+        <Route path="/me/products/new" element={<ProductCreatePage />} />
+        <Route path="/me/products/:id/edit" element={<ProductEditPage />} />
+        <Route path="/me/products/:id/variants" element={<ProductVariantsPage />} />
+
+        {/* shops */}
+        <Route path="/shops/register" element={<ShopRegisterPage />} />
+        <Route path="/shops/me" element={<MyShopPage />} />
+        <Route path="/shops/:id" element={<ShopDetailsPage />} />
+
+        {/* user pages */}
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/:id" element={<OrderDetailPage />} />
+        <Route path="/addresses" element={<AddressesPage />} />
+
+        {/* admin */}
+        <Route path="/admin" element={<HomePageAdmin />} />
+        <Route path="/admin/users" element={<UsersListPage />} />
+        <Route path="/admin/users/deleted" element={<DeletedUsersPage />} />
+        <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+        <Route path="/admin/products" element={<AdminProductsPage />} />
+        <Route path="/admin/shops" element={<AdminShopsListPage />} />
+      </Route>
+
+      {/* fallback */}
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }

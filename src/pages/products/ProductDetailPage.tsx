@@ -417,8 +417,10 @@ export default function ProductDetailPage() {
       <div className="pdp-loading">
         <div className="pdp-error-card">
           <div style={{ marginBottom: 12 }}>{error || 'Sản phẩm không tồn tại.'}</div>
-          <button type="button" className="pdp-btn-buy" onClick={() => navigate('/products')}>
-            ← Quay lại danh sách
+
+          {/* ✅ đổi về /home thay vì /products (product list) */}
+          <button type="button" className="pdp-btn-buy" onClick={() => navigate('/home')}>
+            ← Quay lại trang chủ
           </button>
         </div>
       </div>
@@ -440,7 +442,10 @@ export default function ProductDetailPage() {
         <div className="pdp-breadcrumb">
           <span onClick={() => navigate('/home')}>Trang chủ</span>
           <span className="pdp-breadcrumb-sep">/</span>
-          <span onClick={() => navigate('/products')}>Sản phẩm</span>
+
+          {/* ✅ đổi "Sản phẩm" (product list) về /home */}
+          <span onClick={() => navigate('/home')}>Sản phẩm</span>
+
           <span className="pdp-breadcrumb-sep">/</span>
           <span className="pdp-breadcrumb-current">{product.title}</span>
         </div>
@@ -520,9 +525,7 @@ export default function ProductDetailPage() {
             <div className="pdp-meta-info">
               <div className="pdp-meta-item">
                 <div className="pdp-meta-label">Tồn kho</div>
-                <div className="pdp-meta-value">
-                  {optionSchema.length ? numericStock : totalVariantStock}
-                </div>
+                <div className="pdp-meta-value">{optionSchema.length ? numericStock : totalVariantStock}</div>
               </div>
 
               <div className="pdp-meta-item">
