@@ -32,9 +32,24 @@ export interface AuthUser {
 
 // Login / register / refresh response
 export interface LoginResponse {
-  access_token: string; // JWT 15m
-  refresh_token: string; // JWT 7d (nhưng nằm trong cookie httpOnly)
-  user: AuthUser;
+  access_token?: string;
+  refresh_token?: string; // backend hiện có thể vẫn trả, nhưng FE không nên bắt buộc
+  user?: AuthUser;
+
+  // user bị soft delete -> cần khôi phục
+  needRecover?: true;
+  identifier?: string;
+  via?: 'email' | 'phone';
+
+  // login thành công nhưng chưa verify
+  verify?: {
+    required: true;
+    via: 'email' | 'phone';
+    target: string;
+    expiresAt: string;
+    sent: boolean;
+    cooldownRemaining?: number;
+  };
 }
 
 export interface RefreshResponse {
@@ -43,10 +58,7 @@ export interface RefreshResponse {
 }
 
 export interface ForgotPasswordResponse {
-  // Backward compatible: BE cũ trả email
   email?: string | null;
-
-  // Luồng mới: có thể gửi qua phone hoặc email
   phone?: string | null;
   via?: 'email' | 'phone';
   target?: string;
@@ -56,16 +68,22 @@ export interface ForgotPasswordResponse {
 }
 
 export interface RequestVerifyResponse {
-  // Backward compatible: BE cũ trả email
   email?: string | null;
-
-  // Luồng mới: có thể gửi OTP qua SMS nếu có phone
   phone?: string | null;
   via?: 'email' | 'phone';
   target?: string;
 
   otp?: string;
   expiresAt?: string;
+  isVerified?: boolean;
+
+  sent?: boolean;
+  cooldownRemaining?: number;
+  required?: true;
+}
+
+export interface VerifyAccountResponse {
+  verified?: boolean;
   isVerified?: boolean;
 }
 
@@ -75,41 +93,6 @@ export interface ResetPasswordResponse {
 
 export interface LogoutResponse {
   loggedOut: boolean;
-}
-
-// ================== USER ==================
-
-export type UserRole = 'USER' | 'SELLER' | 'ADMIN';
-
-export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
-
-export interface User {
-  id: number;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  avatarUrl: string | null;
-  birthday: string | null; // YYYY-MM-DD
-  gender: Gender | null;
-  otp: string | null;
-  timeOtp: string | null;
-  isVerified: boolean;
-  role: UserRole;
-  lastLoginAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-}
-
-export interface UserListQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-  role?: UserRole;
-  gender?: Gender;
-  isVerified?: boolean;
-  sortBy?: 'createdAt' | 'name' | 'lastLoginAt' | 'deletedAt';
-  sortOrder?: 'ASC' | 'DESC';
 }
 
 // ================== SHOP ==================

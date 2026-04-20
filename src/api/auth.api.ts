@@ -7,20 +7,21 @@ import type {
   ResetPasswordResponse,
   RequestVerifyResponse,
   LogoutResponse,
+  VerifyAccountResponse,
 } from './types';
 import { setAccessToken, clearAccessToken } from './authToken';
 
 // ====== PAYLOAD TYPES ======
 export interface RegisterPayload {
   name: string;
-  email?: string;  // ✅ optional
-  phone?: string;  // ✅ optional
+  email?: string;
+  phone?: string;
   password: string;
   confirmPassword: string;
 }
 
 export interface LoginPayload {
-  email?: string;  // ✅ email OR phone
+  email?: string; // email OR phone
   phone?: string;
   password: string;
 }
@@ -33,7 +34,7 @@ export interface ResetPasswordPayload {
 }
 
 export interface RecoverConfirmPayload {
-  email: string;
+  email: string; // backend hiện dùng field này như identifier (email hoặc phone)
   otp: string;
   newPassword: string;
   confirmPassword: string;
@@ -41,24 +42,22 @@ export interface RecoverConfirmPayload {
 
 // ====== API FUNCTIONS ======
 export const AuthApi = {
-  // 1) Đăng ký
   async register(payload: RegisterPayload) {
     const res = await http.post<ApiResponse<any>>('/auth/register', payload);
     return res.data.data;
   },
 
-  // 2) Đăng nhập (email hoặc phone)
   async login(payload: LoginPayload): Promise<LoginResponse> {
     const res = await http.post<ApiResponse<LoginResponse>>('/auth/login', payload);
-
     const data = res.data.data;
-    setAccessToken(data.access_token); // access_token lưu localStorage + RAM
 
-    // refresh_token thường nằm cookie httpOnly
+    if (data.access_token) {
+      setAccessToken(data.access_token);
+    }
+
     return data;
   },
 
-  // 3) Refresh access token
   async refresh(): Promise<RefreshResponse> {
     const res = await http.post<ApiResponse<RefreshResponse>>('/auth/refresh');
     const data = res.data.data;
@@ -66,14 +65,12 @@ export const AuthApi = {
     return data;
   },
 
-  // 4) Logout
   async logout(): Promise<LogoutResponse> {
     const res = await http.post<ApiResponse<LogoutResponse>>('/auth/logout');
     clearAccessToken();
     return res.data.data;
   },
 
-  // 5) Forgot password
   async forgotPassword(email: string): Promise<ForgotPasswordResponse> {
     const res = await http.post<ApiResponse<ForgotPasswordResponse>>(
       '/auth/forgot-password',
@@ -82,7 +79,6 @@ export const AuthApi = {
     return res.data.data;
   },
 
-  // 6) Reset password
   async resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResponse> {
     const res = await http.post<ApiResponse<ResetPasswordResponse>>(
       '/auth/reset-password',
@@ -91,27 +87,26 @@ export const AuthApi = {
     return res.data.data;
   },
 
-  // 7) Gửi OTP xác minh (yêu cầu đăng nhập)
-  async requestVerify(): Promise<RequestVerifyResponse> {
-    const res = await http.post<ApiResponse<RequestVerifyResponse>>('/auth/request-verify');
+  async requestVerify(via?: 'email' | 'phone'): Promise<RequestVerifyResponse> {
+    const res = await http.post<ApiResponse<RequestVerifyResponse>>(
+      '/auth/request-verify',
+      via ? { via } : {}
+    );
     return res.data.data;
   },
 
-  // 8) Verify account (yêu cầu đăng nhập)
-  async verifyAccount(otp: string): Promise<{ verified: boolean }> {
-    const res = await http.post<ApiResponse<{ verified: boolean }>>(
+  async verifyAccount(otp: string): Promise<VerifyAccountResponse> {
+    const res = await http.post<ApiResponse<VerifyAccountResponse>>(
       '/auth/verify-account',
       { otp }
     );
     return res.data.data;
   },
 
-  // 9) Recover request (bị vô hiệu hoá)
   async recoverRequest(email: string): Promise<void> {
     await http.post<ApiResponse<any>>('/auth/account/recover/request', { email });
   },
 
-  // 10) Recover confirm
   async recoverConfirm(payload: RecoverConfirmPayload): Promise<void> {
     await http.post<ApiResponse<any>>('/auth/account/recover/confirm', payload);
   },

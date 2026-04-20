@@ -6,8 +6,8 @@ import { guessAuthFieldFromMessage } from './utils/authError';
 import './style/auth.css';
 
 interface ResetLocationState {
-  identifier?: string;
-  email?: string; // backward compatible
+  email?: string;
+  identifier?: string; // backward compatible nếu màn cũ còn truyền identifier
 }
 
 export function ResetPasswordPage() {
@@ -15,9 +15,9 @@ export function ResetPasswordPage() {
   const location = useLocation();
   const state = location.state as ResetLocationState | null;
 
-  const initialIdentifier = (state?.identifier ?? state?.email ?? '').trim();
+  const initialEmail = (state?.email ?? state?.identifier ?? '').trim();
 
-  const [identifier] = useState(initialIdentifier); // không cho sửa
+  const [email] = useState(initialEmail);
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,7 +26,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<'otp' | 'password' | 'confirmPassword' | 'identifier', string>>
+    Partial<Record<'otp' | 'password' | 'confirmPassword' | 'email', string>>
   >({});
 
   async function handleSubmit(e: FormEvent) {
@@ -36,18 +36,18 @@ export function ResetPasswordPage() {
     setFieldErrors({});
     setLoading(true);
 
-    if (!identifier) {
-      const msg = 'Thiếu thông tin tài khoản. Vui lòng quay lại bước Quên mật khẩu.';
+    if (!email) {
+      const msg = 'Thiếu email. Vui lòng quay lại bước Quên mật khẩu.';
       setError(msg);
-      setFieldErrors({ identifier: msg });
+      setFieldErrors({ email: msg });
       setLoading(false);
       return;
     }
 
     try {
       const data = await AuthApi.resetPassword({
-        email: identifier, // BE đang dùng field email
-        otp,
+        email,
+        otp: otp.trim(),
         password,
         confirmPassword,
       });
@@ -63,13 +63,15 @@ export function ResetPasswordPage() {
     } catch (err: any) {
       const msg = getBeMessage(err, 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.');
       setError(msg);
+
       const beField = guessAuthFieldFromMessage(msg);
       const mapped =
         beField === 'otp' || beField === 'password' || beField === 'confirmPassword'
           ? beField
-          : beField === 'email' || beField === 'phone' || beField === 'identifier'
-            ? 'identifier'
+          : beField === 'email'
+            ? 'email'
             : null;
+
       setFieldErrors(mapped ? { [mapped]: msg } : {});
     } finally {
       setLoading(false);
@@ -88,23 +90,19 @@ export function ResetPasswordPage() {
         <h1 className="title">Đặt lại mật khẩu</h1>
 
         <p className="description">
-          Nhập mã OTP và mật khẩu mới cho tài khoản.
+          Nhập mã OTP và mật khẩu mới cho email của bạn.
         </p>
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email hoặc SĐT</label>
-            <input
-              type="text"
-              value={identifier}
-              readOnly
-              className="inputReadonly"
-            />
-            {!identifier && (
+            <label className="label">Email</label>
+            <input type="text" value={email} readOnly className="inputReadonly" />
+            {!email && (
               <div className="errorSmall">
-                Không có thông tin tài khoản. Vui lòng quay lại bước Quên mật khẩu.
+                Không có email. Vui lòng quay lại bước Quên mật khẩu.
               </div>
             )}
+            {fieldErrors.email && <div className="fieldError">{fieldErrors.email}</div>}
           </div>
 
           <div className="formGroup">
@@ -114,6 +112,8 @@ export function ResetPasswordPage() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               className={`input ${fieldErrors.otp ? 'inputError' : ''}`}
+              placeholder="Nhập mã OTP 6 số"
+              inputMode="numeric"
             />
             {fieldErrors.otp && <div className="fieldError">{fieldErrors.otp}</div>}
           </div>
@@ -125,6 +125,7 @@ export function ResetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={`input ${fieldErrors.password ? 'inputError' : ''}`}
+              autoComplete="new-password"
             />
             {fieldErrors.password && <div className="fieldError">{fieldErrors.password}</div>}
           </div>
@@ -136,6 +137,7 @@ export function ResetPasswordPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className={`input ${fieldErrors.confirmPassword ? 'inputError' : ''}`}
+              autoComplete="new-password"
             />
             {fieldErrors.confirmPassword && (
               <div className="fieldError">{fieldErrors.confirmPassword}</div>
@@ -143,7 +145,6 @@ export function ResetPasswordPage() {
           </div>
 
           {error && <div className="error">{error}</div>}
-
           {success && <div className="success">{success}</div>}
 
           <button type="submit" disabled={loading} className="button">

@@ -1,4 +1,3 @@
-// src/pages/auth/VerifyAccountPage.tsx
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
@@ -30,7 +29,7 @@ export function VerifyAccountPage() {
 
       if (data.isVerified) {
         setVerified(true);
-        navigate('/home');
+        setTimeout(() => navigate('/home'), 800);
       }
     } catch (err: any) {
       const msg = getBeMessage(err, 'Không gửi được OTP. Vui lòng thử lại.');
@@ -48,22 +47,26 @@ export function VerifyAccountPage() {
     setLoadingVerify(true);
 
     try {
-      const data = await AuthApi.verifyAccount(otp);
-      setVerified(data.verified);
+      const data = await AuthApi.verifyAccount(otp.trim());
+      const ok = Boolean(data.verified || data.isVerified);
 
-      if (data.verified) navigate('/home');
+      setVerified(ok);
+
+      if (ok) {
+        setTimeout(() => navigate('/home'), 800);
+      }
     } catch (err: any) {
       const msg = getBeMessage(err, 'Xác minh thất bại. Vui lòng kiểm tra lại OTP.');
       setError(msg);
       const beField = guessAuthFieldFromMessage(msg);
       setFieldError(beField === 'otp' ? msg : null);
+      setVerified(false);
     } finally {
       setLoadingVerify(false);
     }
   }
 
-  const sentTo =
-    info?.phone ? `SĐT: ${info.phone}` : info?.email ? `Email: ${info.email}` : null;
+  const sentTo = info?.target ? `${info.via === 'phone' ? 'SĐT' : 'Email'}: ${info.target}` : null;
 
   return (
     <div className="container">
@@ -77,7 +80,7 @@ export function VerifyAccountPage() {
         <h1 className="title">Xác minh tài khoản</h1>
 
         <p className="description">
-          Vui lòng gửi OTP và nhập mã OTP để xác minh tài khoản (yêu cầu bạn đã đăng nhập).
+          Vui lòng gửi OTP và nhập mã OTP để xác minh tài khoản.
         </p>
 
         <button
@@ -97,14 +100,25 @@ export function VerifyAccountPage() {
               <p className="infoTextSuccess">Tài khoản đã được xác minh.</p>
             )}
 
-            {info.otp && (
+            {info.sent === true && !info.isVerified && (
+              <p className="infoTextSuccess">OTP đã được gửi thành công.</p>
+            )}
+
+            {info.sent === false && typeof info.cooldownRemaining === 'number' && (
               <p className="infoText">
-                OTP (dev): <code className="infoCode">{info.otp}</code>
+                Bạn vừa yêu cầu OTP trước đó. Vui lòng đợi thêm{' '}
+                <code className="infoCode">{info.cooldownRemaining}s</code> để gửi lại.
               </p>
             )}
 
             {info.expiresAt && (
-              <p className="infoText">Hết hạn lúc: {info.expiresAt}</p>
+              <p className="infoText">OTP hết hạn lúc: {info.expiresAt}</p>
+            )}
+
+            {info.otp && (
+              <p className="infoText">
+                OTP (dev): <code className="infoCode">{info.otp}</code>
+              </p>
             )}
           </div>
         )}
@@ -117,6 +131,8 @@ export function VerifyAccountPage() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               className={`input ${fieldError ? 'inputError' : ''}`}
+              placeholder="Nhập mã OTP 6 số"
+              inputMode="numeric"
             />
             {fieldError && <div className="fieldError">{fieldError}</div>}
           </div>

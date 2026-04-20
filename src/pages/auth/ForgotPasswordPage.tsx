@@ -8,7 +8,7 @@ import './style/auth.css';
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -19,18 +19,28 @@ export function ForgotPasswordPage() {
     setFieldError(null);
     setLoading(true);
 
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      const msg = 'Email không được để trống';
+      setError(msg);
+      setFieldError(msg);
+      setLoading(false);
+      return;
+    }
+
     try {
-      await AuthApi.forgotPassword(identifier);
+      await AuthApi.forgotPassword(trimmedEmail);
 
       navigate('/reset-password', {
-        state: { identifier },
+        state: { email: trimmedEmail },
       });
     } catch (err: any) {
       const msg = getBeMessage(err, 'Không gửi được OTP. Vui lòng thử lại.');
       setError(msg);
+
       const beField = guessAuthFieldFromMessage(msg);
-      const mapped =
-        beField === 'email' || beField === 'phone' || beField === 'identifier' ? 'identifier' : null;
+      const mapped = beField === 'email' ? 'email' : null;
       setFieldError(mapped ? msg : null);
     } finally {
       setLoading(false);
@@ -49,18 +59,19 @@ export function ForgotPasswordPage() {
         <h1 className="title">Quên mật khẩu</h1>
 
         <p className="description">
-          Nhập email hoặc số điện thoại đã đăng ký để nhận mã OTP đặt lại mật khẩu.
+          Nhập email đã đăng ký để nhận mã OTP đặt lại mật khẩu.
         </p>
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
-            <label className="label">Email hoặc SĐT</label>
+            <label className="label">Email</label>
             <input
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              type="text"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
               className={`input ${fieldError ? 'inputError' : ''}`}
-              placeholder="user@gmail.com hoặc 09xx..."
+              placeholder="user@gmail.com"
+              autoComplete="email"
             />
             {fieldError && <div className="fieldError">{fieldError}</div>}
           </div>
