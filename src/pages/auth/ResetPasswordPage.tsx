@@ -1,3 +1,4 @@
+// src/pages/auth/ResetPasswordPage.tsx
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
@@ -7,7 +8,7 @@ import './style/auth.css';
 
 interface ResetLocationState {
   email?: string;
-  identifier?: string; // backward compatible nếu màn cũ còn truyền identifier
+  identifier?: string;
 }
 
 export function ResetPasswordPage() {
@@ -21,6 +22,9 @@ export function ResetPasswordPage() {
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +92,7 @@ export function ResetPasswordPage() {
         </div>
 
         <h1 className="title">Đặt lại mật khẩu</h1>
-
-        <p className="description">
-          Nhập mã OTP và mật khẩu mới cho email của bạn.
-        </p>
+        <p className="description">Nhập mã OTP và mật khẩu mới cho email của bạn.</p>
 
         <form onSubmit={handleSubmit}>
           <div className="formGroup">
@@ -120,25 +121,53 @@ export function ResetPasswordPage() {
 
           <div className="formGroup">
             <label className="label">Mật khẩu mới</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={`input ${fieldErrors.password ? 'inputError' : ''}`}
-              autoComplete="new-password"
-            />
+
+            <div className="passwordWrapper">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`input passwordInput ${fieldErrors.password ? 'inputError' : ''}`}
+                autoComplete="new-password"
+                placeholder="Nhập mật khẩu mới"
+              />
+              <button
+                type="button"
+                className="passwordToggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showPassword ? '🙈' : '👁'}
+              </button>
+            </div>
+
             {fieldErrors.password && <div className="fieldError">{fieldErrors.password}</div>}
           </div>
 
           <div className="formGroupLast">
             <label className="label">Nhập lại mật khẩu mới</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`input ${fieldErrors.confirmPassword ? 'inputError' : ''}`}
-              autoComplete="new-password"
-            />
+
+            <div className="passwordWrapper">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`input passwordInput ${fieldErrors.confirmPassword ? 'inputError' : ''}`}
+                autoComplete="new-password"
+                placeholder="Nhập lại mật khẩu mới"
+              />
+              <button
+                type="button"
+                className="passwordToggle"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                title={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showConfirmPassword ? '🙈' : '👁'}
+              </button>
+            </div>
+
             {fieldErrors.confirmPassword && (
               <div className="fieldError">{fieldErrors.confirmPassword}</div>
             )}
