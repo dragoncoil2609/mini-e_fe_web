@@ -1,4 +1,3 @@
-// src/pages/addresses/AddressesPage.tsx
 import {
   useEffect,
   useState,
@@ -71,7 +70,7 @@ export default function AddressesPage() {
       isDefault: false,
     });
     setEditingId(null);
-    setFormSession((v) => v + 1);
+    setFormSession((value) => value + 1);
   };
 
   const openCreateForm = () => {
@@ -106,8 +105,8 @@ export default function AddressesPage() {
   };
 
   const handleSelectorLatLngChange = (latStr: string, lngStr: string) => {
-    const latNum = parseFloat(latStr);
-    const lngNum = parseFloat(lngStr);
+    const latNum = Number.parseFloat(latStr);
+    const lngNum = Number.parseFloat(lngStr);
 
     if (!Number.isNaN(latNum) && !Number.isNaN(lngNum)) {
       setFormData((prev) => ({
@@ -118,14 +117,11 @@ export default function AddressesPage() {
     }
   };
 
-  const handleMapLocationChange = (coords: {
-    lat?: string;
-    lng?: string;
-  }) => {
+  const handleMapLocationChange = (coords: { lat?: string; lng?: string }) => {
     if (!coords.lat || !coords.lng) return;
 
-    const latNum = parseFloat(coords.lat);
-    const lngNum = parseFloat(coords.lng);
+    const latNum = Number.parseFloat(coords.lat);
+    const lngNum = Number.parseFloat(coords.lng);
 
     if (!Number.isNaN(latNum) && !Number.isNaN(lngNum)) {
       setFormData((prev) => ({
@@ -153,7 +149,10 @@ export default function AddressesPage() {
       return 'Số điện thoại không hợp lệ.';
     }
 
-    if (!formData.formattedAddress?.trim() || formData.formattedAddress.trim().length < 5) {
+    if (
+      !formData.formattedAddress?.trim() ||
+      formData.formattedAddress.trim().length < 5
+    ) {
       return 'Vui lòng chọn địa chỉ đầy đủ.';
     }
 
@@ -203,7 +202,7 @@ export default function AddressesPage() {
   };
 
   const handleUpdate = async () => {
-    if (!editingId) return;
+    if (editingId == null) return;
 
     const validateMessage = validate();
     if (validateMessage) {
@@ -227,15 +226,6 @@ export default function AddressesPage() {
 
       await AddressesApi.update(editingId, payload);
 
-      const original = addresses.find((a) => a.id === editingId);
-      if (formData.isDefault && original && !original.isDefault) {
-        const setDefaultResult = await AddressesApi.setDefault(editingId);
-        if (!setDefaultResult.success) {
-          setError('Đặt mặc định thất bại.');
-          return;
-        }
-      }
-
       setMessage('Đã cập nhật địa chỉ thành công.');
       setShowForm(false);
       resetForm();
@@ -257,7 +247,7 @@ export default function AddressesPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (editingId) {
+    if (editingId != null) {
       await handleUpdate();
     } else {
       await handleCreate();
@@ -266,13 +256,13 @@ export default function AddressesPage() {
 
   const handleEdit = (address: Address) => {
     setEditingId(address.id);
-    setFormSession((v) => v + 1);
+    setFormSession((value) => value + 1);
     setFormData({
       fullName: address.fullName,
       phone: address.phone,
       formattedAddress: address.formattedAddress,
-      lat: address.lat ? parseFloat(address.lat) : undefined,
-      lng: address.lng ? parseFloat(address.lng) : undefined,
+      lat: address.lat ? Number.parseFloat(address.lat) : undefined,
+      lng: address.lng ? Number.parseFloat(address.lng) : undefined,
       isDefault: address.isDefault,
     });
     setShowForm(true);
@@ -338,9 +328,7 @@ export default function AddressesPage() {
     return (
       <div className="addresses-container">
         <div className="addresses-card">
-          <div className="addresses-loading">
-            Đang tải danh sách địa chỉ...
-          </div>
+          <div className="addresses-loading">Đang tải danh sách địa chỉ...</div>
         </div>
       </div>
     );
@@ -385,7 +373,7 @@ export default function AddressesPage() {
         {showForm && (
           <div className="addresses-form-section">
             <h2 className="addresses-form-title">
-              {editingId ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}
+              {editingId != null ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}
             </h2>
 
             <form onSubmit={handleSubmit} className="addresses-form">
@@ -412,7 +400,7 @@ export default function AddressesPage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
-                    pattern="^(?:\\+?84|0)\\d{9,10}$"
+                    pattern="^(?:\+?84|0)\d{9,10}$"
                     className="addresses-form-input"
                     placeholder="0912..."
                   />
@@ -420,9 +408,7 @@ export default function AddressesPage() {
               </div>
 
               <div className="addresses-form-group">
-                <label className="addresses-form-label">
-                  Địa chỉ nhận hàng *
-                </label>
+                <label className="addresses-form-label">Địa chỉ nhận hàng *</label>
 
                 <VietnamAddressSelector
                   key={`selector-${formSession}`}
@@ -432,8 +418,7 @@ export default function AddressesPage() {
                 />
 
                 <div className="addresses-selected-address">
-                  Địa chỉ đã chọn:{' '}
-                  <span>{formData.formattedAddress || '(Chưa chọn)'}</span>
+                  Địa chỉ đã chọn: <span>{formData.formattedAddress || '(Chưa chọn)'}</span>
                 </div>
               </div>
 
@@ -459,7 +444,8 @@ export default function AddressesPage() {
                 </div>
 
                 <div className="addresses-map-hint">
-                  Bạn có thể click lên bản đồ hoặc kéo marker để chỉnh lại vị trí chính xác hơn.
+                  Chọn tỉnh/quận/phường sẽ làm bản đồ tự nhảy theo khu vực. Bạn cũng có
+                  thể click hoặc kéo marker để chỉnh vị trí chính xác hơn.
                 </div>
               </div>
 
@@ -484,7 +470,7 @@ export default function AddressesPage() {
                 >
                   {updating.has(currentUpdatingKey)
                     ? 'Đang xử lý...'
-                    : editingId
+                    : editingId != null
                     ? 'Cập nhật'
                     : 'Thêm mới'}
                 </button>
