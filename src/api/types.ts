@@ -1,5 +1,8 @@
 // ================== COMMON ==================
 
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
+export type UserRole = 'USER' | 'SELLER' | 'ADMIN';
+
 // Response chuẩn của BE
 export interface ApiResponse<T> {
   success: boolean;
@@ -9,12 +12,26 @@ export interface ApiResponse<T> {
   error?: string; // ví dụ "Bad Request", "Unauthorized"
 }
 
-// Kết quả phân trang chung
+// Meta phân trang
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pageCount?: number;
+}
+
+// Kết quả phân trang chung (một số API cũ có thể vẫn dùng kiểu này)
 export interface PaginatedResult<T> {
   items: T[];
   page: number;
   limit: number;
   total: number;
+}
+
+// Kết quả phân trang chuẩn mới của users.service.ts
+export interface PaginatedData<T> {
+  items: T[];
+  meta: PaginationMeta;
 }
 
 // ================== AUTH ==================
@@ -23,11 +40,51 @@ export interface PaginatedResult<T> {
 export interface AuthUser {
   id: number;
   name: string;
-  email: string | null;
-  phone: string | null;
-  role: 'USER' | 'SELLER' | 'ADMIN';
+  email?: string | null;
+  phone?: string | null;
+  role: UserRole;
   isVerified: boolean;
   createdAt?: string;
+}
+
+// Kiểu User đầy đủ ở module users
+export interface User {
+  id: number;
+  name: string;
+
+  email?: string | null;
+  phone?: string | null;
+
+  avatarUrl?: string | null;
+  birthday?: string | null;
+  gender?: Gender | null;
+
+  isVerified: boolean;
+  role: UserRole;
+
+  lastLoginAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+// Query list user
+export interface UserListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?:
+    | 'id'
+    | 'name'
+    | 'email'
+    | 'phone'
+    | 'role'
+    | 'isVerified'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'lastLoginAt'
+    | 'deletedAt';
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 // Login / register / refresh response
@@ -136,7 +193,6 @@ export interface Category {
   updatedAt?: string;
   deletedAt?: string | null;
 
-  // nếu BE trả dạng tree
   children?: Category[];
 }
 
@@ -157,12 +213,11 @@ export interface UpdateCategoryDto {
   sortOrder?: number;
   isActive?: boolean;
 }
+
 // ================== PRODUCT ==================
 
-// Trạng thái sản phẩm
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT' | string;
 
-// Ảnh sản phẩm
 export interface ProductImage {
   id: number;
   productId: number;
@@ -173,40 +228,32 @@ export interface ProductImage {
   updatedAt?: string;
 }
 
-// [MỚI] Định nghĩa cấu trúc Option Schema (Fix lỗi implicit any)
 export interface ProductOptionSchema {
-  name: string; // Ví dụ: "Màu sắc"
-  values: string[]; // Ví dụ: ["Đỏ", "Xanh"]
+  name: string;
+  values: string[];
 }
 
-// Item trong list /products
 export interface ProductListItem {
   id: number;
   title: string;
   slug: string;
-  price: string; // "150000.00"
-  currency: string; // "VND"
+  price: string;
+  currency: string;
   status: ProductStatus;
   createdAt: string;
   updatedAt?: string;
 
-  // ✅ category
   categoryId?: number | null;
   category?: Category | null;
 
-  // Danh sách ảnh của sản phẩm (BE trả về từ product_images)
   images?: ProductImage[];
-
-  // URL ảnh chính/thumbnail của sản phẩm (deprecated - dùng images với isMain thay thế)
   thumbnailUrl?: string | null;
 }
 
-// [CẬP NHẬT] Chi tiết 1 sản phẩm
 export interface ProductDetail {
   id: number;
   shopId: number;
 
-  // ✅ category
   categoryId?: number | null;
   category?: Category | null;
 
@@ -216,10 +263,10 @@ export interface ProductDetail {
 
   optionSchema?: ProductOptionSchema[] | null;
 
-  price: string; // "150000.00"
+  price: string;
   compareAtPrice?: string | null;
 
-  currency: string; // "VND"
+  currency: string;
   stock: number;
   sold: number;
 
@@ -234,16 +281,16 @@ export interface ProductDetail {
 // ================== VARIANTS ==================
 
 export interface ProductVariantOption {
-  option: string; // "Màu"
-  value: string; // "Trắng"
+  option: string;
+  value: string;
 }
 
 export interface ProductVariant {
   id: number;
   productId: number;
   sku: string;
-  name: string; // "Trắng / S"
-  price: string; // "150000.00"
+  name: string;
+  price: string;
   stock: number;
   imageId: number | null;
   options?: ProductVariantOption[];
@@ -251,10 +298,9 @@ export interface ProductVariant {
   updatedAt?: string;
 }
 
-// Định nghĩa option để generate variants
 export interface ProductOptionDefinition {
-  name: string; // "Màu"
-  values: string[]; // ["Trắng", "Đen"]
+  name: string;
+  values: string[];
 }
 
 export type GenerateVariantsMode = 'replace' | 'add';
@@ -266,21 +312,16 @@ export interface GenerateVariantsPayload {
 
 // ================== DTO FE GỬI LÊN ==================
 
-// Tạo product – JSON body (Cách B)
 export interface CreateProductJsonDto {
   title: string;
   description?: string;
   price: number;
   stock?: number;
   slug?: string;
-
-  // ✅ category
   categoryId?: number | null;
-
-  images?: string[]; // URL ảnh nếu dùng JSON
+  images?: string[];
 }
 
-// Update product
 export interface UpdateProductDto {
   title?: string;
   slug?: string;
@@ -288,12 +329,9 @@ export interface UpdateProductDto {
   price?: number;
   stock?: number;
   status?: ProductStatus;
-
-  // ✅ category
   categoryId?: number | null;
 }
 
-// Update 1 variant
 export interface UpdateVariantDto {
   name?: string;
   sku?: string;
@@ -308,7 +346,6 @@ export interface CartItem {
   id: number;
   cartId: number;
   productId: number;
-
   variantId: number;
 
   title: string;
@@ -383,9 +420,11 @@ export interface UpdateAddressDto {
   placeId?: string;
   lat?: number;
   lng?: number;
+  isDefault?: boolean;
 }
 
 // ================== ORDERS ==================
+
 export type PaymentMethod = 'COD' | 'VNPAY';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
 export type ShippingStatus =
@@ -514,7 +553,6 @@ export type CreateOrderResponse =
       paymentUrl: string;
     };
 
-
 // ================== REVIEWS ==================
 
 export interface ReviewUserPublic {
@@ -528,7 +566,7 @@ export interface ProductReview {
   orderId: string;
   userId: number;
   productId: number;
-  rating: number; // 1..5
+  rating: number;
   comment: string | null;
   images: string[] | null;
   createdAt: string;
