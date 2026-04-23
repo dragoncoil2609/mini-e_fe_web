@@ -6,7 +6,8 @@ import {
   deleteMe,
   type UpdateMePayload,
 } from '../../api/users.api';
-import type { User } from '../../api/types';
+import { getMyShop } from '../../api/shop.api';
+import type { Shop, User } from '../../api/types';
 import './MeProfilePage.css';
 
 const formatDateVN = (dateString?: string | Date | null) => {
@@ -39,6 +40,8 @@ const MeProfilePage: React.FC = () => {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<User | null>(null);
+  const [myShop, setMyShop] = useState<Shop | null>(null);
+
   const [form, setForm] = useState<MeFormState>(defaultForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,10 +49,11 @@ const MeProfilePage: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMe = async () => {
+    const fetchAll = async () => {
       try {
         setLoading(true);
         setError(null);
+
         const me = await getMe();
         setProfile(me);
         setForm({
@@ -60,6 +64,22 @@ const MeProfilePage: React.FC = () => {
           gender: (me.gender as Gender) || '',
           password: '',
         });
+
+        try {
+          const shopRes = await getMyShop();
+          if (shopRes?.success && shopRes.data?.id) {
+            setMyShop(shopRes.data);
+          } else {
+            setMyShop(null);
+          }
+        } catch (shopErr: any) {
+          if (shopErr?.response?.status === 404) {
+            setMyShop(null);
+          } else {
+            console.error(shopErr);
+            setMyShop(null);
+          }
+        }
       } catch (err: any) {
         console.error(err);
         setError(err?.response?.data?.message || 'Không load được thông tin user');
@@ -68,10 +88,12 @@ const MeProfilePage: React.FC = () => {
       }
     };
 
-    void fetchMe();
+    void fetchAll();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -139,8 +161,11 @@ const MeProfilePage: React.FC = () => {
   };
 
   const handleShopAction = () => {
-    if (profile?.role === 'USER') navigate('/shops/register');
-    else navigate('/shops/me');
+    if (myShop?.id) {
+      navigate('/shops/me');
+      return;
+    }
+    navigate('/shops/register');
   };
 
   const displayContact = useMemo(() => {
@@ -150,6 +175,49 @@ const MeProfilePage: React.FC = () => {
   }, [profile]);
 
   const displayAvatar = form.avatarUrl || profile?.avatarUrl || '';
+
+  const shopActionLabel = useMemo(() => {
+    if (!myShop) return '🏪 Đăng ký bán hàng';
+    if (myShop.status === 'PENDING') return '🏪 Shop đang chờ duyệt';
+    if (myShop.status === 'ACTIVE') return '⚙️ Vào cửa hàng của tôi';
+    if (myShop.status === 'SUSPENDED') return '🏪 Shop đang tạm khóa';
+    return '🏪 Vào cửa hàng của tôi';
+  }, [myShop]);
+
+  const shopNotice = useMemo(() => {
+    if (!myShop) return null;
+
+    if (myShop.status === 'PENDING') {
+      return {
+        bg: '#fef9c3',
+        color: '#854d0e',
+        border: '#fde68a',
+        title: 'Shop của bạn đang chờ duyệt',
+        desc:
+          'Bạn đã tạo shop thành công. Hiện tại shop đang chờ admin phê duyệt, vì vậy bạn chưa thể bán hàng nhưng vẫn có thể vào chỉnh sửa thông tin shop.',
+      };
+    }
+
+    if (myShop.status === 'ACTIVE') {
+      return {
+        bg: '#dcfce7',
+        color: '#166534',
+        border: '#bbf7d0',
+        title: 'Shop của bạn đang hoạt động',
+        desc:
+          'Shop đã được kích hoạt. Bạn có thể quản lý sản phẩm, đơn hàng và các thông tin liên quan đến shop.',
+      };
+    }
+
+    return {
+      bg: '#fee2e2',
+      color: '#991b1b',
+      border: '#fecaca',
+      title: 'Shop của bạn đang tạm khóa',
+      desc:
+        'Shop hiện đang bị tạm khóa. Bạn vẫn có thể xem và chỉnh sửa thông tin shop, nhưng chưa thể bán hàng.',
+    };
+  }, [myShop]);
 
   if (loading) {
     return (
@@ -192,10 +260,29 @@ const MeProfilePage: React.FC = () => {
               className="me-top-bar-button me-top-bar-button--primary"
               type="button"
             >
-              {profile.role === 'USER' ? '🏪 Đăng ký bán hàng' : '⚙️ Vào cửa hàng của tôi'}
+              {shopActionLabel}
             </button>
           </div>
         </div>
+
+        {shopNotice && (
+          <div
+            style={{
+              marginBottom: 18,
+              borderRadius: 16,
+              padding: '14px 16px',
+              background: shopNotice.bg,
+              color: shopNotice.color,
+              border: `1px solid ${shopNotice.border}`,
+              lineHeight: 1.6,
+            }}
+          >
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>
+              {shopNotice.title}
+            </div>
+            <div style={{ fontSize: 14 }}>{shopNotice.desc}</div>
+          </div>
+        )}
 
         <section className="me-header-card">
           <div className="me-header-text">
@@ -217,7 +304,15 @@ const MeProfilePage: React.FC = () => {
                   }}
                 />
               ) : (
-                <div className="me-avatar-img" style={{ display: 'grid', placeItems: 'center', fontSize: 28, fontWeight: 800 }}>
+                <div
+                  className="me-avatar-img"
+                  style={{
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 28,
+                    fontWeight: 800,
+                  }}
+                >
                   {(profile.name || 'U').trim().charAt(0).toUpperCase()}
                 </div>
               )}
@@ -225,23 +320,39 @@ const MeProfilePage: React.FC = () => {
 
             <div className="me-info-col">
               <div className="me-name-row">
-                <h2 className="me-display-name">{profile.name || 'Người dùng chưa đặt tên'}</h2>
-                {profile.role !== 'USER' && <span className="badge-role">{profile.role}</span>}
-                {profile.isVerified && <span className="badge-verified">✅ Đã xác minh</span>}
+                <h2 className="me-display-name">
+                  {profile.name || 'Người dùng chưa đặt tên'}
+                </h2>
+                {profile.role !== 'USER' && (
+                  <span className="badge-role">{profile.role}</span>
+                )}
+                {profile.isVerified && (
+                  <span className="badge-verified">✅ Đã xác minh</span>
+                )}
               </div>
               <div className="me-email-row">
                 Liên hệ: <span className="email-text">{displayContact}</span>
-                {profile.email && <span className="readonly-tag">Email không sửa tại đây</span>}
+                {profile.email && (
+                  <span className="readonly-tag">Email không sửa tại đây</span>
+                )}
               </div>
-              <p className="me-member-since">Thành viên từ: {formatDateVN(profile.createdAt)}</p>
+              <p className="me-member-since">
+                Thành viên từ: {formatDateVN(profile.createdAt)}
+              </p>
             </div>
           </div>
         </section>
 
         <div className="me-tabs-container">
-          <button className="me-tab active" type="button">Thông tin chung</button>
-          <button className="me-tab disabled" type="button">Lịch sử mua hàng</button>
-          <button className="me-tab disabled" type="button">Ví / Voucher</button>
+          <button className="me-tab active" type="button">
+            Thông tin chung
+          </button>
+          <button className="me-tab disabled" type="button">
+            Lịch sử mua hàng
+          </button>
+          <button className="me-tab disabled" type="button">
+            Ví / Voucher
+          </button>
         </div>
 
         <section className="me-form-card">
@@ -316,13 +427,34 @@ const MeProfilePage: React.FC = () => {
               <label className="form-label">Giới tính</label>
               <div className="form-input-col radio-group">
                 <label className="radio-label">
-                  <input type="radio" name="gender" value="MALE" checked={form.gender === 'MALE'} onChange={handleChange} /> Nam
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="MALE"
+                    checked={form.gender === 'MALE'}
+                    onChange={handleChange}
+                  />{' '}
+                  Nam
                 </label>
                 <label className="radio-label">
-                  <input type="radio" name="gender" value="FEMALE" checked={form.gender === 'FEMALE'} onChange={handleChange} /> Nữ
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="FEMALE"
+                    checked={form.gender === 'FEMALE'}
+                    onChange={handleChange}
+                  />{' '}
+                  Nữ
                 </label>
                 <label className="radio-label">
-                  <input type="radio" name="gender" value="OTHER" checked={form.gender === 'OTHER'} onChange={handleChange} /> Khác
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="OTHER"
+                    checked={form.gender === 'OTHER'}
+                    onChange={handleChange}
+                  />{' '}
+                  Khác
                 </label>
               </div>
             </div>
@@ -345,12 +477,18 @@ const MeProfilePage: React.FC = () => {
             <div className="form-group-row me-password-hint-row">
               <label className="form-label" />
               <div className="form-input-col">
-                <span className="me-password-hint">* Mật khẩu phải có ít nhất 8 ký tự, bao gồm cả chữ và số.</span>
+                <span className="me-password-hint">
+                  * Mật khẩu phải có ít nhất 8 ký tự, bao gồm cả chữ và số.
+                </span>
               </div>
             </div>
 
             <div className="form-submit-row">
-              <button type="submit" disabled={saving} className="btn-update-sketch">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-update-sketch"
+              >
                 {saving ? 'ĐANG LƯU...' : 'CẬP NHẬT'}
               </button>
             </div>
@@ -358,8 +496,14 @@ const MeProfilePage: React.FC = () => {
         </section>
 
         <div className="me-footer-section">
-          <p className="me-footer-note">Cần xoá tài khoản? Hành động này sẽ đưa tài khoản vào trạng thái xoá mềm.</p>
-          <button onClick={handleDeleteAccount} className="btn-delete-sketch" type="button">
+          <p className="me-footer-note">
+            Cần xoá tài khoản? Hành động này sẽ đưa tài khoản vào trạng thái xoá mềm.
+          </p>
+          <button
+            onClick={handleDeleteAccount}
+            className="btn-delete-sketch"
+            type="button"
+          >
             Xoá tài khoản
           </button>
         </div>

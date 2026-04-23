@@ -216,7 +216,7 @@ export interface UpdateCategoryDto {
 
 // ================== PRODUCT ==================
 
-export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT' | string;
+export type ProductStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED' | string;
 
 export interface ProductImage {
   id: number;
@@ -235,10 +235,17 @@ export interface ProductOptionSchema {
 
 export interface ProductListItem {
   id: number;
+  shopId?: number;
   title: string;
   slug: string;
+
   price: string;
+  compareAtPrice?: string | null;
   currency: string;
+
+  stock?: number;
+  sold?: number;
+
   status: ProductStatus;
   createdAt: string;
   updatedAt?: string;
@@ -248,6 +255,7 @@ export interface ProductListItem {
 
   images?: ProductImage[];
   thumbnailUrl?: string | null;
+  mainImageUrl?: string | null;
 }
 
 export interface ProductDetail {
