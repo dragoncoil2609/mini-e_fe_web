@@ -2,8 +2,83 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { OrdersApi } from '../../api/orders.api';
 import { ReviewsApi } from '../../api/reviews.api';
-import type { Order, ProductReview } from '../../api/types';
+import type { Order, PaymentStatus, ProductReview, ShippingStatus } from '../../api/types';
 import './OrderDetailPage.css';
+
+function formatMoney(value: string | number) {
+  return `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} VND`;
+}
+
+function labelPaymentStatus(status: PaymentStatus) {
+  const map: Record<string, string> = {
+    UNPAID: 'Chưa thanh toán',
+    PAID: 'Đã thanh toán',
+    REFUNDED: 'Đã hoàn tiền',
+  };
+  return map[String(status)] || String(status);
+}
+
+function labelShippingStatus(status: ShippingStatus) {
+  const map: Record<string, string> = {
+    PENDING: 'Chờ lấy hàng',
+    PICKED: 'Đã lấy hàng',
+    IN_TRANSIT: 'Đang giao',
+    DELIVERED: 'Đã giao',
+    RETURNED: 'Hoàn hàng',
+    CANCELED: 'Đã huỷ',
+  };
+  return map[String(status)] || String(status);
+}
+
+function labelOrderStatus(status: Order['status']) {
+  const map: Record<string, string> = {
+    PENDING: 'Chờ xử lý',
+    PAID: 'Đã thanh toán',
+    PROCESSING: 'Đang xử lý',
+    SHIPPED: 'Đang giao',
+    COMPLETED: 'Hoàn thành',
+    CANCELLED: 'Đã huỷ',
+    CONFIRMED: 'Đã xác nhận',
+    SHIPPING: 'Đang giao',
+    DELIVERED: 'Đã giao',
+    REFUNDED: 'Đã hoàn tiền',
+  };
+  return map[String(status)] || String(status);
+}
+
+function getFlowLabel(order: Order) {
+  if (order.shippingStatus === 'RETURNED') return 'Hoàn hàng';
+  if (order.status === 'CANCELLED' || order.shippingStatus === 'CANCELED') return 'Đã huỷ';
+  if (order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED') return 'Đã nhận hàng';
+  if (order.shippingStatus === 'DELIVERED') return 'Đã giao';
+  if (order.shippingStatus === 'IN_TRANSIT') return 'Đang giao';
+  if (order.shippingStatus === 'PICKED') return 'Đã lấy hàng';
+  if (order.status === 'PROCESSING') return 'Đang xử lý';
+  if (order.paymentStatus === 'PAID' && order.status === 'PENDING') return 'Đã thanh toán';
+  return 'Chờ xử lý';
+}
+
+function getStatusClass(order: Order) {
+  if (order.status === 'CANCELLED' || order.shippingStatus === 'CANCELED') {
+    return 'order-detail-status order-detail-status-cancelled';
+  }
+  if (order.shippingStatus === 'RETURNED' || order.paymentStatus === 'REFUNDED') {
+    return 'order-detail-status order-detail-status-cancelled';
+  }
+  if (order.status === 'COMPLETED' || order.shippingStatus === 'DELIVERED') {
+    return 'order-detail-status order-detail-status-completed';
+  }
+  if (order.status === 'SHIPPED' || order.shippingStatus === 'IN_TRANSIT') {
+    return 'order-detail-status order-detail-status-shipping';
+  }
+  if (order.status === 'PROCESSING' || order.shippingStatus === 'PICKED') {
+    return 'order-detail-status order-detail-status-processing';
+  }
+  if (order.paymentStatus === 'PAID') {
+    return 'order-detail-status order-detail-status-paid';
+  }
+  return 'order-detail-status order-detail-status-pending';
+}
 
 function Stars({
   value,
@@ -44,11 +119,11 @@ function Stars({
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // review
   const [reviewLoading, setReviewLoading] = useState(false);
   const [review, setReview] = useState<ProductReview | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -85,9 +160,7 @@ export default function OrderDetailPage() {
         setReview(null);
       }
     } catch (e: any) {
-      // nếu BE trả 404 khi chưa có review -> coi như chưa review
-      const status = e?.response?.status;
-      if (status === 404) {
+      if (e?.response?.status === 404) {
         setReview(null);
       } else {
         setReviewError(e?.response?.data?.message || 'Không tải được review');
@@ -99,23 +172,27 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     if (!order) return;
-    if (order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED') {
+
+    const canReviewNow = order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED';
+    if (canReviewNow) {
       void loadReview(order.id);
     } else {
       setReview(null);
       setReviewError(null);
     }
-  }, [order?.id, order?.shippingStatus, order?.status]);
+  }, [order]);
 
   const submitReview = async () => {
     if (!order) return;
     if (!(order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED')) return;
+
     if (!rating || rating < 1 || rating > 5) {
-      alert('Vui lòng chọn số sao (1-5)');
+      alert('Vui lòng chọn số sao từ 1 đến 5.');
       return;
     }
 
@@ -126,41 +203,19 @@ export default function OrderDetailPage() {
         rating,
         comment: content?.trim() ? content.trim() : undefined,
       });
+
       if (!res.success) {
-        alert(res.message || 'Tạo review thất bại');
+        alert(res.message || 'Tạo đánh giá thất bại');
         return;
       }
+
       setReview(res.data);
+      setContent('');
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Tạo review thất bại');
+      alert(e?.response?.data?.message || 'Tạo đánh giá thất bại');
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const labelFlow = (o: Order) => {
-    // hiển thị theo luồng bạn yêu cầu
-    if (o.status === 'COMPLETED' && o.shippingStatus === 'DELIVERED') return 'Đã nhận hàng';
-    if (o.status === 'COMPLETED' && o.shippingStatus === 'RETURNED') return 'Hoàn hàng';
-    const map: Record<string, string> = {
-      PENDING: 'Đã nhận đơn',
-      IN_TRANSIT: 'Đang giao',
-      DELIVERED: 'Đã giao',
-      RETURNED: 'Hoàn hàng',
-      CANCELED: 'Đã huỷ',
-      PICKED: 'Đã nhận đơn',
-    };
-    return map[String(o.shippingStatus)] || String(o.shippingStatus);
-  };
-
-  const statusClass = (s: Order['status']) => {
-    const key = String(s || '').toLowerCase();
-    const normalized: Record<string, string> = {
-      shipped: 'shipping',
-      completed: 'completed',
-      paid: 'paid',
-    };
-    return `order-detail-status order-detail-status-${normalized[key] || key}`;
   };
 
   const body = () => {
@@ -170,8 +225,12 @@ export default function OrderDetailPage() {
     if (!order) return null;
 
     const canReview = order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED';
-    const canConfirmReceived = order.shippingStatus === 'DELIVERED' && order.status !== 'COMPLETED';
-    const canRequestReturn = order.shippingStatus === 'DELIVERED' && order.status !== 'COMPLETED';
+    const canConfirmReceived =
+      order.shippingStatus === 'DELIVERED' && order.status !== 'COMPLETED';
+    const canRequestReturn =
+      order.status !== 'CANCELLED' &&
+      order.shippingStatus !== 'RETURNED' &&
+      (order.shippingStatus === 'DELIVERED' || order.status === 'COMPLETED');
 
     return (
       <>
@@ -182,6 +241,7 @@ export default function OrderDetailPage() {
               Mã đơn <b>{order.code}</b> • {new Date(order.createdAt).toLocaleString('vi-VN')}
             </p>
           </div>
+
           <div className="order-detail-title-actions">
             <button onClick={() => navigate('/orders')} className="order-detail-back-button">
               ← Quay lại
@@ -194,32 +254,53 @@ export default function OrderDetailPage() {
             <span className="order-detail-label">Mã đơn:</span>
             <span className="order-detail-value">{order.code}</span>
           </div>
+
           <div className="order-detail-info-row">
-            <span className="order-detail-label">Trạng thái:</span>
-            <span className={statusClass(order.status)}>{labelFlow(order)}</span>
+            <span className="order-detail-label">Luồng hiện tại:</span>
+            <span className={getStatusClass(order)}>{getFlowLabel(order)}</span>
           </div>
+
+          <div className="order-detail-info-row">
+            <span className="order-detail-label">Trạng thái đơn:</span>
+            <span className="order-detail-value">{labelOrderStatus(order.status)}</span>
+          </div>
+
           <div className="order-detail-info-row">
             <span className="order-detail-label">Giao hàng:</span>
-            <span className="order-detail-value">{labelFlow(order)}</span>
+            <span className="order-detail-value">{labelShippingStatus(order.shippingStatus)}</span>
           </div>
+
           <div className="order-detail-info-row">
             <span className="order-detail-label">Thanh toán:</span>
-            <span className="order-detail-value">{order.paymentMethod} - {order.paymentStatus}</span>
+            <span className="order-detail-value">
+              {order.paymentMethod} - {labelPaymentStatus(order.paymentStatus)}
+            </span>
           </div>
+
+          {order.paymentRef && (
+            <div className="order-detail-info-row">
+              <span className="order-detail-label">Mã giao dịch:</span>
+              <span className="order-detail-value">{order.paymentRef}</span>
+            </div>
+          )}
+
           <div className="order-detail-info-row">
             <span className="order-detail-label">Ngày đặt:</span>
-            <span className="order-detail-value">{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
+            <span className="order-detail-value">
+              {new Date(order.createdAt).toLocaleString('vi-VN')}
+            </span>
           </div>
         </div>
 
         <div className="order-detail-section">
           <h2 className="order-detail-section-title">Theo dõi đơn hàng</h2>
+
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => void load()}
               className="order-detail-back-button"
-              style={{ background: '#fff', border: '1px solid #e5e7eb' }}
+              style={{ background: '#fff', color: '#111827', border: '1px solid #e5e7eb' }}
             >
               🔄 Cập nhật trạng thái
             </button>
@@ -230,6 +311,7 @@ export default function OrderDetailPage() {
                 onClick={async () => {
                   if (!id) return;
                   if (!window.confirm('Xác nhận bạn đã nhận hàng?')) return;
+
                   try {
                     const res = await OrdersApi.confirmReceived(id);
                     if (!res.success) {
@@ -255,6 +337,7 @@ export default function OrderDetailPage() {
                 onClick={async () => {
                   if (!id) return;
                   if (!window.confirm('Bạn muốn yêu cầu hoàn hàng cho đơn này?')) return;
+
                   try {
                     const res = await OrdersApi.requestReturn(id);
                     if (!res.success) {
@@ -262,7 +345,7 @@ export default function OrderDetailPage() {
                       return;
                     }
                     await load();
-                    alert('Đã cập nhật trạng thái: Hoàn hàng.');
+                    alert('Đã cập nhật trạng thái hoàn hàng.');
                   } catch (e: any) {
                     alert(e?.response?.data?.message || 'Hoàn hàng thất bại');
                   }
@@ -274,8 +357,9 @@ export default function OrderDetailPage() {
               </button>
             )}
           </div>
+
           <div style={{ marginTop: 10, fontSize: 13, opacity: 0.8 }}>
-            Luồng: Đã nhận đơn → Đang giao → Đã giao → (Bạn xác nhận nhận hàng / hoàn hàng) → Kết thúc.
+            Luồng: Chờ xử lý → Đang xử lý / Đang giao → Đã giao → Bạn xác nhận đã nhận hàng hoặc yêu cầu hoàn hàng.
           </div>
         </div>
 
@@ -295,28 +379,27 @@ export default function OrderDetailPage() {
               <div key={it.id} className="order-detail-item">
                 <div className="order-detail-item-image">
                   {it.imageSnapshot ? (
-                    <img src={it.imageSnapshot} alt="" />
+                    <img src={it.imageSnapshot} alt={it.nameSnapshot} />
                   ) : (
                     <div className="order-detail-item-image-placeholder">📦</div>
                   )}
                 </div>
+
                 <div className="order-detail-item-info">
                   <Link to={`/products/${it.productId}`} className="order-detail-item-title">
                     {it.nameSnapshot}
                   </Link>
                   <div className="order-detail-item-price">
-                    {new Intl.NumberFormat('vi-VN').format(Number(it.price))} VND × {it.quantity}
+                    {formatMoney(it.price)} × {it.quantity}
                   </div>
                 </div>
-                <div className="order-detail-item-total">
-                  {new Intl.NumberFormat('vi-VN').format(Number(it.totalLine))} VND
-                </div>
+
+                <div className="order-detail-item-total">{formatMoney(it.totalLine)}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ✅ REVIEW SECTION */}
         <div className="order-detail-section">
           <h2 className="order-detail-section-title">Đánh giá sản phẩm</h2>
 
@@ -380,12 +463,21 @@ export default function OrderDetailPage() {
 
               {!reviewLoading && review && (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     <Stars value={review.rating} disabled />
                     <span style={{ fontSize: 12, opacity: 0.7 }}>
                       {new Date(review.createdAt).toLocaleString('vi-VN')}
                     </span>
                   </div>
+
                   <div style={{ fontSize: 14, lineHeight: 1.5 }}>
                     {review.comment || <span style={{ opacity: 0.7 }}>(Không có nhận xét)</span>}
                   </div>
@@ -407,21 +499,24 @@ export default function OrderDetailPage() {
           <div className="order-detail-summary">
             <div className="order-detail-summary-row">
               <span className="order-detail-summary-label">Tạm tính:</span>
-              <span className="order-detail-summary-value">
-                {new Intl.NumberFormat('vi-VN').format(Number(order.subtotal))} VND
-              </span>
+              <span className="order-detail-summary-value">{formatMoney(order.subtotal)}</span>
             </div>
+
             <div className="order-detail-summary-row">
               <span className="order-detail-summary-label">Phí ship:</span>
-              <span className="order-detail-summary-value">
-                {new Intl.NumberFormat('vi-VN').format(Number(order.shippingFee))} VND
-              </span>
+              <span className="order-detail-summary-value">{formatMoney(order.shippingFee)}</span>
             </div>
+
+            {!!Number(order.discount || 0) && (
+              <div className="order-detail-summary-row">
+                <span className="order-detail-summary-label">Giảm giá:</span>
+                <span className="order-detail-summary-value">- {formatMoney(order.discount)}</span>
+              </div>
+            )}
+
             <div className="order-detail-summary-total">
               <span className="order-detail-summary-total-label">Tổng cộng:</span>
-              <span className="order-detail-summary-total-value">
-                {new Intl.NumberFormat('vi-VN').format(Number(order.total))} VND
-              </span>
+              <span className="order-detail-summary-total-value">{formatMoney(order.total)}</span>
             </div>
           </div>
         </div>
@@ -436,10 +531,17 @@ export default function OrderDetailPage() {
           <button className="order-detail-brand" onClick={() => navigate('/home')}>
             Mini-E
           </button>
+
           <div className="order-detail-headerbar-right">
-            <Link className="order-detail-chip" to="/products">🛍️ Sản phẩm</Link>
-            <Link className="order-detail-chip" to="/cart">🛒 Giỏ hàng</Link>
-            <Link className="order-detail-chip" to="/orders">📦 Đơn hàng</Link>
+            <Link className="order-detail-chip" to="/products">
+              🛍️ Sản phẩm
+            </Link>
+            <Link className="order-detail-chip" to="/cart">
+              🛒 Giỏ hàng
+            </Link>
+            <Link className="order-detail-chip" to="/orders">
+              📦 Đơn hàng
+            </Link>
           </div>
         </div>
       </header>

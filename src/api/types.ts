@@ -450,6 +450,7 @@ export type OrderStatus =
   | 'SHIPPED'
   | 'COMPLETED'
   | 'CANCELLED'
+  // tương thích dữ liệu / UI cũ nếu còn dùng đâu đó
   | 'CONFIRMED'
   | 'SHIPPING'
   | 'DELIVERED'
@@ -527,10 +528,15 @@ export interface PreviewOrderResponse {
     formattedAddress: string;
   };
   orders: Array<{
-    product: { id: number; title: string };
+    shop: {
+      id: number;
+      name: string;
+      slug: string;
+    };
     items: Array<{
       id: number;
       variantId: number | null;
+      productId: number;
       name: string;
       imageUrl: string | null;
       price: number;
@@ -542,7 +548,11 @@ export interface PreviewOrderResponse {
     shippingFee: number;
     total: number;
   }>;
-  summary: { subtotal: number; shippingFee: number; total: number };
+  summary: {
+    subtotal: number;
+    shippingFee: number;
+    total: number;
+  };
 }
 
 export interface CreateOrderDto {
@@ -560,7 +570,7 @@ export type CreateOrderResponse =
       session: { code: string; amount: number; status: string };
       paymentUrl: string;
     };
-
+    
 // ================== REVIEWS ==================
 
 export interface ReviewUserPublic {

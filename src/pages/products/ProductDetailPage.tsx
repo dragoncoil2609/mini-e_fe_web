@@ -126,12 +126,12 @@ export default function ProductDetailPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [variantLoadFailed, setVariantLoadFailed] = useState<boolean>(false);
 
   const [adding, setAdding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
-  // ===== REVIEWS =====
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewSummary, setReviewSummary] = useState<{ count: number; avg: number }>({ count: 0, avg: 0 });
   const [reviewPage, setReviewPage] = useState(1);
@@ -188,8 +188,12 @@ export default function ProductDetailPage() {
 
     setLoading(true);
     setError(null);
+    setVariantLoadFailed(false);
 
-    Promise.all([getPublicProductDetail(numericId), getProductVariants(numericId).catch(() => null)])
+    Promise.all([
+      getPublicProductDetail(numericId),
+      getProductVariants(numericId).catch(() => null),
+    ])
       .then(([detailRes, variantRes]) => {
         const detail = (detailRes as unknown as ApiResponse<ProductDetail>).data;
 
@@ -203,8 +207,10 @@ export default function ProductDetailPage() {
         if (variantRes) {
           const vs = (variantRes as unknown as ApiResponse<ProductVariant[]>).data;
           setVariants(Array.isArray(vs) ? vs : []);
+          setVariantLoadFailed(false);
         } else {
           setVariants([]);
+          setVariantLoadFailed(true);
         }
       })
       .catch((err) => {
@@ -258,7 +264,6 @@ export default function ProductDetailPage() {
     setPreviewImage(getMainImageUrl(product) || null);
   }, [currentVariant, allImages, product]);
 
-  // ===== LOAD REVIEWS (public) =====
   useEffect(() => {
     if (!numericId) return;
 
@@ -328,12 +333,18 @@ export default function ProductDetailPage() {
   };
 
   const displayPrice = currentVariant?.price ?? product?.price;
-  const displayStock = currentVariant?.stock ?? 0;
+  const displayStock =
+    currentVariant?.stock ??
+    (optionSchema.length > 0 ? totalVariantStock : Number(product?.stock ?? 0));
 
   const numericStock = Number(displayStock ?? 0);
   const inStock = numericStock > 0;
 
-  const canPurchase = inStock && (!optionSchema.length || isFullOptionsSelected) && !!currentVariant;
+  const canPurchase =
+    inStock &&
+    !variantLoadFailed &&
+    (!optionSchema.length || isFullOptionsSelected) &&
+    !!currentVariant;
 
   const clampQty = (q: number) => {
     const min = 1;
@@ -347,13 +358,18 @@ export default function ProductDetailPage() {
 
     if (!product) return false;
 
-    if (!currentVariant) {
-      setActionError('Vui lòng chọn biến thể trước khi thêm vào giỏ.');
+    if (variantLoadFailed) {
+      setActionError('Không tải được thông tin biến thể của sản phẩm. Vui lòng thử lại sau.');
       return false;
     }
 
     if (optionSchema.length && !isFullOptionsSelected) {
       setActionError('Vui lòng chọn đầy đủ biến thể.');
+      return false;
+    }
+
+    if (!currentVariant) {
+      setActionError('Vui lòng chọn biến thể trước khi thêm vào giỏ.');
       return false;
     }
 
@@ -417,8 +433,6 @@ export default function ProductDetailPage() {
       <div className="pdp-loading">
         <div className="pdp-error-card">
           <div style={{ marginBottom: 12 }}>{error || 'Sản phẩm không tồn tại.'}</div>
-
-          {/* ✅ đổi về /home thay vì /products (product list) */}
           <button type="button" className="pdp-btn-buy" onClick={() => navigate('/home')}>
             ← Quay lại trang chủ
           </button>
@@ -442,16 +456,12 @@ export default function ProductDetailPage() {
         <div className="pdp-breadcrumb">
           <span onClick={() => navigate('/home')}>Trang chủ</span>
           <span className="pdp-breadcrumb-sep">/</span>
-
-          {/* ✅ đổi "Sản phẩm" (product list) về /home */}
           <span onClick={() => navigate('/home')}>Sản phẩm</span>
-
           <span className="pdp-breadcrumb-sep">/</span>
           <span className="pdp-breadcrumb-current">{product.title}</span>
         </div>
 
         <div className="pdp-main-card">
-          {/* LEFT */}
           <div className="pdp-gallery-col">
             <div className="pdp-main-image-frame">
               {mainUrl ? <img src={mainUrl} alt={product.title} /> : <div className="pdp-no-image">No image</div>}
@@ -474,7 +484,6 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* RIGHT */}
           <div className="pdp-info-col">
             {shop && (
               <div className="pdp-shop-header">
@@ -525,7 +534,9 @@ export default function ProductDetailPage() {
             <div className="pdp-meta-info">
               <div className="pdp-meta-item">
                 <div className="pdp-meta-label">Tồn kho</div>
-                <div className="pdp-meta-value">{optionSchema.length ? numericStock : totalVariantStock}</div>
+                <div className="pdp-meta-value">
+                  {optionSchema.length ? (currentVariant ? numericStock : totalVariantStock) : numericStock}
+                </div>
               </div>
 
               <div className="pdp-meta-item">
@@ -567,9 +578,11 @@ export default function ProductDetailPage() {
                 <button type="button" className="pdp-btn-buy" disabled={!canPurchase || adding} onClick={handleBuyNow}>
                   {canPurchase
                     ? 'Mua ngay'
-                    : optionSchema.length && !isFullOptionsSelected
-                      ? 'Vui lòng chọn biến thể'
-                      : 'Hết hàng'}
+                    : variantLoadFailed
+                      ? 'Chưa tải được biến thể'
+                      : optionSchema.length && !isFullOptionsSelected
+                        ? 'Vui lòng chọn biến thể'
+                        : 'Hết hàng'}
                 </button>
               </div>
             </div>
@@ -590,7 +603,6 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-        {/* ===== REVIEWS ===== */}
         <div className="pdp-reviews-section">
           <div className="pdp-reviews-header">
             <h3>Đánh giá</h3>
