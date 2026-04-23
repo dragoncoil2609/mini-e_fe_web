@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ApiResponse, Category, PaginatedResult, ProductListItem, ProductStatus } from '../../../api/types';
-import { getPublicProducts, updateProduct, deleteProduct } from '../../../api/products.api';
+import type {
+  ApiResponse,
+  Category,
+  PaginatedResult,
+  ProductListItem,
+  ProductStatus,
+} from '../../../api/types';
+import {
+  getAdminProducts,
+  updateProduct,
+  deleteProduct,
+} from '../../../api/products.api';
 import { getPublicCategories } from '../../../api/categories.api';
 import { getBeMessage } from '../../../api/apiError';
 import './AdminProductsPage.css';
@@ -59,14 +69,16 @@ export default function AdminProductsPage() {
   const fetchList = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const res = await getPublicProducts({
+      const res = await getAdminProducts({
         page,
         limit,
         q: q.trim() || undefined,
         status: status || undefined,
         categoryId: categoryId || undefined,
       });
+
       if (!res.success) {
         setError(res.message || 'Không lấy được danh sách sản phẩm.');
         setItems([]);
@@ -99,7 +111,6 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     void fetchList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   const onSearch = (e: React.FormEvent) => {
@@ -115,15 +126,17 @@ export default function AdminProductsPage() {
   const onSaveStatus = async (id: number) => {
     const next = statusDrafts[id];
     if (!next) return;
+
     setSavingId(id);
     setError(null);
+
     try {
       const res = await updateProduct(id, { status: next });
       if (!res.success) {
         setError(res.message || 'Cập nhật trạng thái thất bại.');
         return;
       }
-      setItems((prev) => prev.map((p) => (p.id === id ? ({ ...p, status: next } as any) : p)));
+      setItems((prev) => prev.map((p) => (p.id === id ? { ...p, status: next } : p)));
     } catch (e) {
       setError(getBeMessage(e, 'Cập nhật trạng thái thất bại.'));
     } finally {
@@ -133,8 +146,10 @@ export default function AdminProductsPage() {
 
   const onDelete = async (id: number) => {
     if (!window.confirm('Bạn chắc chắn muốn xoá sản phẩm này?')) return;
+
     setDeletingId(id);
     setError(null);
+
     try {
       const res = await deleteProduct(id);
       if (!res.success) {
@@ -155,7 +170,9 @@ export default function AdminProductsPage() {
       <div className="admin-products__topbar">
         <div className="admin-products__titlewrap">
           <h1 className="admin-products__title">Quản lý sản phẩm</h1>
-          <div className="admin-products__subtitle">Admin xem danh sách + đổi trạng thái + xoá</div>
+          <div className="admin-products__subtitle">
+            Admin xem danh sách, đổi trạng thái và xoá
+          </div>
         </div>
 
         <button type="button" className="btn btn--ghost" onClick={() => navigate('/admin')}>
@@ -171,13 +188,22 @@ export default function AdminProductsPage() {
       <div className="admin-card">
         <div className="admin-toolbar">
           <form className="admin-toolbar__left" onSubmit={onSearch}>
-            <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm theo tên/slug..." />
+            <input
+              className="input"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Tìm theo tên hoặc slug..."
+            />
 
-            <select className="select" value={status} onChange={(e) => setStatus(e.target.value as any)}>
+            <select
+              className="select"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StatusFilter)}
+            >
               <option value="">-- Tất cả status --</option>
               <option value="ACTIVE">ACTIVE</option>
               <option value="DRAFT">DRAFT</option>
-              <option value="INACTIVE">INACTIVE</option>
+              <option value="ARCHIVED">ARCHIVED</option>
             </select>
 
             <select
@@ -186,7 +212,9 @@ export default function AdminProductsPage() {
               onChange={(e) => setCategoryId(Number(e.target.value))}
               disabled={loadingCats}
             >
-              <option value="0">{loadingCats ? 'Đang tải danh mục...' : '-- Tất cả danh mục --'}</option>
+              <option value="0">
+                {loadingCats ? 'Đang tải danh mục...' : '-- Tất cả danh mục --'}
+              </option>
               {sortedCats.map((c) => (
                 <option key={c.id} value={String(c.id)}>
                   {c.parentId ? `— ${c.name}` : c.name}
@@ -218,6 +246,7 @@ export default function AdminProductsPage() {
               <th style={{ width: 210 }}>Hành động</th>
             </tr>
           </thead>
+
           <tbody>
             {items.length === 0 ? (
               <tr>
@@ -229,15 +258,26 @@ export default function AdminProductsPage() {
               items.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
+
                   <td>
                     <div style={{ fontWeight: 900 }}>{p.title}</div>
                     <div style={{ color: '#6b7280', fontSize: 13 }}>{p.slug}</div>
                   </td>
-                  <td>{(p as any).shopId ?? '—'}</td>
+
+                  <td>{p.shopId ?? '—'}</td>
                   <td>{p.categoryId ?? '—'}</td>
+
                   <td>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                      }}
+                    >
                       <span className={pillClass(p.status)}>{p.status}</span>
+
                       <select
                         className="select"
                         value={statusDrafts[p.id] || p.status}
@@ -245,8 +285,9 @@ export default function AdminProductsPage() {
                       >
                         <option value="ACTIVE">ACTIVE</option>
                         <option value="DRAFT">DRAFT</option>
-                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="ARCHIVED">ARCHIVED</option>
                       </select>
+
                       <button
                         type="button"
                         className="btn btn--primary"
@@ -257,15 +298,27 @@ export default function AdminProductsPage() {
                       </button>
                     </div>
                   </td>
+
                   <td>{p.price}</td>
+
                   <td>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button type="button" className="btn btn--ghost" onClick={() => navigate(`/products/${p.id}`)}>
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => navigate(`/products/${p.id}`)}
+                      >
                         Xem
                       </button>
-                      <button type="button" className="btn btn--ghost" onClick={() => navigate(`/me/products/${p.id}/edit`)}>
-                        Sửa (seller UI)
+
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => navigate(`/me/products/${p.id}/edit`)}
+                      >
+                        Sửa
                       </button>
+
                       <button
                         type="button"
                         className="btn btn--danger"
@@ -282,10 +335,24 @@ export default function AdminProductsPage() {
           </tbody>
         </table>
 
-        <div style={{ padding: 12, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn--ghost" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+        <div
+          style={{
+            padding: 12,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn--ghost"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
             ← Trước
           </button>
+
           <button
             type="button"
             className="btn btn--ghost"
@@ -299,5 +366,3 @@ export default function AdminProductsPage() {
     </div>
   );
 }
-
-

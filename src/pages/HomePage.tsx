@@ -1,4 +1,3 @@
-// src/pages/HomePage.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type {
@@ -27,6 +26,45 @@ type QuickKey =
   | 'Thương hiệu'
   | 'Gợi ý cho bạn';
 
+const LIMIT = 20;
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function formatPrice(value: string | number | null | undefined): string {
+  return new Intl.NumberFormat('vi-VN').format(toNumber(value));
+}
+
+function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function getDiscountPercent(product: ProductListItem): number {
+  const price = toNumber(product.price);
+  const compare = toNumber(product.compareAtPrice);
+  if (compare <= 0 || compare <= price) return 0;
+  return Math.round(((compare - price) / compare) * 100);
+}
+
+function getSafeImageUrl(product: ProductListItem): string | null {
+  const byUtil = getMainImageUrl(product as any);
+  if (byUtil) return byUtil;
+
+  if (product.mainImageUrl) return product.mainImageUrl;
+  if (product.thumbnailUrl) return product.thumbnailUrl;
+
+  const firstImage = Array.isArray(product.images)
+    ? product.images.find((img) => img?.isMain) || product.images[0]
+    : null;
+
+  return firstImage?.url || null;
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,8 +73,8 @@ export function HomePage() {
   const [myShop, setMyShop] = useState<Shop | null>(null);
 
   const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [searchInput, setSearchInput] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +85,6 @@ export function HomePage() {
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 20;
 
   const sidebarItems = useMemo(
     () =>
@@ -70,12 +107,23 @@ export function HomePage() {
   const [expandedParentId, setExpandedParentId] = useState<number>(0);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authFrom, setAuthFrom] = useState<string>('/home');
+  const [authFrom, setAuthFrom] = useState('/home');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q')?.trim() || '';
+    const categoryId = Number(params.get('categoryId') || 0);
+    const nextPage = Number(params.get('page') || 1);
+
+    setSearchInput(q);
+    setSearchQuery(q);
+    setActiveCategoryId(Number.isFinite(categoryId) && categoryId > 0 ? categoryId : 0);
+    setPage(Number.isFinite(nextPage) && nextPage > 0 ? nextPage : 1);
+  }, [location.search]);
 
   useEffect(() => {
     void loadUserAndShop();
     void loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -87,17 +135,43 @@ export function HomePage() {
   }, [location.state]);
 
   useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    if (activeCategoryId > 0) params.set('categoryId', String(activeCategoryId));
+    if (page > 1) params.set('page', String(page));
+
+    const nextSearch = params.toString() ? `?${params.toString()}` : '';
+    if (nextSearch !== location.search) {
+      navigate(
+        {
+          pathname: '/home',
+          search: nextSearch,
+        },
+        { replace: true },
+      );
+    }
+  }, [searchQuery, activeCategoryId, page, location.search, navigate]);
+
+  useEffect(() => {
     void loadProducts();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, page, activeCategoryId]);
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [message]);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!showMenu) return;
       const el = menuRef.current;
-      if (el && !el.contains(e.target as Node)) setShowMenu(false);
+      if (el && !el.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
     };
+
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showMenu]);
@@ -146,7 +220,9 @@ export function HomePage() {
       if (res.success) {
         const tree = Array.isArray(res.data) ? res.data : [];
         setCategoryTree(tree);
-        if (tree.length) setExpandedParentId(tree[0].id);
+        if (tree.length && !expandedParentId) {
+          setExpandedParentId(tree[0].id);
+        }
       } else {
         setCategoryTree([]);
       }
@@ -165,94 +241,43 @@ export function HomePage() {
     try {
       const res = await getPublicProducts({
         page,
-        limit,
+        limit: LIMIT,
         q: searchQuery || undefined,
-        status: 'ACTIVE',
         categoryId: activeCategoryId || undefined,
       });
 
       if (res.success) {
-        const payload = (res as unknown as ApiResponse<
-          PaginatedResult<ProductListItem>
-        >).data;
-        setProducts(payload.items);
-        setTotal(payload.total);
+        const payload = (res as unknown as ApiResponse<PaginatedResult<ProductListItem>>).data;
+        setProducts(Array.isArray(payload.items) ? payload.items : []);
+        setTotal(Number(payload.total || 0));
       } else {
+        setProducts([]);
+        setTotal(0);
         setError(res.message || 'Không tải được danh sách sản phẩm.');
       }
     } catch (err: any) {
       console.error(err);
-      setError(
-        err?.response?.data?.message || 'Không tải được danh sách sản phẩm.',
-      );
+      setProducts([]);
+      setTotal(0);
+      setError(err?.response?.data?.message || 'Không tải được danh sách sản phẩm.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-    setSearchQuery(searchInput.trim());
-  };
-
-  const handleClearSearch = () => {
-    setSearchInput('');
-    setSearchQuery('');
-    setPage(1);
-  };
-
-  const handleProductClick = (productId: number) => navigate(`/products/${productId}`);
-
-  const handleAddToCart = async (productId: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    navigate(`/products/${productId}`);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await AuthApi.logout();
-    } catch {
-      // ignore
-    } finally {
-      localStorage.removeItem('current_user');
-      clearAccessToken();
-      setUser(null);
-      setMyShop(null);
-      navigate('/home');
-    }
-  };
-
-  const handleShopNavigation = () => {
-    if (!user) {
-      setAuthFrom('/shops/register');
-      setShowAuthModal(true);
-      return;
-    }
-
-    if (myShop?.id) {
-      navigate('/shops/me');
-      return;
-    }
-
-    navigate('/shops/register');
-  };
-
-  const formatPrice = (price: string): string => {
-    const num = parseFloat(price);
-    return new Intl.NumberFormat('vi-VN').format(num);
-  };
-
-  const totalPages = Math.max(1, Math.ceil(total / limit));
   const parentCategories = useMemo(() => categoryTree ?? [], [categoryTree]);
+
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const resolveCategoryName = useMemo(() => {
     if (!activeCategoryId) return 'Tất cả sản phẩm';
+
     const stack: Category[] = [];
     parentCategories.forEach((p) => {
       stack.push(p);
       (p.children ?? []).forEach((c) => stack.push(c));
     });
+
     const found = stack.find((c) => c.id === activeCategoryId);
     return found?.name ?? 'Sản phẩm';
   }, [activeCategoryId, parentCategories]);
@@ -264,6 +289,50 @@ export function HomePage() {
     const initials = parts.map((p) => p[0]?.toUpperCase()).join('');
     return initials || 'U';
   }, [user]);
+
+  const displayedProducts = useMemo(() => {
+    const items = [...products];
+
+    switch (activeQuick) {
+      case 'Khuyến mãi hôm nay':
+        return items.sort((a, b) => getDiscountPercent(b) - getDiscountPercent(a));
+
+      case 'Sản phẩm mới':
+        return items.sort(
+          (a, b) =>
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+        );
+
+      case 'Bán chạy':
+        return items.sort((a, b) => toNumber(b.sold) - toNumber(a.sold));
+
+      case 'Giảm giá sốc':
+        return items.sort((a, b) => getDiscountPercent(b) - getDiscountPercent(a));
+
+      case 'Thương hiệu':
+        return items.sort((a, b) => a.title.localeCompare(b.title, 'vi'));
+
+      case 'Gợi ý cho bạn':
+        return items.sort((a, b) => {
+          const soldDiff = toNumber(b.sold) - toNumber(a.sold);
+          if (soldDiff !== 0) return soldDiff;
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+      default:
+        return items;
+    }
+  }, [products, activeQuick]);
+
+  const resultsHint = useMemo(() => {
+    const bits: string[] = [];
+
+    if (searchQuery) bits.push(`Từ khóa: "${searchQuery}"`);
+    if (activeCategoryId) bits.push(`Danh mục: ${resolveCategoryName}`);
+    if (activeQuick) bits.push(`Chế độ xem: ${activeQuick}`);
+
+    return bits.join(' • ');
+  }, [searchQuery, activeCategoryId, resolveCategoryName, activeQuick]);
 
   const quickIcon = (key: QuickKey) => {
     switch (key) {
@@ -284,73 +353,6 @@ export function HomePage() {
     }
   };
 
-  const handlePickAll = () => {
-    setPage(1);
-    setActiveCategoryId(0);
-  };
-
-  const handlePickParent = (parentId: number) => {
-    setPage(1);
-    setExpandedParentId((cur) => (cur === parentId ? 0 : parentId));
-
-    const p = parentCategories.find((x) => x.id === parentId);
-    const kids = (p?.children ?? []) as Category[];
-
-    if (kids.length) {
-      setActiveCategoryId(kids[0].id);
-    } else {
-      setActiveCategoryId(parentId);
-    }
-  };
-
-  const handlePickChild = (childId: number) => {
-    setPage(1);
-    setActiveCategoryId(childId);
-  };
-
-  const renderProductCard = (product: ProductListItem) => {
-    const imageUrl = getMainImageUrl(product);
-
-    return (
-      <div
-        key={product.id}
-        className="home-product-card"
-        onClick={() => handleProductClick(product.id)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') handleProductClick(product.id);
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        <div className="home-product-image-wrapper">
-          {imageUrl ? (
-            <img src={imageUrl} alt={product.title} className="home-product-image" />
-          ) : (
-            <div className="home-product-image-placeholder">📦</div>
-          )}
-        </div>
-
-        <div className="home-product-info">
-          <h3 className="home-product-title">{product.title}</h3>
-
-          <div className="home-product-meta">
-            <div className="home-product-price">
-              {formatPrice(product.price)} {product.currency}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={(e) => void handleAddToCart(product.id, e)}
-            className="home-product-add-button"
-          >
-            Xem & chọn biến thể
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   const shopStatusText = (status?: ShopStatus) => {
     switch (status) {
       case 'PENDING':
@@ -362,6 +364,162 @@ export function HomePage() {
       default:
         return 'Đăng ký bán hàng';
     }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    setSearchQuery(searchInput.trim());
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setActiveCategoryId(0);
+    setPage(1);
+    setActiveQuick('Khuyến mãi hôm nay');
+  };
+
+  const handleProductClick = (productId: number) => {
+    navigate(`/products/${productId}`);
+  };
+
+  const handleViewProduct = (productId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    navigate(`/products/${productId}`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AuthApi.logout();
+    } catch {
+      // ignore
+    } finally {
+      localStorage.removeItem('current_user');
+      clearAccessToken();
+      setUser(null);
+      setMyShop(null);
+      setShowMenu(false);
+      setMessage('Bạn đã đăng xuất.');
+      navigate('/home');
+    }
+  };
+
+  const handleShopNavigation = () => {
+    if (!user) {
+      setAuthFrom('/shops/register');
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (myShop?.id) {
+      navigate('/shops/me');
+      return;
+    }
+
+    navigate('/shops/register');
+  };
+
+  const handlePickAll = () => {
+    setPage(1);
+    setActiveCategoryId(0);
+  };
+
+  const handlePickParent = (parentId: number) => {
+    setPage(1);
+    setExpandedParentId((cur) => (cur === parentId ? 0 : parentId));
+    setActiveCategoryId(parentId);
+  };
+
+  const handlePickChild = (parentId: number, childId: number) => {
+    setPage(1);
+    setExpandedParentId(parentId);
+    setActiveCategoryId(childId);
+  };
+
+  const renderProductCard = (product: ProductListItem) => {
+    const imageUrl = getSafeImageUrl(product);
+    const discountPercent = getDiscountPercent(product);
+    const sold = toNumber(product.sold);
+    const stock = toNumber(product.stock);
+    const outOfStock = stock > 0 ? false : stock === 0;
+    const isNew =
+      Date.now() - new Date(product.createdAt || 0).getTime() <= 1000 * 60 * 60 * 24 * 7;
+
+    return (
+      <div
+        key={product.id}
+        className="home-product-card"
+        onClick={() => handleProductClick(product.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleProductClick(product.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        <div className="home-product-image-wrapper">
+          {imageUrl ? (
+            <img src={imageUrl} alt={product.title} className="home-product-image" />
+          ) : (
+            <div className="home-product-image-placeholder">📦</div>
+          )}
+
+          <div className="home-product-badges">
+            {discountPercent > 0 && (
+              <span className="home-product-badge home-product-badge--sale">
+                -{discountPercent}%
+              </span>
+            )}
+            {isNew && (
+              <span className="home-product-badge home-product-badge--new">Mới</span>
+            )}
+            {outOfStock && (
+              <span className="home-product-badge home-product-badge--muted">
+                Hết hàng
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="home-product-info">
+          <h3 className="home-product-title">{product.title}</h3>
+
+          <div className="home-product-prices">
+            <div className="home-product-price">
+              {formatPrice(product.price)} {product.currency}
+            </div>
+
+            {toNumber(product.compareAtPrice) > toNumber(product.price) && (
+              <div className="home-product-price-old">
+                {formatPrice(product.compareAtPrice)} {product.currency}
+              </div>
+            )}
+          </div>
+
+          <div className="home-product-extra">
+            <span>{sold > 0 ? `Đã bán ${formatCompactNumber(sold)}` : 'Mới lên kệ'}</span>
+            <span>{product.category?.name || 'Danh mục khác'}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => handleViewProduct(product.id, e)}
+            className="home-product-add-button"
+          >
+            Xem chi tiết
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -390,17 +548,19 @@ export function HomePage() {
               placeholder="Tìm kiếm sản phẩm, shop, từ khóa..."
               className="home-search__input"
             />
+
             {searchInput.trim().length > 0 && (
               <button
                 type="button"
                 className="home-search__clear"
                 onClick={handleClearSearch}
-                aria-label="Clear"
+                aria-label="Xóa từ khóa"
               >
                 ✕
               </button>
             )}
-            <button type="submit" className="home-search__btn" aria-label="Search">
+
+            <button type="submit" className="home-search__btn" aria-label="Tìm kiếm">
               Tìm
             </button>
           </form>
@@ -481,7 +641,6 @@ export function HomePage() {
                       type="button"
                       onClick={() => {
                         void handleLogout();
-                        setShowMenu(false);
                       }}
                       className="home-menu-item home-menu-item--danger"
                     >
@@ -544,9 +703,7 @@ export function HomePage() {
                           }`}
                           onClick={() => setActiveQuick(it)}
                         >
-                          <span className="home-sidebar-quickitem__icon">
-                            {quickIcon(it)}
-                          </span>
+                          <span className="home-sidebar-quickitem__icon">{quickIcon(it)}</span>
                           <span className="home-sidebar-quickitem__text">{it}</span>
                         </button>
                       </li>
@@ -576,12 +733,15 @@ export function HomePage() {
                       {parentCategories.map((p) => {
                         const kids = (p.children ?? []) as Category[];
                         const expanded = expandedParentId === p.id;
+                        const parentActive = activeCategoryId === p.id;
 
                         return (
                           <div key={p.id} className="home-cat-group">
                             <button
                               type="button"
-                              className="home-cat-parent"
+                              className={`home-cat-parent ${
+                                parentActive ? 'home-cat-parent--active' : ''
+                              }`}
                               onClick={() => handlePickParent(p.id)}
                               title={p.name}
                             >
@@ -598,11 +758,9 @@ export function HomePage() {
                                     key={c.id}
                                     type="button"
                                     className={`home-cat-child ${
-                                      activeCategoryId === c.id
-                                        ? 'home-cat-child--active'
-                                        : ''
+                                      activeCategoryId === c.id ? 'home-cat-child--active' : ''
                                     }`}
-                                    onClick={() => handlePickChild(c.id)}
+                                    onClick={() => handlePickChild(p.id, c.id)}
                                     title={c.name}
                                   >
                                     {c.name}
@@ -626,19 +784,15 @@ export function HomePage() {
                       Mua sắm tiện lợi, giá tốt mỗi ngày
                     </div>
                     <div className="home-hero-sub">
-                      Tìm sản phẩm nhanh • Xem chi tiết rõ ràng • Chọn biến thể dễ
-                      dàng • Thanh toán thuận tiện.
+                      Tìm sản phẩm nhanh • Xem chi tiết rõ ràng • Chọn biến thể dễ dàng •
+                      Thanh toán thuận tiện.
                     </div>
 
                     <div className="home-hero-actions">
                       <button
                         type="button"
                         className="home-hero-button"
-                        onClick={() => {
-                          handlePickAll();
-                          setSearchInput('');
-                          setSearchQuery('');
-                        }}
+                        onClick={handleResetFilters}
                       >
                         Xem tất cả sản phẩm
                       </button>
@@ -665,25 +819,33 @@ export function HomePage() {
                       <div className="home-products-sub">
                         {total} sản phẩm • Trang {page}/{totalPages}
                       </div>
+                      {resultsHint && (
+                        <div className="home-products-hint">{resultsHint}</div>
+                      )}
                     </div>
 
                     <div className="home-products-header-right">
                       <button
                         type="button"
                         className="home-soft-btn"
-                        onClick={handleClearSearch}
-                        disabled={!searchQuery}
+                        onClick={handleResetFilters}
+                        disabled={!searchQuery && activeCategoryId === 0}
                       >
-                        Xóa tìm kiếm
+                        Đặt lại bộ lọc
                       </button>
                     </div>
                   </div>
 
-                  {products.length === 0 ? (
-                    <div className="home-empty">Không có sản phẩm phù hợp.</div>
+                  {displayedProducts.length === 0 ? (
+                    <div className="home-empty">
+                      <div className="home-empty__title">Không có sản phẩm phù hợp.</div>
+                      <div className="home-empty__sub">
+                        Hãy thử đổi từ khóa, danh mục hoặc quay về tất cả sản phẩm.
+                      </div>
+                    </div>
                   ) : (
                     <div className="home-products-grid">
-                      {products.map(renderProductCard)}
+                      {displayedProducts.map(renderProductCard)}
                     </div>
                   )}
 
@@ -696,9 +858,11 @@ export function HomePage() {
                     >
                       ← Trước
                     </button>
+
                     <div className="home-pagination-info">
                       Trang {page} / {totalPages}
                     </div>
+
                     <button
                       type="button"
                       className="home-pagination-button"
@@ -719,80 +883,36 @@ export function HomePage() {
         <div className="home-footer-inner">
           <div className="home-footer-column">
             <div className="home-footer-heading">Mini E</div>
-            <button className="home-footer-link" onClick={() => navigate('/home')}>
+            <button type="button" className="home-footer-link" onClick={() => navigate('/home')}>
               Trang chủ
             </button>
-            <button
-              className="home-footer-link"
-              onClick={() => navigate('/products')}
-            >
-              Sản phẩm
-            </button>
-            <button className="home-footer-link" onClick={() => navigate('/cart')}>
+            <button type="button" className="home-footer-link" onClick={() => navigate('/cart')}>
               Giỏ hàng
             </button>
           </div>
 
           <div className="home-footer-column">
             <div className="home-footer-heading">Tài khoản</div>
-            <button className="home-footer-link" onClick={() => navigate('/me')}>
-              Thông tin cá nhân
+            <button type="button" className="home-footer-link" onClick={() => navigate('/me')}>
+              Hồ sơ cá nhân
             </button>
-            <button
-              className="home-footer-link"
-              onClick={() => navigate('/orders')}
-            >
+            <button type="button" className="home-footer-link" onClick={() => navigate('/orders')}>
               Đơn hàng
             </button>
-            <button
-              className="home-footer-link"
-              onClick={() => navigate('/addresses')}
-            >
-              Địa chỉ
+          </div>
+
+          <div className="home-footer-column">
+            <div className="home-footer-heading">Bán hàng</div>
+            <button type="button" className="home-footer-link" onClick={handleShopNavigation}>
+              {myShop?.id ? 'Shop của tôi' : 'Mở shop'}
             </button>
-          </div>
-
-          <div className="home-footer-column">
-            <div className="home-footer-heading">Hỗ trợ</div>
-            <button className="home-footer-link">Hotline</button>
-            <button className="home-footer-link">Chính sách</button>
-            <button className="home-footer-link">Liên hệ</button>
-          </div>
-
-          <div className="home-footer-column">
-            <div className="home-footer-heading">Bắt đầu</div>
-
-            {!user ? (
-              <>
-                <button
-                  className="home-footer-link"
-                  onClick={() => navigate('/login', { state: { from: '/home' } })}
-                >
-                  Đăng nhập
-                </button>
-                <button
-                  className="home-footer-link"
-                  onClick={() => navigate('/register', { state: { from: '/home' } })}
-                >
-                  Đăng ký
-                </button>
-                <button
-                  className="home-footer-link"
-                  onClick={() => navigate('/shops/register')}
-                >
-                  Mở shop
-                </button>
-              </>
-            ) : (
-              <>
-                <button className="home-footer-link" onClick={() => navigate('/me')}>
-                  Tài khoản của tôi
-                </button>
-                <button className="home-footer-link" onClick={handleShopNavigation}>
-                  {myShop?.id ? shopStatusText(myShop.status) : 'Đăng ký bán hàng'}
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              className="home-footer-link"
+              onClick={() => navigate('/shops/register')}
+            >
+              Đăng ký shop
+            </button>
           </div>
         </div>
       </footer>
@@ -800,14 +920,13 @@ export function HomePage() {
       {showAuthModal && (
         <div
           className="auth-overlay"
-          role="dialog"
-          aria-modal="true"
           onClick={() => setShowAuthModal(false)}
+          role="presentation"
         >
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <div className="auth-modal__title">Bạn cần đăng nhập</div>
             <div className="auth-modal__desc">
-              Trang này yêu cầu tài khoản. Đăng nhập/đăng ký để tiếp tục.
+              Để tiếp tục tới trang này, bạn hãy đăng nhập hoặc tạo tài khoản mới.
             </div>
 
             <div className="auth-modal__actions">
@@ -833,7 +952,7 @@ export function HomePage() {
               className="auth-modal__close"
               onClick={() => setShowAuthModal(false)}
             >
-              Tiếp tục xem trang chủ
+              Đóng
             </button>
           </div>
         </div>

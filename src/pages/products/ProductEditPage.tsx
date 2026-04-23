@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getPublicProductDetail, updateProduct } from '../../api/products.api';
+import {
+  getManageProductDetail,
+  updateProduct,
+} from '../../api/products.api';
 import { getPublicCategories } from '../../api/categories.api';
-import type { ProductDetail, ApiResponse, UpdateProductDto, Category } from '../../api/types';
+import type {
+  ProductDetail,
+  ApiResponse,
+  UpdateProductDto,
+  Category,
+  ProductStatus,
+} from '../../api/types';
 import './style/ProductEditPage.css';
 
 type ProductImageLike = {
@@ -22,8 +31,8 @@ export default function ProductEditPage() {
     title: string;
     description: string;
     price: number;
-    status: string;
-    categoryId: number; // 0 = none
+    status: ProductStatus;
+    categoryId: number;
   }>({
     title: '',
     description: '',
@@ -76,7 +85,6 @@ export default function ProductEditPage() {
   }, [images]);
 
   useEffect(() => {
-    // load categories
     (async () => {
       setLoadingCats(true);
       try {
@@ -102,7 +110,7 @@ export default function ProductEditPage() {
 
     (async () => {
       try {
-        const detailRes = await getPublicProductDetail(productId);
+        const detailRes = await getManageProductDetail(productId);
         const detail = unwrap<ProductDetail>(detailRes);
 
         setOriginal(detail);
@@ -111,13 +119,13 @@ export default function ProductEditPage() {
         setForm({
           title: detail.title,
           description: detail.description || '',
-          price: Number(detail.price),
+          price: Number(detail.price ?? 0),
           status: detail.status,
           categoryId: Number(detail.categoryId ?? 0),
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setError('Không tải được sản phẩm.');
+        setError(err?.response?.data?.message || 'Không tải được sản phẩm.');
       } finally {
         setLoading(false);
       }
@@ -150,18 +158,21 @@ export default function ProductEditPage() {
     e.preventDefault();
     if (!productId) return;
 
+    if (!form.title.trim()) {
+      setError('Tên sản phẩm không được để trống.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setMessage(null);
 
     try {
       const body: UpdateProductDto = {
-        title: form.title,
-        description: form.description,
-        price: form.price,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
         status: form.status,
-
-        // ✅ nếu 0 thì set null (xóa danh mục)
         categoryId: form.categoryId ? form.categoryId : null,
       };
 
@@ -169,8 +180,11 @@ export default function ProductEditPage() {
       setMessage('Cập nhật sản phẩm thành công.');
     } catch (err: any) {
       console.error(err);
-      if (err?.response?.status === 409) setError('Slug/sku/tổ hợp bị trùng (409).');
-      else setError(err?.response?.data?.message || 'Lưu sản phẩm thất bại.');
+      if (err?.response?.status === 409) {
+        setError('Slug hoặc dữ liệu unique đang bị trùng.');
+      } else {
+        setError(err?.response?.data?.message || 'Lưu sản phẩm thất bại.');
+      }
     } finally {
       setSaving(false);
     }
@@ -182,7 +196,9 @@ export default function ProductEditPage() {
   if (!productId) {
     return (
       <div className="product-edit-page">
-        <div className="product-edit-card product-edit-card-small">Thiếu productId trên URL.</div>
+        <div className="product-edit-card product-edit-card-small">
+          Thiếu productId trên URL.
+        </div>
       </div>
     );
   }
@@ -190,7 +206,6 @@ export default function ProductEditPage() {
   return (
     <div className="product-edit-page">
       <div className="product-edit-card">
-        {/* Top bar */}
         <div className="product-edit-topbar">
           <button type="button" className="btn-ghost" onClick={() => navigate('/me/products')}>
             ← Quản lý sản phẩm
@@ -205,7 +220,6 @@ export default function ProductEditPage() {
           </button>
         </div>
 
-        {/* Header */}
         <div className="product-edit-header">
           <div className="product-edit-icon">✏️</div>
           <h1 className="product-edit-title">Sửa sản phẩm #{productId}</h1>
@@ -214,16 +228,23 @@ export default function ProductEditPage() {
         {error && <div className="alert-error">{error}</div>}
         {message && <div className="alert-success">{message}</div>}
 
-        {/* Preview ảnh hiện tại */}
         <div className="product-edit-preview">
-          <div className="product-edit-preview-image">{mainImageUrl && <img src={mainImageUrl} alt="" />}</div>
+          <div className="product-edit-preview-image">
+            {mainImageUrl && <img src={mainImageUrl} alt="" />}
+          </div>
+
           <div className="product-edit-preview-info">
             <div className="product-edit-preview-name">{hint(original?.title)}</div>
             <div className="product-edit-preview-meta">
-              Ảnh sản phẩm: {images.length || 0} (ảnh chính ưu tiên isMain)
+              Ảnh sản phẩm: {images.length || 0}
             </div>
           </div>
-          <button type="button" className="btn-ghost" onClick={() => navigate(`/products/${productId}`)}>
+
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => navigate(`/products/${productId}`)}
+          >
             Xem public
           </button>
         </div>
@@ -243,7 +264,6 @@ export default function ProductEditPage() {
               />
             </div>
 
-            {/* ✅ Category */}
             <div className="product-edit-field">
               <label className="product-edit-label">Danh mục</label>
               <select
@@ -253,7 +273,9 @@ export default function ProductEditPage() {
                 className="product-edit-input"
                 disabled={loadingCats}
               >
-                <option value="0">{loadingCats ? 'Đang tải danh mục...' : '— Không chọn —'}</option>
+                <option value="0">
+                  {loadingCats ? 'Đang tải danh mục...' : '— Không chọn —'}
+                </option>
                 {sortedCats.map((c) => (
                   <option key={c.id} value={String(c.id)}>
                     {c.parentId ? `— ${c.name}` : c.name}
@@ -305,7 +327,12 @@ export default function ProductEditPage() {
               <button type="submit" className="btn-green" disabled={saving}>
                 {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
-              <button type="button" className="btn-ghost" onClick={() => navigate('/me/products')}>
+
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => navigate('/me/products')}
+              >
                 Hủy
               </button>
             </div>

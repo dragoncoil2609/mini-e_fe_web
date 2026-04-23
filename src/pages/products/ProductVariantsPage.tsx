@@ -1,11 +1,10 @@
-// src/pages/me/ProductVariantsPage.tsx
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   generateProductVariants,
   getProductVariants,
   updateProductVariant,
-  getPublicProductDetail,
+  getManageProductDetail,
 } from '../../api/products.api';
 import './style/ProductVariantsPage.css';
 
@@ -43,8 +42,8 @@ const ProductVariantsPage = () => {
 
   const [mode, setMode] = useState<GenerateMode>('add');
   const [options, setOptions] = useState<OptionRow[]>([
-    { key: uuid(), name: 'Màu', values: 'Trắng,Đen,Hồng,Cam' },
-    { key: uuid(), name: 'Size', values: 'XL,M' },
+    { key: uuid(), name: 'Màu', values: 'Trắng,Đen' },
+    { key: uuid(), name: 'Size', values: 'M,L' },
   ]);
 
   const [productImages, setProductImages] = useState<ProductImageLike[]>([]);
@@ -87,7 +86,7 @@ const ProductVariantsPage = () => {
   const loadProductImages = async () => {
     if (!productId) return;
     try {
-      const res = await getPublicProductDetail(productId);
+      const res = await getManageProductDetail(productId);
       const detail = unwrap<any>(res);
       setProductImages(extractImages(detail));
     } catch (e) {
@@ -99,6 +98,7 @@ const ProductVariantsPage = () => {
     if (!productId) return;
     setLoadingVariants(true);
     setError(null);
+
     try {
       const res = await getProductVariants(productId);
       const data = unwrap<any[]>(res) || [];
@@ -123,7 +123,6 @@ const ProductVariantsPage = () => {
       void loadProductImages();
       void loadVariants();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   const normalizeOptionsPayload = () => {
@@ -143,7 +142,7 @@ const ProductVariantsPage = () => {
 
     const normalized = normalizeOptionsPayload();
     if (normalized.length === 0) {
-      setError('Vui lòng thêm ít nhất 1 option có name và values.');
+      setError('Vui lòng thêm ít nhất 1 option hợp lệ.');
       return;
     }
 
@@ -152,7 +151,7 @@ const ProductVariantsPage = () => {
     setSuccessMsg(null);
 
     try {
-      const payload = { options: normalized, mode } as any;
+      const payload = { options: normalized, mode };
       const res = await generateProductVariants(productId, payload);
       const data = unwrap<any[]>(res) || [];
 
@@ -166,25 +165,30 @@ const ProductVariantsPage = () => {
       }));
 
       setVariants(vs);
-      setSuccessMsg('Sinh biến thể thành công!');
+      setSuccessMsg('Sinh biến thể thành công.');
     } catch (err: any) {
-      if (err?.response?.status === 409) setError('Tổ hợp biến thể trùng (409).');
-      else setError(err?.response?.data?.message || 'Sinh biến thể thất bại. Vui lòng thử lại.');
+      if (err?.response?.status === 409) {
+        setError('Tổ hợp biến thể đang bị trùng.');
+      } else {
+        setError(err?.response?.data?.message || 'Sinh biến thể thất bại.');
+      }
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleVariantFieldChange = (index: number, field: keyof EditableVariant, value: string) => {
+  const handleVariantFieldChange = (
+    index: number,
+    field: keyof EditableVariant,
+    value: string,
+  ) => {
     setVariants((prev) =>
       prev.map((v, i) => (i === index ? ({ ...v, [field]: value } as EditableVariant) : v)),
     );
   };
 
-  // ✅ yêu cầu: lưu xong -> thông báo tạo sản phẩm thành công -> về /shops/me
   const handleSaveAll = async () => {
-    if (!productId) return;
-    if (variants.length === 0) return;
+    if (!productId || variants.length === 0) return;
 
     setSaving(true);
     setError(null);
@@ -192,7 +196,7 @@ const ProductVariantsPage = () => {
 
     try {
       for (const v of variants) {
-        const body: any = {
+        const body = {
           price: Number(v.price),
           stock: Number(v.stock),
           imageId: v.imageId ? Number(v.imageId) : null,
@@ -200,20 +204,17 @@ const ProductVariantsPage = () => {
         await updateProductVariant(productId, v.id, body);
       }
 
-      setSuccessMsg('Tạo sản phẩm thành công! Đang chuyển về shop của bạn...');
-
-      // Cho user nhìn thấy message một chút rồi chuyển trang
-      window.setTimeout(() => {
-        navigate('/shops/me', { replace: true });
-      }, 900);
+      setSuccessMsg('Lưu tất cả biến thể thành công.');
+      await loadVariants();
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Cập nhật biến thể thất bại. Vui lòng thử lại.');
+      setError(err?.response?.data?.message || 'Cập nhật biến thể thất bại.');
     } finally {
       setSaving(false);
     }
   };
 
   const addOption = () => {
+    if (options.length >= 5) return;
     setOptions((prev) => [...prev, { key: uuid(), name: '', values: '' }]);
   };
 
@@ -227,7 +228,7 @@ const ProductVariantsPage = () => {
 
   const handleOptionInputChange =
     (key: string, field: keyof OptionRow) => (e: ChangeEvent<HTMLInputElement>) => {
-      updateOption(key, { [field]: e.target.value } as any);
+      updateOption(key, { [field]: e.target.value } as Partial<OptionRow>);
     };
 
   if (!productId) {
@@ -241,31 +242,32 @@ const ProductVariantsPage = () => {
   return (
     <div className="variants-page">
       <div className="variants-card">
-        {/* Header */}
         <div className="variants-header">
-          <div className="variants-avatar">{mainImageUrl ? <img src={mainImageUrl} alt="" /> : <span>📦</span>}</div>
+          <div className="variants-avatar">
+            {mainImageUrl ? <img src={mainImageUrl} alt="" /> : <span>📦</span>}
+          </div>
           <h1 className="variants-title">Quản lý biến thể sản phẩm #{productId}</h1>
         </div>
 
-        {/* Links */}
         <div className="variants-links">
           <Link to="/me/products" className="variants-link">
-            &laquo; Quản lý sản phẩm
+            « Quản lý sản phẩm
           </Link>
           <Link to={`/me/products/${productId}/edit`} className="variants-link">
-            &laquo; Sửa sản phẩm
+            « Sửa sản phẩm
           </Link>
         </div>
 
         {error && <div className="alert-error">{error}</div>}
         {successMsg && <div className="alert-success">{successMsg}</div>}
 
-        {/* Ảnh sản phẩm */}
         {productImages.length > 0 && (
           <section className="variants-section">
             <div className="variants-section-header">
-              <h2 className="variants-section-title">Ảnh sản phẩm (chọn imageId cho biến thể)</h2>
-              <div className="variants-section-subtitle">Tip: Ảnh chính ưu tiên isMain</div>
+              <h2 className="variants-section-title">Ảnh sản phẩm</h2>
+              <div className="variants-section-subtitle">
+                Chọn imageId cho từng biến thể nếu cần
+              </div>
             </div>
 
             <div className="variants-images-grid">
@@ -287,18 +289,16 @@ const ProductVariantsPage = () => {
           </section>
         )}
 
-        {/* Generate section */}
         <section className="variants-section">
           <div className="variants-section-header">
-            <h2 className="variants-section-title">Sinh biến thể (generate)</h2>
+            <h2 className="variants-section-title">Sinh biến thể</h2>
             <button type="button" className="btn-main" onClick={addOption}>
               + Thêm option
             </button>
           </div>
 
           <p className="variants-section-subtitle">
-            mode = "add": chỉ thêm tổ hợp mới, bỏ qua tổ hợp đã tồn tại. mode = "replace": xoá toàn bộ biến thể cũ rồi
-            tạo lại từ schema mới.
+            add: chỉ thêm tổ hợp mới. replace: xoá toàn bộ biến thể cũ và tạo lại.
           </p>
 
           <div className="variants-options-list">
@@ -326,12 +326,13 @@ const ProductVariantsPage = () => {
                       className="variants-input"
                     />
                   </div>
+
                   <div>
-                    <label className="variants-label">Values (cách nhau bằng dấu phẩy)</label>
+                    <label className="variants-label">Values</label>
                     <input
                       value={opt.values}
                       onChange={handleOptionInputChange(opt.key, 'values')}
-                      placeholder="VD: Trắng,Đen"
+                      placeholder="VD: Trắng, Đen"
                       className="variants-input"
                     />
                   </div>
@@ -342,6 +343,7 @@ const ProductVariantsPage = () => {
 
           <div className="variants-mode">
             <span>Mode:</span>
+
             <label style={{ marginRight: 14, cursor: 'pointer' }}>
               <input
                 type="radio"
@@ -351,8 +353,9 @@ const ProductVariantsPage = () => {
                 onChange={() => setMode('add')}
                 style={{ marginRight: 4 }}
               />
-              add (chỉ thêm mới)
+              add
             </label>
+
             <label style={{ cursor: 'pointer' }}>
               <input
                 type="radio"
@@ -362,16 +365,20 @@ const ProductVariantsPage = () => {
                 onChange={() => setMode('replace')}
                 style={{ marginRight: 4 }}
               />
-              replace (xoá hết tạo lại)
+              replace
             </label>
           </div>
 
-          <button type="button" onClick={handleGenerate} disabled={generating} className="btn-main">
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            className="btn-main"
+          >
             {generating ? 'Đang sinh biến thể...' : 'Sinh biến thể'}
           </button>
         </section>
 
-        {/* Danh sách biến thể */}
         <section className="variants-section">
           <div className="variants-section-header">
             <h2 className="variants-section-title">Danh sách biến thể</h2>
@@ -390,7 +397,9 @@ const ProductVariantsPage = () => {
 
           {loadingVariants && <div className="variants-loading">Đang tải biến thể...</div>}
 
-          {!loadingVariants && variants.length === 0 && <div className="variants-loading">Chưa có biến thể nào.</div>}
+          {!loadingVariants && variants.length === 0 && (
+            <div className="variants-loading">Chưa có biến thể nào.</div>
+          )}
 
           {variants.length > 0 && (
             <>
@@ -408,7 +417,8 @@ const ProductVariantsPage = () => {
                   </thead>
                   <tbody>
                     {variants.map((v, index) => {
-                      const img = productImages.find((x) => String(x.id) === String(v.imageId)) || null;
+                      const img =
+                        productImages.find((x) => String(x.id) === String(v.imageId)) || null;
                       const imgUrl = img?.url || img?.imageUrl || '';
 
                       return (
@@ -416,28 +426,37 @@ const ProductVariantsPage = () => {
                           <td>{v.id}</td>
                           <td>{v.name}</td>
                           <td>{v.sku}</td>
+
                           <td>
                             <input
                               type="number"
                               value={v.price}
-                              onChange={(e) => handleVariantFieldChange(index, 'price', e.target.value)}
+                              onChange={(e) =>
+                                handleVariantFieldChange(index, 'price', e.target.value)
+                              }
                               className="variants-table-input"
                             />
                           </td>
+
                           <td>
                             <input
                               type="number"
                               value={v.stock}
-                              onChange={(e) => handleVariantFieldChange(index, 'stock', e.target.value)}
+                              onChange={(e) =>
+                                handleVariantFieldChange(index, 'stock', e.target.value)
+                              }
                               className="variants-table-input"
                             />
                           </td>
+
                           <td>
                             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                               {productImages.length > 0 ? (
                                 <select
                                   value={v.imageId}
-                                  onChange={(e) => handleVariantFieldChange(index, 'imageId', e.target.value)}
+                                  onChange={(e) =>
+                                    handleVariantFieldChange(index, 'imageId', e.target.value)
+                                  }
                                   className="variants-table-select"
                                 >
                                   <option value="">(Không chọn)</option>
@@ -451,13 +470,17 @@ const ProductVariantsPage = () => {
                                 <input
                                   type="number"
                                   value={v.imageId}
-                                  onChange={(e) => handleVariantFieldChange(index, 'imageId', e.target.value)}
+                                  onChange={(e) =>
+                                    handleVariantFieldChange(index, 'imageId', e.target.value)
+                                  }
                                   placeholder="imageId"
                                   className="variants-table-input"
                                 />
                               )}
 
-                              <div className="variants-table-image-preview">{imgUrl && <img src={imgUrl} alt="" />}</div>
+                              <div className="variants-table-image-preview">
+                                {imgUrl && <img src={imgUrl} alt="" />}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -467,7 +490,12 @@ const ProductVariantsPage = () => {
                 </table>
               </div>
 
-              <button type="button" onClick={handleSaveAll} disabled={saving} className="variants-save-btn">
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="variants-save-btn"
+              >
                 {saving ? 'Đang lưu...' : 'Lưu tất cả biến thể'}
               </button>
             </>

@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { getMyShop } from '../../api/shop.api';
-import { getProductsByShop, deleteProduct } from '../../api/products.api';
-import type { ProductListItem, PaginatedResult } from '../../api/types';
+import {
+  getMyProducts,
+  getProductsByShop,
+  deleteProduct,
+} from '../../api/products.api';
+import type {
+  ProductListItem,
+  PaginatedResult,
+  ProductStatus,
+} from '../../api/types';
 import { getMainImageUrl } from '../../utils/productImage';
 import './style/MyProductsPage.css';
 
 const DEFAULT_LIMIT = 20;
+type StatusFilter = '' | ProductStatus;
 
 export default function MyProductsPage() {
   const navigate = useNavigate();
@@ -18,6 +27,9 @@ export default function MyProductsPage() {
   const [total, setTotal] = useState<number>(0);
 
   const [q, setQ] = useState<string>(searchParams.get('q') || '');
+  const [status, setStatus] = useState<StatusFilter>(
+    (searchParams.get('status') as StatusFilter) || '',
+  );
 
   const [shopId, setShopId] = useState<number | null>(null);
 
@@ -34,7 +46,6 @@ export default function MyProductsPage() {
   };
 
   useEffect(() => {
-    // lấy shop của tôi để có shopId
     (async () => {
       try {
         const res = await getMyShop();
@@ -46,54 +57,76 @@ export default function MyProductsPage() {
         setError('Bạn chưa có shop hoặc không tải được shop của bạn.');
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const load = async () => {
-    if (!shopId) return;
+  const syncSearchParams = () => {
+    const params: Record<string, string> = {
+      page: String(page),
+      limit: String(limit),
+    };
+    if (q.trim()) params.q = q.trim();
+    if (status) params.status = status;
+    setSearchParams(params);
+  };
 
+  const load = async () => {
     setLoading(true);
     setError(null);
     setMsg(null);
 
     try {
-      const res = await getProductsByShop(shopId, { page, limit });
-      const payload = unwrap<any>(res);
+      let payload: PaginatedResult<ProductListItem> | null = null;
+
+      try {
+        const res = await getMyProducts({
+          page,
+          limit,
+          q: q.trim() || undefined,
+          status: status || undefined,
+        });
+        payload = unwrap<PaginatedResult<ProductListItem>>(res);
+      } catch (firstErr: any) {
+        if (!shopId) throw firstErr;
+
+        const fallback = await getProductsByShop(shopId, {
+          page,
+          limit,
+          q: q.trim() || undefined,
+          status: status || undefined,
+        });
+        payload = unwrap<PaginatedResult<ProductListItem>>(fallback);
+      }
 
       const paginated: PaginatedResult<ProductListItem> =
         payload?.items && payload?.total !== undefined
           ? payload
           : {
               items: Array.isArray(payload) ? payload : payload?.items ?? [],
+              page,
+              limit,
               total: payload?.total ?? 0,
             };
 
-      setItems(paginated.items || []);
+      setItems(Array.isArray(paginated.items) ? paginated.items : []);
       setTotal(Number(paginated.total || 0));
-
-      const params: any = { page: String(page), limit: String(limit) };
-      if (q) params.q = q;
-      setSearchParams(params);
-    } catch (err) {
+      syncSearchParams();
+    } catch (err: any) {
       console.error(err);
-      setError('Không tải được danh sách sản phẩm của shop.');
+      setError(err?.response?.data?.message || 'Không tải được danh sách sản phẩm của shop.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!shopId) return;
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, page, limit]);
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / limit)),
-    [total, limit],
-  );
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
   const handleDelete = async (productId: number) => {
-    if (!confirm(`Xoá sản phẩm #${productId}?`)) return;
+    if (!window.confirm(`Xoá sản phẩm #${productId}?`)) return;
 
     setLoading(true);
     setError(null);
@@ -114,21 +147,22 @@ export default function MyProductsPage() {
     }
   };
 
+  const handleSearch = () => {
+    setPage(1);
+    void load();
+  };
+
   return (
     <div className="my-products-container">
       <div className="my-products-card">
         <div className="my-products-header">
-          <button
-            onClick={() => navigate('/shops/me')}
-            className="home-button"
-          >
+          <button onClick={() => navigate('/shops/me')} className="home-button">
             ← Về shop của tôi
           </button>
           <div className="my-products-icon">📦</div>
           <h1 className="my-products-title">Quản lý sản phẩm</h1>
         </div>
 
-        {/* Thanh tạo + tìm kiếm */}
         <div className="my-products-header-actions">
           <button
             onClick={() => navigate('/me/products/new')}
@@ -141,18 +175,24 @@ export default function MyProductsPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Tìm theo tên..."
+              placeholder="Tìm theo tên hoặc slug..."
               className="my-products-search-input"
             />
           </div>
 
-          <button
-            onClick={() => {
-              setPage(1);
-              void load();
-            }}
-            className="my-products-link"
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as StatusFilter)}
+            className="my-products-search-input"
+            style={{ maxWidth: 160 }}
           >
+            <option value="">Tất cả</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="ARCHIVED">ARCHIVED</option>
+          </select>
+
+          <button onClick={handleSearch} className="my-products-link">
             Tìm
           </button>
         </div>
@@ -186,13 +226,7 @@ export default function MyProductsPage() {
                   <tr key={p.id}>
                     <td>#{p.id}</td>
                     <td>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 10,
-                          alignItems: 'center',
-                        }}
-                      >
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                         {getMainImageUrl(p) ? (
                           <img
                             src={getMainImageUrl(p)!}
@@ -218,10 +252,13 @@ export default function MyProductsPage() {
                         <span>{p.title}</span>
                       </div>
                     </td>
+
                     <td>
                       {p.price} {p.currency}
                     </td>
+
                     <td>{p.status}</td>
+
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <button
                         className="my-products-link"
@@ -234,9 +271,7 @@ export default function MyProductsPage() {
                       <button
                         className="my-products-link"
                         style={{ marginRight: 8 }}
-                        onClick={() =>
-                          navigate(`/me/products/${p.id}/variants`)
-                        }
+                        onClick={() => navigate(`/me/products/${p.id}/variants`)}
                       >
                         Biến thể
                       </button>
@@ -265,28 +300,28 @@ export default function MyProductsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
 
-        {totalPages > 1 && (
-          <div className="my-products-pagination">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              className="my-products-pagination-button"
-            >
-              &lt; Trang trước
-            </button>
-            <span className="my-products-pagination-info">
-              Trang {page}/{totalPages}
-            </span>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              className="my-products-pagination-button"
-            >
-              Trang sau &gt;
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 16 }}>
+              <button
+                className="my-products-link"
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                ← Trước
+              </button>
+
+              <span style={{ alignSelf: 'center', fontWeight: 700 }}>
+                Trang {page}/{totalPages}
+              </span>
+
+              <button
+                className="my-products-link"
+                disabled={page >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Sau →
+              </button>
+            </div>
           </div>
         )}
       </div>
