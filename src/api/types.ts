@@ -183,23 +183,31 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+
   parentId: number | null;
+  parent?: Category | null;
+  children?: Category[];
+
   description?: string | null;
 
-  sortOrder?: number;
-  isActive?: boolean;
+  sortOrder: number;
+  isActive: boolean;
 
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
+}
 
-  children?: Category[];
+export interface SearchCategoriesParams {
+  q?: string;
+  parentId?: number;
+  isActive?: boolean;
 }
 
 export interface CreateCategoryDto {
   name: string;
   slug?: string;
-  description?: string;
+  description?: string | null;
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;
@@ -208,10 +216,15 @@ export interface CreateCategoryDto {
 export interface UpdateCategoryDto {
   name?: string;
   slug?: string;
-  description?: string;
+  description?: string | null;
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;
+}
+
+export interface DeleteCategoryResponse {
+  id: number;
+  deleted: boolean;
 }
 
 // ================== PRODUCT ==================

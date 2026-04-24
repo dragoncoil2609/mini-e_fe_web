@@ -4,6 +4,7 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type CSSProperties,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -61,7 +62,7 @@ const statusMessageMap: Record<ShopStatus, string> = {
     'Shop của bạn đang bị tạm khóa. Bạn vẫn có thể xem và cập nhật thông tin shop nhưng chưa thể bán hàng.',
 };
 
-const statusBannerStyleMap: Record<ShopStatus, React.CSSProperties> = {
+const statusBannerStyleMap: Record<ShopStatus, CSSProperties> = {
   PENDING: {
     background: '#fef9c3',
     color: '#854d0e',
@@ -157,11 +158,22 @@ const MyShopPage = () => {
     }
   };
 
-  const loadShopOrders = async (page = shopOrdersPage) => {
-    if (!shop || shop.status !== 'ACTIVE') {
-      setShopOrders([]);
-      setShopOrdersError(null);
-      setShopOrdersTotal(0);
+  const clearShopOrdersState = () => {
+    setShopOrders([]);
+    setShopOrdersError(null);
+    setShopOrdersTotal(0);
+    setShopOrdersPage(1);
+  };
+
+  const loadShopOrders = async (
+    page = shopOrdersPage,
+    options?: { force?: boolean; shopStatus?: ShopStatus | null },
+  ) => {
+    const currentStatus = options?.shopStatus ?? shop?.status ?? null;
+    const canLoad = options?.force || currentStatus === 'ACTIVE';
+
+    if (!canLoad) {
+      clearShopOrdersState();
       return;
     }
 
@@ -210,11 +222,9 @@ const MyShopPage = () => {
       await loadProducts(data.id);
 
       if (data.status === 'ACTIVE') {
-        await loadShopOrders(1);
+        await loadShopOrders(1, { force: true, shopStatus: data.status });
       } else {
-        setShopOrders([]);
-        setShopOrdersError(null);
-        setShopOrdersTotal(0);
+        clearShopOrdersState();
       }
     } catch (err: any) {
       console.error(err);
@@ -231,27 +241,30 @@ const MyShopPage = () => {
 
   const labelShipping = (status: ShippingStatus) => {
     const map: Record<ShippingStatus, string> = {
-      PENDING: 'Đã nhận đơn',
+      PENDING: 'Chờ xác nhận',
       PICKED: 'Đã nhận đơn',
       IN_TRANSIT: 'Đang giao',
-      DELIVERED: 'Đã giao',
-      RETURNED: 'Hoàn hàng',
+      DELIVERED: 'Khách đã nhận',
+      RETURNED: 'Khách hoàn hàng',
       CANCELED: 'Đã huỷ',
     };
     return map[status] || status;
   };
 
-  const nextShippingOptions = (current: ShippingStatus): ShippingStatus[] => {
-    const map: Record<ShippingStatus, ShippingStatus[]> = {
-      PENDING: ['IN_TRANSIT', 'CANCELED'],
-      PICKED: ['IN_TRANSIT', 'CANCELED'],
-      IN_TRANSIT: ['DELIVERED', 'CANCELED'],
-      DELIVERED: [],
-      RETURNED: [],
-      CANCELED: [],
-    };
-    return map[current] || [];
-  };
+  const canShopAccept = (o: Order) =>
+    o.shippingStatus === 'PENDING' &&
+    o.status !== 'CANCELLED' &&
+    o.status !== 'COMPLETED';
+
+  const canShopShip = (o: Order) =>
+    o.shippingStatus === 'PICKED' &&
+    o.status !== 'CANCELLED' &&
+    o.status !== 'COMPLETED';
+
+  const canShopCancel = (o: Order) =>
+    (o.shippingStatus === 'PENDING' || o.shippingStatus === 'PICKED') &&
+    o.status !== 'CANCELLED' &&
+    o.status !== 'COMPLETED';
 
   const updateShipping = async (orderId: string, next: ShippingStatus) => {
     try {
@@ -266,6 +279,10 @@ const MyShopPage = () => {
       setShopOrders((prev) =>
         prev.map((o) => (o.id === orderId ? ({ ...o, ...res.data } as Order) : o)),
       );
+
+      if (orderDetail?.id === orderId) {
+        setOrderDetail((prev) => (prev ? ({ ...prev, ...res.data } as Order) : prev));
+      }
     } catch (e: any) {
       setError(
         e?.response?.data?.message || 'Không thể cập nhật trạng thái đơn.',
@@ -339,7 +356,7 @@ const MyShopPage = () => {
   };
 
   const handleEditChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     if (!form) return;
     const { name, value } = e.target;
@@ -385,6 +402,15 @@ const MyShopPage = () => {
       resetFormFromShop(data);
       setEditing(false);
       setSuccessMsg('Đã cập nhật thông tin shop.');
+
+      if (data.status === 'ACTIVE') {
+        await loadShopOrders(shopOrdersPage, {
+          force: true,
+          shopStatus: data.status,
+        });
+      } else {
+        clearShopOrdersState();
+      }
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Cập nhật shop thất bại.');
     }
@@ -708,7 +734,12 @@ const MyShopPage = () => {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => loadShopOrders(1)}
+                onClick={() =>
+                  loadShopOrders(1, {
+                    force: true,
+                    shopStatus: shop.status,
+                  })
+                }
               >
                 Tải lại
               </button>
@@ -780,21 +811,46 @@ const MyShopPage = () => {
                           </td>
 
                           <td>
-                            {nextShippingOptions(o.shippingStatus).length === 0 ? (
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  gap: 8,
-                                  flexWrap: 'wrap',
-                                }}
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="btn-secondary btn-secondary--small"
+                                onClick={() => void openOrderDetail(o.id)}
                               >
+                                Xem
+                              </button>
+
+                              {canShopAccept(o) && (
                                 <button
                                   type="button"
                                   className="btn-secondary btn-secondary--small"
-                                  onClick={() => void openOrderDetail(o.id)}
+                                  onClick={() => void updateShipping(o.id, 'PICKED')}
                                 >
-                                  Xem
+                                  Đã nhận đơn
                                 </button>
+                              )}
+
+                              {canShopShip(o) && (
+                                <button
+                                  type="button"
+                                  className="btn-secondary btn-secondary--small"
+                                  onClick={() => void updateShipping(o.id, 'IN_TRANSIT')}
+                                >
+                                  Chuyển đang giao
+                                </button>
+                              )}
+
+                              {canShopCancel(o) && (
+                                <button
+                                  type="button"
+                                  className="btn-secondary btn-secondary--small"
+                                  onClick={() => void updateShipping(o.id, 'CANCELED')}
+                                >
+                                  Huỷ đơn
+                                </button>
+                              )}
+
+                              {!canShopAccept(o) && !canShopShip(o) && !canShopCancel(o) && (
                                 <button
                                   type="button"
                                   className="btn-secondary btn-secondary--small"
@@ -802,40 +858,8 @@ const MyShopPage = () => {
                                 >
                                   Đã kết thúc
                                 </button>
-                              </div>
-                            ) : (
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  gap: 8,
-                                  flexWrap: 'wrap',
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  className="btn-secondary btn-secondary--small"
-                                  onClick={() => void openOrderDetail(o.id)}
-                                >
-                                  Xem
-                                </button>
-                                <select
-                                  className="shop-status-select"
-                                  defaultValue=""
-                                  onChange={(e) => {
-                                    const value = e.target.value as ShippingStatus;
-                                    if (value) void updateShipping(o.id, value);
-                                    e.currentTarget.value = '';
-                                  }}
-                                >
-                                  <option value="">Cập nhật...</option>
-                                  {nextShippingOptions(o.shippingStatus).map((s) => (
-                                    <option key={s} value={s}>
-                                      {labelShipping(s)}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -855,7 +879,10 @@ const MyShopPage = () => {
                       className="btn-secondary btn-secondary--small"
                       disabled={shopOrdersPage <= 1}
                       onClick={() =>
-                        loadShopOrders(Math.max(1, shopOrdersPage - 1))
+                        loadShopOrders(Math.max(1, shopOrdersPage - 1), {
+                          force: true,
+                          shopStatus: shop.status,
+                        })
                       }
                     >
                       ← Trang trước
@@ -871,6 +898,10 @@ const MyShopPage = () => {
                       onClick={() =>
                         loadShopOrders(
                           Math.min(shopOrdersTotalPages, shopOrdersPage + 1),
+                          {
+                            force: true,
+                            shopStatus: shop.status,
+                          },
                         )
                       }
                     >
@@ -1070,6 +1101,9 @@ const MyShopPage = () => {
                   <div>
                     <b>Trạng thái giao hàng:</b>{' '}
                     {labelShipping(orderDetail.shippingStatus)}
+                  </div>
+                  <div>
+                    <b>Trạng thái đơn:</b> {orderDetail.status}
                   </div>
                   <div>
                     <b>Tổng:</b> {formatCurrency(orderDetail.total)}
