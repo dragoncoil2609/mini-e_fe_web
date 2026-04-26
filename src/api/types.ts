@@ -446,6 +446,8 @@ export interface UpdateAddressDto {
 
 // ================== ORDERS ==================
 
+// ================== ORDERS ==================
+
 export type PaymentMethod = 'COD' | 'VNPAY';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
 export type ShippingStatus =
@@ -463,7 +465,6 @@ export type OrderStatus =
   | 'SHIPPED'
   | 'COMPLETED'
   | 'CANCELLED'
-  // tương thích dữ liệu / UI cũ nếu còn dùng đâu đó
   | 'CONFIRMED'
   | 'SHIPPING'
   | 'DELIVERED'
@@ -583,7 +584,6 @@ export type CreateOrderResponse =
       session: { code: string; amount: number; status: string };
       paymentUrl: string;
     };
-    
 // ================== REVIEWS ==================
 
 export interface ReviewUserPublic {

@@ -73,13 +73,11 @@ export default function CheckoutPage() {
         return;
       }
 
-      // COD: tạo order ngay
       if ('orders' in res.data) {
         navigate('/orders');
         return;
       }
 
-      // VNPAY: redirect sang gateway
       if ('paymentUrl' in res.data) {
         window.location.href = res.data.paymentUrl;
         return;
@@ -169,17 +167,9 @@ export default function CheckoutPage() {
                       <div className="checkout-orders">
                         {preview.orders.map((g) => (
                           <div key={g.shop.id} className="checkout-order-group">
-                            <div className="checkout-order-group-title">
-                              🏪 {g.shop.name}
-                            </div>
+                            <div className="checkout-order-group-title">🏪 {g.shop.name}</div>
 
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: '#667085',
-                                marginBottom: 10,
-                              }}
-                            >
+                            <div style={{ fontSize: 12, color: '#667085', marginBottom: 10 }}>
                               Shop ID: {g.shop.id}
                               {g.distanceKm > 0 ? ` • Khoảng cách ước tính: ${g.distanceKm} km` : ''}
                             </div>
@@ -189,26 +179,18 @@ export default function CheckoutPage() {
                                 <div key={it.id} className="checkout-item">
                                   <div className="checkout-item-left">
                                     {it.imageUrl ? (
-                                      <img
-                                        className="checkout-item-image"
-                                        src={it.imageUrl}
-                                        alt={it.name}
-                                      />
+                                      <img className="checkout-item-image" src={it.imageUrl} alt={it.name} />
                                     ) : (
                                       <div className="checkout-item-image checkout-item-image--placeholder" />
                                     )}
 
                                     <div className="checkout-item-info">
                                       <div className="checkout-item-name">{it.name}</div>
-                                      <div className="checkout-item-qty">
-                                        Số lượng: x{it.quantity}
-                                      </div>
+                                      <div className="checkout-item-qty">Số lượng: x{it.quantity}</div>
                                     </div>
                                   </div>
 
-                                  <div className="checkout-item-total">
-                                    {formatMoney(it.totalLine)}
-                                  </div>
+                                  <div className="checkout-item-total">{formatMoney(it.totalLine)}</div>
                                 </div>
                               ))}
                             </div>
@@ -235,23 +217,17 @@ export default function CheckoutPage() {
                       <div className="checkout-summary">
                         <div className="checkout-summary-row">
                           <span className="checkout-summary-label">Tạm tính</span>
-                          <b className="checkout-summary-value">
-                            {formatMoney(preview.summary.subtotal)}
-                          </b>
+                          <b className="checkout-summary-value">{formatMoney(preview.summary.subtotal)}</b>
                         </div>
 
                         <div className="checkout-summary-row">
                           <span className="checkout-summary-label">Phí ship</span>
-                          <b className="checkout-summary-value">
-                            {formatMoney(preview.summary.shippingFee)}
-                          </b>
+                          <b className="checkout-summary-value">{formatMoney(preview.summary.shippingFee)}</b>
                         </div>
 
                         <div className="checkout-summary-total">
                           <span className="checkout-summary-total-label">Tổng cộng</span>
-                          <b className="checkout-summary-total-value">
-                            {formatMoney(preview.summary.total)}
-                          </b>
+                          <b className="checkout-summary-total-value">{formatMoney(preview.summary.total)}</b>
                         </div>
                       </div>
                     </div>
