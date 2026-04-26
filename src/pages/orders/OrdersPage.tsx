@@ -26,8 +26,8 @@ function labelOrderStatus(status: OrderStatus) {
 
 function labelShippingStatus(status: ShippingStatus) {
   const map: Record<string, string> = {
-    PENDING: 'Chờ lấy hàng',
-    PICKED: 'Đã lấy hàng',
+    PENDING: 'Chờ shop xác nhận',
+    PICKED: 'Shop đã nhận đơn',
     IN_TRANSIT: 'Đang giao',
     DELIVERED: 'Đã giao',
     RETURNED: 'Hoàn hàng',
@@ -46,15 +46,18 @@ function labelPaymentStatus(status: PaymentStatus) {
 }
 
 function getFlowLabel(order: Order) {
-  if (order.shippingStatus === 'RETURNED') return 'Hoàn hàng';
   if (order.status === 'CANCELLED' || order.shippingStatus === 'CANCELED') return 'Đã huỷ';
+  if (order.shippingStatus === 'RETURNED') return 'Hoàn hàng';
   if (order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED') return 'Đã nhận hàng';
-  if (order.shippingStatus === 'DELIVERED') return 'Đã giao';
-  if (order.shippingStatus === 'IN_TRANSIT') return 'Đang giao';
-  if (order.shippingStatus === 'PICKED') return 'Đã lấy hàng';
-  if (order.status === 'PROCESSING') return 'Đang xử lý';
-  if (order.paymentStatus === 'PAID' && order.status === 'PENDING') return 'Đã thanh toán';
-  return 'Chờ xử lý';
+
+  const map: Record<string, string> = {
+    PENDING: 'Chờ shop xác nhận',
+    PICKED: 'Shop đã nhận đơn',
+    IN_TRANSIT: 'Đang giao',
+    DELIVERED: 'Đã giao',
+  };
+
+  return map[String(order.shippingStatus)] || String(order.shippingStatus);
 }
 
 function getStatusClass(order: Order) {
@@ -147,6 +150,9 @@ export default function OrdersPage() {
             </Link>
             <Link className="orders-chip" to="/cart">
               🛒 Giỏ hàng
+            </Link>
+            <Link className="orders-chip" to="/orders">
+              📦 Đơn hàng
             </Link>
           </div>
         </div>

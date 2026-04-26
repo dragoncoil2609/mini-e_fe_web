@@ -607,12 +607,18 @@ export interface ProductReview {
 
 export interface CreateProductReviewDto {
   orderId: string;
+  productId: number;
   rating: number;
   comment?: string;
+  content?: string;
+  images?: string[];
 }
 
 export interface ProductReviewsList {
-  summary: { count: number; avg: number };
+  summary: {
+    count: number;
+    avg: number;
+  };
   items: ProductReview[];
   page: number;
   limit: number;
