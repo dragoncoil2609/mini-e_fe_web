@@ -299,6 +299,24 @@ export interface ProductDetail {
   mainImageUrl?: string | null;
 }
 
+export interface CreateProductJsonDto {
+  title: string;
+  slug?: string;
+  description?: string;
+  price: number;
+  categoryId?: number | null;
+  images?: string[];
+}
+
+export interface UpdateProductDto {
+  title?: string;
+  slug?: string;
+  description?: string;
+  price?: number;
+  status?: ProductStatus;
+  categoryId?: number | null;
+}
+
 // ================== VARIANTS ==================
 
 export interface ProductVariantOption {

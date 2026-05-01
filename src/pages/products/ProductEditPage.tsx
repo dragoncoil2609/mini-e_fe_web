@@ -190,9 +190,6 @@ export default function ProductEditPage() {
     }
   };
 
-  const hint = (text?: any) =>
-    text !== undefined && text !== null && String(text).trim() !== '' ? String(text) : '(trống)';
-
   if (!productId) {
     return (
       <div className="product-edit-page">
@@ -228,26 +225,20 @@ export default function ProductEditPage() {
         {error && <div className="alert-error">{error}</div>}
         {message && <div className="alert-success">{message}</div>}
 
-        <div className="product-edit-preview">
-          <div className="product-edit-preview-image">
-            {mainImageUrl && <img src={mainImageUrl} alt="" />}
-          </div>
+        {mainImageUrl && (
+          <div className="product-edit-preview">
+            <div className="product-edit-preview-image">
+              <img src={mainImageUrl} alt="" />
+            </div>
 
-          <div className="product-edit-preview-info">
-            <div className="product-edit-preview-name">{hint(original?.title)}</div>
-            <div className="product-edit-preview-meta">
-              Ảnh sản phẩm: {images.length || 0}
+            <div className="product-edit-preview-info">
+              <div className="product-edit-preview-name">{original?.title}</div>
+              <div className="product-edit-preview-meta">
+                Tồn kho hiện tại: <b>{Number(original?.stock || 0)}</b>
+              </div>
             </div>
           </div>
-
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => navigate(`/products/${productId}`)}
-          >
-            Xem public
-          </button>
-        </div>
+        )}
 
         {loading ? (
           <div className="product-edit-card product-edit-card-small">Đang tải...</div>
@@ -306,6 +297,19 @@ export default function ProductEditPage() {
                   min={0}
                   className="product-edit-input"
                 />
+              </div>
+
+              <div className="product-edit-field">
+                <label className="product-edit-label">Tồn kho</label>
+                <input
+                  type="text"
+                  value={String(Number(original?.stock || 0))}
+                  readOnly
+                  className="product-edit-input"
+                />
+                <div className="product-edit-help">
+                  Tồn kho được tính tự động từ tổng số lượng các biến thể.
+                </div>
               </div>
             </div>
 

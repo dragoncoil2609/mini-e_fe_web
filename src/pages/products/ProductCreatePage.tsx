@@ -1,31 +1,25 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createProductMultipart } from '../../api/products.api';
 import { getPublicCategories } from '../../api/categories.api';
-import type { Category, ApiResponse } from '../../api/types';
+import { createProductMultipart } from '../../api/products.api';
+import type { Category } from '../../api/types';
 import './style/ProductCreatePage.css';
 
 export default function ProductCreatePage() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<{
-    title: string;
-    price: string;
-    description: string;
-    categoryId: string; // '' = chưa chọn
-    images: FileList | null;
-  }>({
-    title: '',
-    price: '',
-    description: '',
-    categoryId: '',
-    images: null,
-  });
+  const [title, setTitle] = useState('');
+  const [price, setPrice] = useState<number>(0);
+  const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState<number>(0);
+
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCats, setLoadingCats] = useState(false);
 
-  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,12 +27,9 @@ export default function ProductCreatePage() {
       setLoadingCats(true);
       try {
         const res = await getPublicCategories({ isActive: true });
-        const ok = (res as any)?.success ?? true;
-        const data = ok ? (res as ApiResponse<Category[]>).data : [];
-        setCategories(Array.isArray(data) ? data : []);
+        setCategories(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         console.error(e);
-        // không block tạo product, chỉ không có danh mục
         setCategories([]);
       } finally {
         setLoadingCats(false);
@@ -46,165 +37,191 @@ export default function ProductCreatePage() {
     })();
   }, []);
 
-  const previewUrls = useMemo(() => {
-    if (!form.images) return [];
-    return Array.from(form.images).map((f) => URL.createObjectURL(f));
-  }, [form.images]);
+  useEffect(() => {
+    const urls = files.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(urls);
 
-  const handleChangeInput =
-    (field: 'title' | 'price' | 'description') =>
-    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      setForm((prev) => ({ ...prev, [field]: value }));
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
     };
+  }, [files]);
 
-  const handleCategoryChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setForm((prev) => ({ ...prev, categoryId: e.target.value }));
-  };
-
-  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, images: e.target.files }));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-
-    try {
-      const fd = new FormData();
-      fd.append('title', form.title);
-      fd.append('price', form.price);
-      fd.append('description', form.description);
-
-      // ✅ categoryId (FormData chỉ nhận string|Blob)
-      if (form.categoryId) {
-        fd.append('categoryId', String(form.categoryId));
-      }
-
-      if (form.images) {
-        Array.from(form.images).forEach((f) => fd.append('images', f));
-      }
-
-      const res = await createProductMultipart(fd);
-      const ok = (res as any)?.success ?? true;
-      if (!ok) throw new Error((res as any)?.message || 'CREATE_PRODUCT_FAILED');
-
-      const created = (res as any)?.data ?? (res as any);
-      const id = Number(created?.id);
-      if (!id) throw new Error('Không nhận được id sản phẩm.');
-
-      navigate(`/me/products/${id}/variants`, { replace: true });
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.message || err?.message || 'Tạo sản phẩm thất bại.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const sortedCats = useMemo(() => {
-    // nếu BE có sortOrder thì ưu tiên, không có thì sort theo name
+  const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => {
-      const soA = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-      if (soA !== 0) return soA;
+      const sortA = a.sortOrder ?? 0;
+      const sortB = b.sortOrder ?? 0;
+      if (sortA !== sortB) return sortA - sortB;
       return (a.name || '').localeCompare(b.name || '');
     });
   }, [categories]);
 
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files || []);
+    setFiles(list.slice(0, 10));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!title.trim()) {
+      setError('Vui lòng nhập tên sản phẩm.');
+      return;
+    }
+
+    if (Number(price) < 0) {
+      setError('Giá sản phẩm không hợp lệ.');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const fd = new FormData();
+      fd.append('title', title.trim());
+      fd.append('price', String(Number(price)));
+      if (description.trim()) fd.append('description', description.trim());
+      if (categoryId > 0) fd.append('categoryId', String(categoryId));
+
+      files.forEach((file) => {
+        fd.append('images', file);
+      });
+
+      const res = await createProductMultipart(fd);
+
+      if (!res.success || !res.data?.id) {
+        throw new Error(res.message || 'Tạo sản phẩm thất bại.');
+      }
+
+      navigate(`/me/products/${res.data.id}/variants`, {
+        replace: true,
+      });
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data?.message || err?.message || 'Tạo sản phẩm thất bại.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="product-create-page">
       <div className="product-create-card">
-        {/* Top bar */}
         <div className="product-create-topbar">
-          <button type="button" className="pc-btn-ghost" onClick={() => navigate('/me/products')}>
-            ← Quản lý sản phẩm
-          </button>
-          <button type="button" className="pc-btn-ghost" onClick={() => navigate('/shops/me')}>
-            Về shop của tôi
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => navigate('/me/products')}
+          >
+            ← Quay lại
           </button>
         </div>
 
-        {/* Header */}
         <div className="product-create-header">
-          <div className="product-create-icon">✨</div>
+          <div className="product-create-icon">📦</div>
           <h1 className="product-create-title">Tạo sản phẩm mới</h1>
+          <p className="product-create-subtitle">
+            Sau khi tạo xong, bạn sẽ được chuyển sang trang tạo biến thể.
+          </p>
         </div>
 
-        {error && <div className="pc-error">{error}</div>}
+        {error && <div className="alert-error">{error}</div>}
 
         <form className="product-create-form" onSubmit={handleSubmit}>
-          <div className="pc-field">
-            <label className="pc-label">Tên sản phẩm</label>
-            <input value={form.title} onChange={handleChangeInput('title')} required className="pc-input" />
-          </div>
-
-          {/* ✅ Category */}
-          <div className="pc-field">
-            <label className="pc-label">Danh mục</label>
-            <select
-              className="pc-input"
-              value={form.categoryId}
-              onChange={handleCategoryChange}
-              disabled={loadingCats}
-            >
-              <option value="">{loadingCats ? 'Đang tải danh mục...' : '— Chọn danh mục —'}</option>
-              {sortedCats.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.parentId ? `— ${c.name}` : c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="pc-row-grid">
-            <div className="pc-field">
-              <label className="pc-label">Giá</label>
-              <input
-                type="number"
-                value={form.price}
-                onChange={handleChangeInput('price')}
-                min={0}
-                required
-                className="pc-input"
-              />
-            </div>
-          </div>
-
-          <div className="pc-field">
-            <label className="pc-label">Mô tả</label>
-            <textarea
-              value={form.description}
-              onChange={handleChangeInput('description')}
-              rows={3}
-              className="pc-textarea"
+          <div className="product-create-field">
+            <label className="product-create-label">Tên sản phẩm</label>
+            <input
+              className="product-create-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Nhập tên sản phẩm"
+              required
             />
           </div>
 
-          <div className="pc-field">
-            <label className="pc-label">Ảnh (có thể chọn nhiều)</label>
-            <input type="file" multiple accept="image/*" onChange={handleImagesChange} />
+          <div className="product-create-grid-2">
+            <div className="product-create-field">
+              <label className="product-create-label">Giá</label>
+              <input
+                className="product-create-input"
+                type="number"
+                min={0}
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+
+            <div className="product-create-field">
+              <label className="product-create-label">Danh mục</label>
+              <select
+                className="product-create-input"
+                value={String(categoryId)}
+                onChange={(e) => setCategoryId(Number(e.target.value))}
+                disabled={loadingCats}
+              >
+                <option value="0">
+                  {loadingCats ? 'Đang tải danh mục...' : '— Không chọn —'}
+                </option>
+                {sortedCategories.map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.parentId ? `— ${c.name}` : c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="product-create-field">
+            <label className="product-create-label">Mô tả</label>
+            <textarea
+              className="product-create-textarea"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Nhập mô tả sản phẩm"
+            />
+          </div>
+
+          <div className="product-create-field">
+            <label className="product-create-label">Ảnh sản phẩm</label>
+            <input
+              className="product-create-input"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onPickFiles}
+            />
           </div>
 
           {previewUrls.length > 0 && (
-            <div className="pc-field">
-              <div className="pc-images-preview-title">Preview ảnh đã chọn</div>
-              <div className="pc-images-preview-grid">
-                {previewUrls.map((u) => (
-                  <div key={u} className="pc-images-preview-item">
-                    <img src={u} alt="" />
-                  </div>
-                ))}
-              </div>
+            <div className="product-create-preview-grid">
+              {previewUrls.map((url, idx) => (
+                <div key={idx} className="product-create-preview-item">
+                  <img src={url} alt={`preview-${idx}`} />
+                </div>
+              ))}
             </div>
           )}
 
-          <button type="submit" disabled={saving} className="product-create-submit">
-            {saving ? 'Đang tạo...' : 'Tạo sản phẩm'}
-          </button>
+          <div className="product-create-note">
+            Tồn kho sản phẩm sẽ được tự động tính bằng tổng tồn kho của các biến thể.
+            Hiện tại sau khi tạo mới, tồn kho sản phẩm sẽ là <b>0</b>.
+          </div>
 
-          <div className="pc-note">
-            Sau khi tạo xong, hệ thống sẽ tự chuyển bạn sang trang tạo biến thể (ProductVariantsPage).
+          <div className="product-create-actions">
+            <button type="submit" className="btn-green" disabled={submitting}>
+              {submitting ? 'Đang tạo...' : 'Tạo sản phẩm'}
+            </button>
+
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => navigate('/me/products')}
+            >
+              Hủy
+            </button>
           </div>
         </form>
       </div>
