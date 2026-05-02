@@ -1,32 +1,41 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type {
-  User,
-  ProductListItem,
-  PaginatedResult,
   ApiResponse,
   Category,
+  PaginatedResult,
+  ProductListItem,
   Shop,
   ShopStatus,
+  User,
 } from '../api/types';
 import { getPublicProducts } from '../api/products.api';
 import { getPublicCategoryTree } from '../api/categories.api';
 import { getMe } from '../api/users.api';
 import { getMyShop } from '../api/shop.api';
 import { AuthApi } from '../api/auth.api';
-import { getAccessToken, clearAccessToken } from '../api/authToken';
+import { clearAccessToken, getAccessToken } from '../api/authToken';
 import { getMainImageUrl } from '../utils/productImage';
 import './HomePage.css';
 
-type QuickKey =
-  | 'Khuyến mãi hôm nay'
-  | 'Sản phẩm mới'
-  | 'Bán chạy'
-  | 'Giảm giá sốc'
-  | 'Thương hiệu'
-  | 'Gợi ý cho bạn';
+type QuickKey = 'all' | 'new' | 'discount' | 'sold' | 'suggest';
+
+type QuickItem = {
+  key: QuickKey;
+  label: string;
+  icon: string;
+};
 
 const LIMIT = 20;
+
+const QUICK_ITEMS: QuickItem[] = [
+  { key: 'all', label: 'Tất cả sản phẩm', icon: '🏠' },
+  { key: 'new', label: 'Hàng mới', icon: '✨' },
+  { key: 'discount', label: 'Giá tốt', icon: '⚡' },
+  { key: 'sold', label: 'Bán nhiều', icon: '🔥' },
+  { key: 'suggest', label: 'Gợi ý cho bạn', icon: '🎁' },
+];
 
 function toNumber(value: unknown): number {
   const num = Number(value ?? 0);
@@ -37,18 +46,19 @@ function formatPrice(value: string | number | null | undefined): string {
   return new Intl.NumberFormat('vi-VN').format(toNumber(value));
 }
 
-function formatCompactNumber(value: number): string {
+function formatCompactNumber(value: string | number | null | undefined): string {
   return new Intl.NumberFormat('vi-VN', {
     notation: 'compact',
     maximumFractionDigits: 1,
-  }).format(value);
+  }).format(toNumber(value));
 }
 
 function getDiscountPercent(product: ProductListItem): number {
   const price = toNumber(product.price);
-  const compare = toNumber(product.compareAtPrice);
-  if (compare <= 0 || compare <= price) return 0;
-  return Math.round(((compare - price) / compare) * 100);
+  const compareAtPrice = toNumber(product.compareAtPrice);
+
+  if (price <= 0 || compareAtPrice <= 0 || compareAtPrice <= price) return 0;
+  return Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
 }
 
 function getSafeImageUrl(product: ProductListItem): string | null {
@@ -65,47 +75,72 @@ function getSafeImageUrl(product: ProductListItem): string | null {
   return firstImage?.url || null;
 }
 
+function getCategoryIcon(name?: string | null): string {
+  const text = (name || '').toLowerCase();
+
+  if (text.includes('điện thoại') || text.includes('phone')) return '📱';
+  if (text.includes('laptop') || text.includes('máy tính')) return '💻';
+  if (text.includes('điện tử')) return '🎧';
+  if (text.includes('gia dụng')) return '🏠';
+  if (text.includes('thời trang') || text.includes('quần') || text.includes('áo')) return '👕';
+  if (text.includes('sức khỏe') || text.includes('làm đẹp')) return '💄';
+  if (text.includes('mẹ') || text.includes('bé')) return '🧸';
+  if (text.includes('sách') || text.includes('văn phòng')) return '📚';
+  if (text.includes('thể thao')) return '⚽';
+  if (text.includes('xe')) return '🛵';
+
+  return '🛍️';
+}
+
+function normalizeProductsPayload(
+  res: ApiResponse<PaginatedResult<ProductListItem>> | any,
+): { items: ProductListItem[]; total: number } {
+  const data = res?.data;
+  const items = Array.isArray(data?.items)
+    ? data.items
+    : Array.isArray(data)
+      ? data
+      : [];
+
+  const total = toNumber(data?.total ?? data?.meta?.total ?? items.length);
+  return { items, total };
+}
+
+function isProductNew(product: ProductListItem): boolean {
+  if (!product.createdAt) return false;
+  const createdTime = new Date(product.createdAt).getTime();
+  if (!Number.isFinite(createdTime)) return false;
+
+  const sevenDays = 1000 * 60 * 60 * 24 * 7;
+  return Date.now() - createdTime <= sevenDays;
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const [user, setUser] = useState<User | null>(null);
   const [myShop, setMyShop] = useState<Shop | null>(null);
 
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryTree, setCategoryTree] = useState<Category[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState(0);
+  const [expandedParentId, setExpandedParentId] = useState(0);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeQuick, setActiveQuick] = useState<QuickKey>('all');
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const sidebarItems = useMemo(
-    () =>
-      [
-        'Khuyến mãi hôm nay',
-        'Sản phẩm mới',
-        'Bán chạy',
-        'Giảm giá sốc',
-        'Thương hiệu',
-        'Gợi ý cho bạn',
-      ] as QuickKey[],
-    [],
-  );
-  const [activeQuick, setActiveQuick] =
-    useState<QuickKey>('Khuyến mãi hôm nay');
-
-  const [categoryTree, setCategoryTree] = useState<Category[]>([]);
-  const [loadingCats, setLoadingCats] = useState(false);
-  const [activeCategoryId, setActiveCategoryId] = useState<number>(0);
-  const [expandedParentId, setExpandedParentId] = useState<number>(0);
-
+  const [showMenu, setShowMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authFrom, setAuthFrom] = useState('/home');
 
@@ -127,57 +162,54 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
-    const st = location.state as any;
-    if (st?.authRequired) {
-      setAuthFrom(st.from || '/home');
+    const state = location.state as { authRequired?: boolean; from?: string } | null;
+
+    if (state?.authRequired) {
+      setAuthFrom(state.from || '/home');
       setShowAuthModal(true);
     }
   }, [location.state]);
 
   useEffect(() => {
     const params = new URLSearchParams();
+
     if (searchQuery.trim()) params.set('q', searchQuery.trim());
     if (activeCategoryId > 0) params.set('categoryId', String(activeCategoryId));
     if (page > 1) params.set('page', String(page));
 
     const nextSearch = params.toString() ? `?${params.toString()}` : '';
+
     if (nextSearch !== location.search) {
-      navigate(
-        {
-          pathname: '/home',
-          search: nextSearch,
-        },
-        { replace: true },
-      );
+      navigate({ pathname: '/home', search: nextSearch }, { replace: true });
     }
-  }, [searchQuery, activeCategoryId, page, location.search, navigate]);
+  }, [activeCategoryId, location.search, navigate, page, searchQuery]);
 
   useEffect(() => {
     void loadProducts();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [searchQuery, page, activeCategoryId]);
+  }, [activeCategoryId, page, searchQuery]);
 
   useEffect(() => {
-    if (!message) return;
+    if (!message) return undefined;
+
     const timer = window.setTimeout(() => setMessage(null), 2500);
     return () => window.clearTimeout(timer);
   }, [message]);
 
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
       if (!showMenu) return;
-      const el = menuRef.current;
-      if (el && !el.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(false);
       }
     };
 
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
   const loadUserAndShop = async () => {
     const token = getAccessToken();
+
     if (!token) {
       setUser(null);
       setMyShop(null);
@@ -192,18 +224,10 @@ export function HomePage() {
 
       try {
         const shopRes = await getMyShop();
-        if (shopRes?.success && shopRes.data?.id) {
-          setMyShop(shopRes.data);
-        } else {
-          setMyShop(null);
-        }
+        setMyShop(shopRes?.success && shopRes.data?.id ? shopRes.data : null);
       } catch (shopErr: any) {
-        if (shopErr?.response?.status === 404) {
-          setMyShop(null);
-        } else {
-          console.error(shopErr);
-          setMyShop(null);
-        }
+        if (shopErr?.response?.status !== 404) console.error(shopErr);
+        setMyShop(null);
       }
     } catch {
       clearAccessToken();
@@ -214,28 +238,28 @@ export function HomePage() {
   };
 
   const loadCategories = async () => {
-    setLoadingCats(true);
+    setLoadingCategories(true);
+
     try {
       const res = await getPublicCategoryTree();
-      if (res.success) {
-        const tree = Array.isArray(res.data) ? res.data : [];
+      const tree = Array.isArray(res?.data) ? res.data : [];
+
+      if (res?.success) {
         setCategoryTree(tree);
-        if (tree.length && !expandedParentId) {
-          setExpandedParentId(tree[0].id);
-        }
+        if (tree.length > 0) setExpandedParentId((current) => current || tree[0].id);
       } else {
         setCategoryTree([]);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
       setCategoryTree([]);
     } finally {
-      setLoadingCats(false);
+      setLoadingCategories(false);
     }
   };
 
   const loadProducts = async () => {
-    setLoading(true);
+    setLoadingProducts(true);
     setError(null);
 
     try {
@@ -246,14 +270,14 @@ export function HomePage() {
         categoryId: activeCategoryId || undefined,
       });
 
-      if (res.success) {
-        const payload = (res as unknown as ApiResponse<PaginatedResult<ProductListItem>>).data;
-        setProducts(Array.isArray(payload.items) ? payload.items : []);
-        setTotal(Number(payload.total || 0));
+      if (res?.success) {
+        const payload = normalizeProductsPayload(res);
+        setProducts(payload.items);
+        setTotal(payload.total);
       } else {
         setProducts([]);
         setTotal(0);
-        setError(res.message || 'Không tải được danh sách sản phẩm.');
+        setError(res?.message || 'Không tải được danh sách sản phẩm.');
       }
     } catch (err: any) {
       console.error(err);
@@ -261,113 +285,110 @@ export function HomePage() {
       setTotal(0);
       setError(err?.response?.data?.message || 'Không tải được danh sách sản phẩm.');
     } finally {
-      setLoading(false);
+      setLoadingProducts(false);
     }
   };
 
   const parentCategories = useMemo(() => categoryTree ?? [], [categoryTree]);
-
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
-  const resolveCategoryName = useMemo(() => {
-    if (!activeCategoryId) return 'Tất cả sản phẩm';
+  const allCategories = useMemo(() => {
+    const list: Category[] = [];
 
-    const stack: Category[] = [];
-    parentCategories.forEach((p) => {
-      stack.push(p);
-      (p.children ?? []).forEach((c) => stack.push(c));
+    parentCategories.forEach((parent) => {
+      list.push(parent);
+      (parent.children ?? []).forEach((child) => list.push(child));
     });
 
-    const found = stack.find((c) => c.id === activeCategoryId);
-    return found?.name ?? 'Sản phẩm';
-  }, [activeCategoryId, parentCategories]);
+    return list;
+  }, [parentCategories]);
 
-  const userInitials = useMemo(() => {
-    const raw = (user?.name || user?.email || '').trim();
-    if (!raw) return 'U';
-    const parts = raw.split(/\s+/).slice(0, 2);
-    const initials = parts.map((p) => p[0]?.toUpperCase()).join('');
-    return initials || 'U';
-  }, [user]);
+  const activeCategoryName = useMemo(() => {
+    if (!activeCategoryId) return 'Tất cả sản phẩm';
+    return allCategories.find((category) => category.id === activeCategoryId)?.name || 'Sản phẩm';
+  }, [activeCategoryId, allCategories]);
 
   const displayedProducts = useMemo(() => {
     const items = [...products];
 
     switch (activeQuick) {
-      case 'Khuyến mãi hôm nay':
-        return items.sort((a, b) => getDiscountPercent(b) - getDiscountPercent(a));
-
-      case 'Sản phẩm mới':
+      case 'new':
         return items.sort(
-          (a, b) =>
-            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+          (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
         );
 
-      case 'Bán chạy':
-        return items.sort((a, b) => toNumber(b.sold) - toNumber(a.sold));
-
-      case 'Giảm giá sốc':
+      case 'discount':
         return items.sort((a, b) => getDiscountPercent(b) - getDiscountPercent(a));
 
-      case 'Thương hiệu':
-        return items.sort((a, b) => a.title.localeCompare(b.title, 'vi'));
+      case 'sold':
+        return items.sort((a, b) => toNumber(b.sold) - toNumber(a.sold));
 
-      case 'Gợi ý cho bạn':
+      case 'suggest':
         return items.sort((a, b) => {
-          const soldDiff = toNumber(b.sold) - toNumber(a.sold);
-          if (soldDiff !== 0) return soldDiff;
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          const discountDiff = getDiscountPercent(b) - getDiscountPercent(a);
+          if (discountDiff !== 0) return discountDiff;
+          return toNumber(b.sold) - toNumber(a.sold);
         });
 
+      case 'all':
       default:
         return items;
     }
-  }, [products, activeQuick]);
+  }, [activeQuick, products]);
 
-  const resultsHint = useMemo(() => {
-    const bits: string[] = [];
+  const userInitials = useMemo(() => {
+    const raw = (user?.name || user?.email || '').trim();
+    if (!raw) return 'U';
 
-    if (searchQuery) bits.push(`Từ khóa: "${searchQuery}"`);
-    if (activeCategoryId) bits.push(`Danh mục: ${resolveCategoryName}`);
-    if (activeQuick) bits.push(`Chế độ xem: ${activeQuick}`);
+    return raw
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'U';
+  }, [user]);
 
-    return bits.join(' • ');
-  }, [searchQuery, activeCategoryId, resolveCategoryName, activeQuick]);
+  const productHint = useMemo(() => {
+    const pieces: string[] = [];
 
-  const quickIcon = (key: QuickKey) => {
-    switch (key) {
-      case 'Khuyến mãi hôm nay':
-        return '⚡';
-      case 'Sản phẩm mới':
-        return '🆕';
-      case 'Bán chạy':
-        return '🔥';
-      case 'Giảm giá sốc':
-        return '💸';
-      case 'Thương hiệu':
-        return '🏷️';
-      case 'Gợi ý cho bạn':
-        return '✨';
-      default:
-        return '•';
-    }
-  };
+    if (searchQuery) pieces.push(`Từ khóa: ${searchQuery}`);
+    if (activeCategoryId) pieces.push(`Danh mục: ${activeCategoryName}`);
+
+    const quickLabel = QUICK_ITEMS.find((item) => item.key === activeQuick)?.label;
+    if (quickLabel && activeQuick !== 'all') pieces.push(`Sắp xếp: ${quickLabel}`);
+
+    return pieces.join(' • ');
+  }, [activeCategoryId, activeCategoryName, activeQuick, searchQuery]);
+
+  const heroImageUrl = useMemo(() => {
+    const productWithImage = displayedProducts.find((product) => getSafeImageUrl(product));
+    return productWithImage ? getSafeImageUrl(productWithImage) : null;
+  }, [displayedProducts]);
 
   const shopStatusText = (status?: ShopStatus) => {
     switch (status) {
-      case 'PENDING':
-        return 'Shop của tôi (đang chờ duyệt)';
       case 'ACTIVE':
         return 'Shop của tôi';
+      case 'PENDING':
+        return 'Shop chờ duyệt';
       case 'SUSPENDED':
-        return 'Shop của tôi (tạm khóa)';
+        return 'Shop tạm khóa';
       default:
         return 'Đăng ký bán hàng';
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const goToProtected = (path: string) => {
+    if (!user) {
+      setAuthFrom(path);
+      setShowAuthModal(true);
+      return;
+    }
+
+    navigate(path);
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setPage(1);
     setSearchQuery(searchInput.trim());
   };
@@ -382,33 +403,17 @@ export function HomePage() {
     setSearchInput('');
     setSearchQuery('');
     setActiveCategoryId(0);
+    setActiveQuick('all');
     setPage(1);
-    setActiveQuick('Khuyến mãi hôm nay');
   };
 
   const handleProductClick = (productId: number) => {
     navigate(`/products/${productId}`);
   };
 
-  const handleViewProduct = (productId: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handleViewProduct = (productId: number, event?: ReactMouseEvent<HTMLButtonElement>) => {
+    event?.stopPropagation();
     navigate(`/products/${productId}`);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await AuthApi.logout();
-    } catch {
-      // ignore
-    } finally {
-      localStorage.removeItem('current_user');
-      clearAccessToken();
-      setUser(null);
-      setMyShop(null);
-      setShowMenu(false);
-      setMessage('Bạn đã đăng xuất.');
-      navigate('/home');
-    }
   };
 
   const handleShopNavigation = () => {
@@ -427,98 +432,112 @@ export function HomePage() {
   };
 
   const handlePickAll = () => {
-    setPage(1);
     setActiveCategoryId(0);
+    setPage(1);
   };
 
   const handlePickParent = (parentId: number) => {
-    setPage(1);
-    setExpandedParentId((cur) => (cur === parentId ? 0 : parentId));
+    setExpandedParentId((current) => (current === parentId ? 0 : parentId));
     setActiveCategoryId(parentId);
+    setPage(1);
   };
 
   const handlePickChild = (parentId: number, childId: number) => {
-    setPage(1);
     setExpandedParentId(parentId);
     setActiveCategoryId(childId);
+    setPage(1);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AuthApi.logout();
+    } catch {
+      // Không cần chặn logout phía FE nếu API logout lỗi.
+    } finally {
+      localStorage.removeItem('current_user');
+      clearAccessToken();
+      setUser(null);
+      setMyShop(null);
+      setShowMenu(false);
+      setMessage('Bạn đã đăng xuất.');
+      navigate('/home');
+    }
   };
 
   const renderProductCard = (product: ProductListItem) => {
     const imageUrl = getSafeImageUrl(product);
     const discountPercent = getDiscountPercent(product);
     const sold = toNumber(product.sold);
-    const stock = toNumber(product.stock);
-    const outOfStock = stock > 0 ? false : stock === 0;
-    const isNew =
-      Date.now() - new Date(product.createdAt || 0).getTime() <= 1000 * 60 * 60 * 24 * 7;
+    const stock = product.stock === undefined || product.stock === null ? null : toNumber(product.stock);
+    const outOfStock = stock === 0;
+    const productShopName = (product as any)?.shop?.name || (product as any)?.shopName || null;
 
     return (
-      <div
+      <article
         key={product.id}
         className="home-product-card"
+        role="button"
+        tabIndex={0}
         onClick={() => handleProductClick(product.id)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
             handleProductClick(product.id);
           }
         }}
-        role="button"
-        tabIndex={0}
       >
         <div className="home-product-image-wrapper">
           {imageUrl ? (
-            <img src={imageUrl} alt={product.title} className="home-product-image" />
+            <img src={imageUrl} alt={product.title} className="home-product-image" loading="lazy" />
           ) : (
             <div className="home-product-image-placeholder">📦</div>
           )}
 
           <div className="home-product-badges">
             {discountPercent > 0 && (
-              <span className="home-product-badge home-product-badge--sale">
-                -{discountPercent}%
-              </span>
+              <span className="home-product-badge home-product-badge--sale">-{discountPercent}%</span>
             )}
-            {isNew && (
+
+            {isProductNew(product) && (
               <span className="home-product-badge home-product-badge--new">Mới</span>
             )}
+
             {outOfStock && (
-              <span className="home-product-badge home-product-badge--muted">
-                Hết hàng
-              </span>
+              <span className="home-product-badge home-product-badge--muted">Hết hàng</span>
             )}
           </div>
         </div>
 
         <div className="home-product-info">
+          <div className="home-product-category">{product.category?.name || 'Sản phẩm'}</div>
           <h3 className="home-product-title">{product.title}</h3>
 
           <div className="home-product-prices">
-            <div className="home-product-price">
-              {formatPrice(product.price)} {product.currency}
-            </div>
+            <strong className="home-product-price">
+              {formatPrice(product.price)}{product.currency || 'đ'}
+            </strong>
 
             {toNumber(product.compareAtPrice) > toNumber(product.price) && (
-              <div className="home-product-price-old">
-                {formatPrice(product.compareAtPrice)} {product.currency}
-              </div>
+              <span className="home-product-price-old">
+                {formatPrice(product.compareAtPrice)}{product.currency || 'đ'}
+              </span>
             )}
           </div>
 
           <div className="home-product-extra">
             <span>{sold > 0 ? `Đã bán ${formatCompactNumber(sold)}` : 'Mới lên kệ'}</span>
-            <span>{product.category?.name || 'Danh mục khác'}</span>
+            {productShopName && <span>{productShopName}</span>}
           </div>
 
           <button
             type="button"
-            onClick={(e) => handleViewProduct(product.id, e)}
-            className="home-product-add-button"
+            className="home-product-view-button"
+            onClick={(event) => handleViewProduct(product.id, event)}
           >
             Xem chi tiết
           </button>
         </div>
-      </div>
+      </article>
     );
   };
 
@@ -526,52 +545,35 @@ export function HomePage() {
     <div className="home-container">
       <header className="home-header">
         <div className="home-header-content">
-          <button
-            type="button"
-            className="home-brand"
-            onClick={() => navigate('/home')}
-            aria-label="Mini E Home"
-          >
+          <button type="button" className="home-brand" onClick={() => navigate('/home')}>
             <span className="home-brand__logo">🛍️</span>
             <span className="home-brand__text">
               <span className="home-brand__name">Mini E</span>
-              <span className="home-brand__sub">Mua sắm nhanh • Giá tốt</span>
+              <span className="home-brand__sub">Mua sắm thông minh</span>
             </span>
           </button>
 
-          <form onSubmit={handleSearchSubmit} className="home-search">
-            <span className="home-search__icon">🔎</span>
+          <form className="home-search" onSubmit={handleSearchSubmit}>
             <input
-              type="text"
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Tìm kiếm sản phẩm, shop, từ khóa..."
+              onChange={(event) => setSearchInput(event.target.value)}
               className="home-search__input"
+              placeholder="Tìm kiếm sản phẩm, danh mục..."
             />
 
-            {searchInput.trim().length > 0 && (
-              <button
-                type="button"
-                className="home-search__clear"
-                onClick={handleClearSearch}
-                aria-label="Xóa từ khóa"
-              >
+            {searchInput.trim() && (
+              <button type="button" className="home-search__clear" onClick={handleClearSearch}>
                 ✕
               </button>
             )}
 
             <button type="submit" className="home-search__btn" aria-label="Tìm kiếm">
-              Tìm
+              🔍
             </button>
           </form>
 
           <div className="home-actions">
-            <button
-              type="button"
-              className="home-cart-btn"
-              onClick={() => navigate('/cart')}
-              aria-label="Cart"
-            >
+            <button type="button" className="home-cart-btn" onClick={() => goToProtected('/cart')}>
               <span className="home-cart-btn__icon">🛒</span>
               <span className="home-cart-btn__text">Giỏ hàng</span>
             </button>
@@ -581,10 +583,15 @@ export function HomePage() {
                 <button
                   type="button"
                   className="home-user__btn"
-                  onClick={() => setShowMenu((s) => !s)}
+                  onClick={() => setShowMenu((current) => !current)}
                   aria-expanded={showMenu}
                 >
-                  <span className="home-user__avatar">{userInitials}</span>
+                  {user.avatarUrl ? (
+                    <img className="home-user__avatar-img" src={user.avatarUrl} alt={user.name || 'Avatar'} />
+                  ) : (
+                    <span className="home-user__avatar">{userInitials}</span>
+                  )}
+
                   <span className="home-user__name">{user.name || user.email}</span>
                   <span className="home-user__chev">▾</span>
                 </button>
@@ -593,44 +600,44 @@ export function HomePage() {
                   <div className="home-menu-dropdown">
                     <button
                       type="button"
+                      className="home-menu-item"
                       onClick={() => {
                         navigate('/me');
                         setShowMenu(false);
                       }}
-                      className="home-menu-item"
                     >
-                      📝 Thông tin cá nhân
+                      👤 Thông tin cá nhân
                     </button>
 
                     <button
                       type="button"
+                      className="home-menu-item"
                       onClick={() => {
                         navigate('/addresses');
                         setShowMenu(false);
                       }}
-                      className="home-menu-item"
                     >
-                      📍 Địa chỉ
+                      📍 Địa chỉ của tôi
                     </button>
 
                     <button
                       type="button"
+                      className="home-menu-item"
                       onClick={() => {
                         navigate('/orders');
                         setShowMenu(false);
                       }}
-                      className="home-menu-item"
                     >
                       📦 Đơn hàng
                     </button>
 
                     <button
                       type="button"
+                      className="home-menu-item"
                       onClick={() => {
                         handleShopNavigation();
                         setShowMenu(false);
                       }}
-                      className="home-menu-item"
                     >
                       🏪 {shopStatusText(myShop?.status)}
                     </button>
@@ -639,10 +646,8 @@ export function HomePage() {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        void handleLogout();
-                      }}
                       className="home-menu-item home-menu-item--danger"
+                      onClick={() => void handleLogout()}
                     >
                       🚪 Đăng xuất
                     </button>
@@ -650,35 +655,28 @@ export function HomePage() {
                 )}
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="home-login-button"
-              >
+              <button type="button" className="home-login-button" onClick={() => navigate('/login')}>
                 Đăng nhập
               </button>
             )}
           </div>
         </div>
 
-        <div className="home-quicknav">
-          <div className="home-quicknav__inner">
-            {sidebarItems.map((it) => (
+        <nav className="home-topnav">
+          <div className="home-topnav__inner">
+            {QUICK_ITEMS.map((item) => (
               <button
-                key={it}
+                key={item.key}
                 type="button"
-                className={`home-quicknav__item ${
-                  activeQuick === it ? 'home-quicknav__item--active' : ''
-                }`}
-                onClick={() => setActiveQuick(it)}
-                aria-pressed={activeQuick === it}
+                className={`home-topnav__item ${activeQuick === item.key ? 'home-topnav__item--active' : ''}`}
+                onClick={() => setActiveQuick(item.key)}
               >
-                <span className="home-quicknav__icon">{quickIcon(it)}</span>
-                <span className="home-quicknav__text">{it}</span>
+                <span>{item.icon}</span>
+                {item.label}
               </button>
             ))}
           </div>
-        </div>
+        </nav>
       </header>
 
       <main className="home-main">
@@ -686,248 +684,241 @@ export function HomePage() {
           {error && <div className="home-error">{error}</div>}
           {message && <div className="home-message">{message}</div>}
 
-          {loading ? (
-            <div className="home-loading">Đang tải sản phẩm...</div>
-          ) : (
-            <div className="home-layout">
-              <aside className="home-sidebar">
-                <div className="home-sidebar-block">
-                  <div className="home-sidebar-title">Khám phá</div>
-                  <ul className="home-sidebar-quicklist">
-                    {sidebarItems.map((it) => (
-                      <li key={it}>
+          <section className="home-landing-grid">
+            <aside className="home-category-panel">
+              <div className="home-category-title">
+                <span>☰</span>
+                Danh mục sản phẩm
+              </div>
+
+              <button
+                type="button"
+                className={`home-category-row ${activeCategoryId === 0 ? 'home-category-row--active' : ''}`}
+                onClick={handlePickAll}
+              >
+                <span className="home-category-row__icon">🛒</span>
+                <span className="home-category-row__name">Tất cả sản phẩm</span>
+                <span className="home-category-row__arrow">›</span>
+              </button>
+
+              {loadingCategories ? (
+                <div className="home-category-loading">Đang tải danh mục...</div>
+              ) : (
+                <div className="home-category-list">
+                  {parentCategories.map((parent) => {
+                    const children = parent.children ?? [];
+                    const expanded = expandedParentId === parent.id;
+                    const active = activeCategoryId === parent.id;
+
+                    return (
+                      <div className="home-category-group" key={parent.id}>
                         <button
                           type="button"
-                          className={`home-sidebar-quickitem ${
-                            activeQuick === it ? 'home-sidebar-quickitem--active' : ''
-                          }`}
-                          onClick={() => setActiveQuick(it)}
+                          className={`home-category-row ${active ? 'home-category-row--active' : ''}`}
+                          onClick={() => handlePickParent(parent.id)}
                         >
-                          <span className="home-sidebar-quickitem__icon">{quickIcon(it)}</span>
-                          <span className="home-sidebar-quickitem__text">{it}</span>
+                          <span className="home-category-row__icon">{getCategoryIcon(parent.name)}</span>
+                          <span className="home-category-row__name">{parent.name}</span>
+                          <span className="home-category-row__arrow">{children.length ? (expanded ? '⌄' : '›') : '›'}</span>
                         </button>
-                      </li>
-                    ))}
-                  </ul>
+
+                        {expanded && children.length > 0 && (
+                          <div className="home-category-children">
+                            {children.map((child) => (
+                              <button
+                                key={child.id}
+                                type="button"
+                                className={`home-category-child ${
+                                  activeCategoryId === child.id ? 'home-category-child--active' : ''
+                                }`}
+                                onClick={() => handlePickChild(parent.id, child.id)}
+                              >
+                                {child.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+              )}
+            </aside>
 
-                <div className="home-sidebar-divider" />
+            <section className="home-hero">
+              <div className="home-hero__content">
+                <span className="home-hero__eyebrow">Ưu đãi mỗi ngày</span>
+                <h1 className="home-hero__title">Mua sắm nhanh hơn với sản phẩm từ API</h1>
+                <p className="home-hero__description">
+                  Danh mục, tài khoản, ảnh đại diện và danh sách sản phẩm đều được lấy trực tiếp từ backend của bạn.
+                </p>
 
-                <div className="home-sidebar-block">
-                  <div className="home-sidebar-title">Danh mục sản phẩm</div>
-
+                <div className="home-hero__actions">
+                  <button type="button" className="home-hero__button" onClick={handleResetFilters}>
+                    Xem sản phẩm
+                  </button>
                   <button
                     type="button"
-                    className={`home-cat-item ${
-                      activeCategoryId === 0 ? 'home-cat-item--active' : ''
-                    }`}
-                    onClick={handlePickAll}
+                    className="home-hero__button home-hero__button--light"
+                    onClick={handleShopNavigation}
                   >
-                    Tất cả
+                    {myShop?.id ? 'Vào shop của tôi' : 'Mở shop'}
                   </button>
-
-                  {loadingCats ? (
-                    <div className="home-sidebar-muted">Đang tải danh mục...</div>
-                  ) : (
-                    <div className="home-cat-tree">
-                      {parentCategories.map((p) => {
-                        const kids = (p.children ?? []) as Category[];
-                        const expanded = expandedParentId === p.id;
-                        const parentActive = activeCategoryId === p.id;
-
-                        return (
-                          <div key={p.id} className="home-cat-group">
-                            <button
-                              type="button"
-                              className={`home-cat-parent ${
-                                parentActive ? 'home-cat-parent--active' : ''
-                              }`}
-                              onClick={() => handlePickParent(p.id)}
-                              title={p.name}
-                            >
-                              <span className="home-cat-parent__name">{p.name}</span>
-                              <span className="home-cat-parent__chev">
-                                {kids.length ? (expanded ? '▾' : '▸') : ''}
-                              </span>
-                            </button>
-
-                            {expanded && kids.length > 0 && (
-                              <div className="home-cat-children">
-                                {kids.map((c) => (
-                                  <button
-                                    key={c.id}
-                                    type="button"
-                                    className={`home-cat-child ${
-                                      activeCategoryId === c.id ? 'home-cat-child--active' : ''
-                                    }`}
-                                    onClick={() => handlePickChild(p.id, c.id)}
-                                    title={c.name}
-                                  >
-                                    {c.name}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
-              </aside>
+              </div>
 
-              <section className="home-main-column">
-                <div className="home-hero">
-                  <div className="home-hero-text">
-                    <div className="home-hero-badge">{activeQuick}</div>
-                    <div className="home-hero-title">
-                      Mua sắm tiện lợi, giá tốt mỗi ngày
-                    </div>
-                    <div className="home-hero-sub">
-                      Tìm sản phẩm nhanh • Xem chi tiết rõ ràng • Chọn biến thể dễ dàng •
-                      Thanh toán thuận tiện.
-                    </div>
+              <div className="home-hero__visual" aria-hidden>
+                {heroImageUrl ? <img src={heroImageUrl} alt="" /> : <span>🛍️</span>}
+              </div>
+            </section>
 
-                    <div className="home-hero-actions">
-                      <button
-                        type="button"
-                        className="home-hero-button"
-                        onClick={handleResetFilters}
-                      >
-                        Xem tất cả sản phẩm
-                      </button>
-
-                      <button
-                        type="button"
-                        className="home-hero-button home-hero-button--ghost"
-                        onClick={handleShopNavigation}
-                      >
-                        {myShop?.id ? 'Xem shop của tôi →' : 'Mở shop →'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="home-hero-illustration" aria-hidden>
-                    🧴🧼🛒
-                  </div>
+            <aside className="home-service-panel">
+              <div className="home-service-card">
+                <span className="home-service-card__icon">🚚</span>
+                <div>
+                  <strong>Giao hàng tiện lợi</strong>
+                  <span>Theo địa chỉ người dùng</span>
                 </div>
+              </div>
 
-                <div className="home-section">
-                  <div className="home-products-header">
-                    <div className="home-products-header-left">
-                      <h2 className="home-products-title">{resolveCategoryName}</h2>
-                      <div className="home-products-sub">
-                        {total} sản phẩm • Trang {page}/{totalPages}
-                      </div>
-                      {resultsHint && (
-                        <div className="home-products-hint">{resultsHint}</div>
-                      )}
-                    </div>
-
-                    <div className="home-products-header-right">
-                      <button
-                        type="button"
-                        className="home-soft-btn"
-                        onClick={handleResetFilters}
-                        disabled={!searchQuery && activeCategoryId === 0}
-                      >
-                        Đặt lại bộ lọc
-                      </button>
-                    </div>
-                  </div>
-
-                  {displayedProducts.length === 0 ? (
-                    <div className="home-empty">
-                      <div className="home-empty__title">Không có sản phẩm phù hợp.</div>
-                      <div className="home-empty__sub">
-                        Hãy thử đổi từ khóa, danh mục hoặc quay về tất cả sản phẩm.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="home-products-grid">
-                      {displayedProducts.map(renderProductCard)}
-                    </div>
-                  )}
-
-                  <div className="home-pagination">
-                    <button
-                      type="button"
-                      className="home-pagination-button"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page <= 1}
-                    >
-                      ← Trước
-                    </button>
-
-                    <div className="home-pagination-info">
-                      Trang {page} / {totalPages}
-                    </div>
-
-                    <button
-                      type="button"
-                      className="home-pagination-button"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page >= totalPages}
-                    >
-                      Sau →
-                    </button>
-                  </div>
+              <div className="home-service-card">
+                <span className="home-service-card__icon">🔁</span>
+                <div>
+                  <strong>Đơn hàng rõ ràng</strong>
+                  <span>Theo dõi trạng thái dễ dàng</span>
                 </div>
-              </section>
+              </div>
+
+              <div className="home-service-card">
+                <span className="home-service-card__icon">✅</span>
+                <div>
+                  <strong>Shop đã duyệt</strong>
+                  <span>Bán hàng theo tài khoản shop</span>
+                </div>
+              </div>
+            </aside>
+          </section>
+
+          <section className="home-shortcuts" aria-label="Tiện ích nhanh">
+            {QUICK_ITEMS.slice(1).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`home-shortcut-card ${activeQuick === item.key ? 'home-shortcut-card--active' : ''}`}
+                onClick={() => setActiveQuick(item.key)}
+              >
+                <span className="home-shortcut-card__icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+
+            <button type="button" className="home-shortcut-card" onClick={handleShopNavigation}>
+              <span className="home-shortcut-card__icon">🏪</span>
+              <span>{myShop?.id ? 'Shop của tôi' : 'Đăng ký shop'}</span>
+            </button>
+          </section>
+
+          <section className="home-products-section">
+            <div className="home-products-header">
+              <div>
+                <span className="home-section-label">Danh sách sản phẩm</span>
+                <h2 className="home-products-title">{activeCategoryName}</h2>
+                <p className="home-products-sub">
+                  {total} sản phẩm • Trang {page}/{totalPages}
+                  {productHint ? ` • ${productHint}` : ''}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="home-reset-button"
+                onClick={handleResetFilters}
+                disabled={!searchQuery && activeCategoryId === 0 && activeQuick === 'all'}
+              >
+                Đặt lại
+              </button>
             </div>
-          )}
+
+            {loadingProducts ? (
+              <div className="home-products-grid">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div className="home-product-card home-product-card--skeleton" key={index}>
+                    <div className="home-skeleton home-skeleton--image" />
+                    <div className="home-product-info">
+                      <div className="home-skeleton home-skeleton--line" />
+                      <div className="home-skeleton home-skeleton--line home-skeleton--short" />
+                      <div className="home-skeleton home-skeleton--button" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : displayedProducts.length === 0 ? (
+              <div className="home-empty">
+                <div className="home-empty__icon">🔎</div>
+                <div className="home-empty__title">Không có sản phẩm phù hợp</div>
+                <div className="home-empty__sub">Bạn thử đổi từ khóa, danh mục hoặc bấm đặt lại để xem tất cả.</div>
+              </div>
+            ) : (
+              <div className="home-products-grid">{displayedProducts.map(renderProductCard)}</div>
+            )}
+
+            <div className="home-pagination">
+              <button
+                type="button"
+                className="home-pagination-button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page <= 1}
+              >
+                ← Trước
+              </button>
+
+              <span className="home-pagination-info">Trang {page} / {totalPages}</span>
+
+              <button
+                type="button"
+                className="home-pagination-button"
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={page >= totalPages}
+              >
+                Sau →
+              </button>
+            </div>
+          </section>
         </div>
       </main>
 
       <footer className="home-footer">
         <div className="home-footer-inner">
-          <div className="home-footer-column">
-            <div className="home-footer-heading">Mini E</div>
-            <button type="button" className="home-footer-link" onClick={() => navigate('/home')}>
-              Trang chủ
-            </button>
-            <button type="button" className="home-footer-link" onClick={() => navigate('/cart')}>
-              Giỏ hàng
-            </button>
+          <div className="home-footer-brand">
+            <div className="home-footer-logo">🛍️ Mini E</div>
+            <p>Nền tảng mua sắm trực tuyến dùng dữ liệu thật từ API: sản phẩm, danh mục, shop và tài khoản.</p>
           </div>
 
           <div className="home-footer-column">
-            <div className="home-footer-heading">Tài khoản</div>
-            <button type="button" className="home-footer-link" onClick={() => navigate('/me')}>
-              Hồ sơ cá nhân
-            </button>
-            <button type="button" className="home-footer-link" onClick={() => navigate('/orders')}>
-              Đơn hàng
-            </button>
+            <strong>Về chúng tôi</strong>
+            <button type="button" onClick={() => navigate('/home')}>Trang chủ</button>
+            <button type="button" onClick={handleShopNavigation}>Kênh người bán</button>
           </div>
 
           <div className="home-footer-column">
-            <div className="home-footer-heading">Bán hàng</div>
-            <button type="button" className="home-footer-link" onClick={handleShopNavigation}>
-              {myShop?.id ? 'Shop của tôi' : 'Mở shop'}
-            </button>
-            <button
-              type="button"
-              className="home-footer-link"
-              onClick={() => navigate('/shops/register')}
-            >
-              Đăng ký shop
-            </button>
+            <strong>Hỗ trợ khách hàng</strong>
+            <button type="button" onClick={() => goToProtected('/orders')}>Đơn hàng</button>
+            <button type="button" onClick={() => goToProtected('/addresses')}>Địa chỉ</button>
+          </div>
+
+          <div className="home-footer-column">
+            <strong>Tài khoản</strong>
+            <button type="button" onClick={() => goToProtected('/me')}>Thông tin cá nhân</button>
+            <button type="button" onClick={() => goToProtected('/cart')}>Giỏ hàng</button>
           </div>
         </div>
       </footer>
 
       {showAuthModal && (
-        <div
-          className="auth-overlay"
-          onClick={() => setShowAuthModal(false)}
-          role="presentation"
-        >
-          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="auth-overlay" role="presentation" onClick={() => setShowAuthModal(false)}>
+          <div className="auth-modal" onClick={(event) => event.stopPropagation()}>
             <div className="auth-modal__title">Bạn cần đăng nhập</div>
-            <div className="auth-modal__desc">
-              Để tiếp tục tới trang này, bạn hãy đăng nhập hoặc tạo tài khoản mới.
-            </div>
+            <div className="auth-modal__desc">Đăng nhập hoặc tạo tài khoản mới để tiếp tục chức năng này.</div>
 
             <div className="auth-modal__actions">
               <button
@@ -947,11 +938,7 @@ export function HomePage() {
               </button>
             </div>
 
-            <button
-              type="button"
-              className="auth-modal__close"
-              onClick={() => setShowAuthModal(false)}
-            >
+            <button type="button" className="auth-modal__close" onClick={() => setShowAuthModal(false)}>
               Đóng
             </button>
           </div>
