@@ -19,7 +19,7 @@ function formatDateTime(value?: string) {
   return date.toLocaleString('vi-VN');
 }
 
-export function VerifyAccountPage() {
+export default function VerifyAccountPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as VerifyLocationState | null;

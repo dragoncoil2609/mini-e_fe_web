@@ -13,7 +13,7 @@ interface ResetLocationState {
   identifier?: string;
 }
 
-export function ResetPasswordPage() {
+export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ResetLocationState | null;

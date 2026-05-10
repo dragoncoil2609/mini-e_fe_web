@@ -17,7 +17,7 @@ function normalizePhone(raw: string) {
   return v;
 }
 
-export function RegisterPage() {
+export default function RegisterPage() {
   const navigate = useNavigate();
 
   const [name, setName] = useState('');

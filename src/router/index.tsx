@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 
-import { LoginPage } from '../pages/auth/LoginPage';
-import { RegisterPage } from '../pages/auth/RegisterPage';
-import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
-import { VerifyAccountPage } from '../pages/auth/VerifyAccountPage';
-import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
-import { RecoverConfirmPage } from '../pages/auth/RecoverConfirmPage';
-import { RecoverRequestPage } from '../pages/auth/RecoverRequestPage';
+import LoginPage from '../pages/auth/LoginPage';
+import RegisterPage from '../pages/auth/RegisterPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import VerifyAccountPage from '../pages/auth/VerifyAccountPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
+import RecoverConfirmPage from '../pages/auth/RecoverConfirmPage';
+import RecoverRequestPage from '../pages/auth/RecoverRequestPage';
 
 import HomePage from '../pages/home/HomePage';
 

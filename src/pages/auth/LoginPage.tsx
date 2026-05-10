@@ -26,7 +26,7 @@ function normalizePhone(raw: string) {
   return v;
 }
 
-export function LoginPage() {
+export default function LoginPage() {
   const navigate = useNavigate();
 
   const [identifier, setIdentifier] = useState('');

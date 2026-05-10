@@ -7,7 +7,7 @@ import { AuthMessage } from './components/AuthMessage';
 import { guessAuthFieldFromMessage } from './utils/authError';
 import './style/auth.css';
 
-export function ForgotPasswordPage() {
+export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
