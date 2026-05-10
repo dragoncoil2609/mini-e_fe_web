@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 import { getBeMessage } from '../../api/apiError';
+import { AuthCard } from './components/AuthCard';
+import { AuthMessage } from './components/AuthMessage';
 import { guessAuthFieldFromMessage } from './utils/authError';
 import './style/auth.css';
 
@@ -48,47 +50,35 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="container">
-      <div className="card">
-        <div className="header">
-          <button onClick={() => navigate('/home')} className="home-button">
-            🏠 Về trang chủ
-          </button>
+    <AuthCard title="Quên mật khẩu" description="Nhập email đã đăng ký để nhận mã OTP đặt lại mật khẩu.">
+      <form onSubmit={handleSubmit}>
+        <div className="auth-form-group">
+          <label className="auth-label">Email</label>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            className={`auth-input ${fieldError ? 'auth-input-error' : ''}`}
+            placeholder="user@gmail.com"
+            autoComplete="email"
+          />
+          {fieldError && <div className="auth-field-error">{fieldError}</div>}
         </div>
 
-        <h1 className="title">Quên mật khẩu</h1>
+        <AuthMessage type="error" text={error} />
 
-        <p className="description">
-          Nhập email đã đăng ký để nhận mã OTP đặt lại mật khẩu.
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <div className="formGroup">
-            <label className="label">Email</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              className={`input ${fieldError ? 'inputError' : ''}`}
-              placeholder="user@gmail.com"
-              autoComplete="email"
-            />
-            {fieldError && <div className="fieldError">{fieldError}</div>}
-          </div>
-
-          {error && <div className="error">{error}</div>}
-
-          <button type="submit" disabled={loading} className="button">
+        <div style={{ marginTop: 18 }}>
+          <button type="submit" disabled={loading} className="auth-btn">
             {loading ? 'Đang gửi OTP...' : 'Gửi OTP'}
           </button>
-        </form>
-
-        <div className="linkContainer">
-          <Link to="/login" className="link">
-            Đã nhớ mật khẩu? Đăng nhập
-          </Link>
         </div>
+      </form>
+
+      <div className="auth-link-center">
+        <Link to="/login" className="auth-link">
+          Đã nhớ mật khẩu? Đăng nhập
+        </Link>
       </div>
-    </div>
+    </AuthCard>
   );
 }

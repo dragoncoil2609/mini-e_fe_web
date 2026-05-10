@@ -1,0 +1,25 @@
+:root {
+  --color-primary: #05a83f;
+  --color-primary-dark: #027a31;
+  --color-primary-soft: #e9f9ef;
+
+  --color-bg: #f7fbf8;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+
+  --color-text: #14201a;
+  --color-muted: #667085;
+  --color-danger: #dc2626;
+  --color-warning: #f59e0b;
+  --color-success: #16a34a;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
+
+  --container-width: 1440px;
+}

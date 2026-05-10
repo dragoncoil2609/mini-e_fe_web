@@ -1,101 +1,149 @@
-// src/pages/auth/RecoverRequestPage.tsx
 import { useState, type FormEvent } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApi } from '../../api/auth.api';
 import { getBeMessage } from '../../api/apiError';
+import { AuthCard } from './components/AuthCard';
+import { PasswordInput } from './components/PasswordInput';
+import { AuthMessage } from './components/AuthMessage';
 import { guessAuthFieldFromMessage } from './utils/authError';
 import './style/auth.css';
 
-interface RecoverRequestState {
+interface ResetLocationState {
+  email?: string;
   identifier?: string;
-  email?: string; // backward compatible
 }
 
-export function RecoverRequestPage() {
+export function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as RecoverRequestState | null;
+  const state = location.state as ResetLocationState | null;
 
-  const [identifier, setIdentifier] = useState((state?.identifier ?? state?.email ?? '').trim());
+  const initialEmail = (state?.email ?? state?.identifier ?? '').trim();
+
+  const [email] = useState(initialEmail);
+  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<'otp' | 'password' | 'confirmPassword' | 'email', string>>
+  >({});
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setFieldError(null);
+    setFieldErrors({});
     setLoading(true);
 
-    try {
-      await AuthApi.recoverRequest(identifier);
-
-      setSuccess(
-        'Đã gửi yêu cầu khôi phục tài khoản. Vui lòng kiểm tra Email/SMS để lấy OTP.',
-      );
-
-      setTimeout(() => {
-        navigate('/auth/account/recover/confirm', {
-          state: { identifier },
-        });
-      }, 1000);
-    } catch (err: any) {
-      const msg = getBeMessage(err, 'Không gửi được yêu cầu khôi phục. Vui lòng thử lại.');
+    if (!email) {
+      const msg = 'Thiếu email. Vui lòng quay lại bước Quên mật khẩu.';
       setError(msg);
+      setFieldErrors({ email: msg });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await AuthApi.resetPassword({
+        email,
+        otp: otp.trim(),
+        password,
+        confirmPassword,
+      });
+
+      if (data.reset) {
+        setSuccess('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập.');
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      } else {
+        setError('Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
+      }
+    } catch (err: any) {
+      const msg = getBeMessage(err, 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.');
+      setError(msg);
+
       const beField = guessAuthFieldFromMessage(msg);
       const mapped =
-        beField === 'email' || beField === 'phone' || beField === 'identifier' ? 'identifier' : null;
-      setFieldError(mapped ? msg : null);
+        beField === 'otp' || beField === 'password' || beField === 'confirmPassword'
+          ? beField
+          : beField === 'email'
+            ? 'email'
+            : null;
+
+      setFieldErrors(mapped ? { [mapped]: msg } : {});
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="container">
-      <div className="card">
-        <div className="header">
-          <button onClick={() => navigate('/home')} className="home-button">
-            🏠 Về trang chủ
-          </button>
+    <AuthCard title="Đặt lại mật khẩu" description="Nhập mã OTP và mật khẩu mới cho email của bạn.">
+      <form onSubmit={handleSubmit}>
+        <div className="auth-form-group">
+          <label className="auth-label">Email</label>
+          <input type="text" value={email} readOnly className="auth-input-readonly" />
+          {!email && (
+            <div className="auth-error-small">
+              Không có email. Vui lòng quay lại bước Quên mật khẩu.
+            </div>
+          )}
+          {fieldErrors.email && <div className="auth-field-error">{fieldErrors.email}</div>}
         </div>
 
-        <h1 className="title">Khôi phục tài khoản</h1>
-
-        <p className="description">
-          Tài khoản của bạn đã bị vô hiệu hoá. Vui lòng nhập Email hoặc SĐT để nhận mã OTP khôi phục tài khoản.
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <div className="formGroup">
-            <label className="label">Email hoặc SĐT</label>
-            <input
-              type="text"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className={`input ${fieldError ? 'inputError' : ''}`}
-              placeholder="user@gmail.com hoặc 09xx..."
-            />
-            {fieldError && <div className="fieldError">{fieldError}</div>}
-          </div>
-
-          {error && <div className="error">{error}</div>}
-
-          {success && <div className="success">{success}</div>}
-
-          <button type="submit" disabled={loading} className="button">
-            {loading ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu khôi phục'}
-          </button>
-        </form>
-
-        <div className="linkContainer">
-          <Link to="/login" className="link">
-            Quay lại đăng nhập
-          </Link>
+        <div className="auth-form-group">
+          <label className="auth-label">Mã OTP</label>
+          <input
+            type="text"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            className={`auth-input ${fieldErrors.otp ? 'auth-input-error' : ''}`}
+            placeholder="Nhập mã OTP 6 số"
+            inputMode="numeric"
+          />
+          {fieldErrors.otp && <div className="auth-field-error">{fieldErrors.otp}</div>}
         </div>
+
+        <PasswordInput
+          label="Mật khẩu mới"
+          value={password}
+          onChange={setPassword}
+          placeholder="Nhập mật khẩu mới"
+          autoComplete="new-password"
+          error={fieldErrors.password ?? null}
+        />
+
+        <PasswordInput
+          label="Nhập lại mật khẩu mới"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          placeholder="Nhập lại mật khẩu mới"
+          autoComplete="new-password"
+          error={fieldErrors.confirmPassword ?? null}
+        />
+
+        <AuthMessage type="error" text={error} />
+        <AuthMessage type="success" text={success} />
+
+        <div style={{ marginTop: 18 }}>
+          <button type="submit" disabled={loading} className="auth-btn">
+            {loading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
+          </button>
+        </div>
+      </form>
+
+      <div className="auth-links">
+        <Link to="/login" className="auth-link">
+          Đã đặt lại xong? Đăng nhập
+        </Link>
+        <Link to="/forgot-password" className="auth-link">
+          Chưa có OTP?
+        </Link>
       </div>
-    </div>
+    </AuthCard>
   );
 }

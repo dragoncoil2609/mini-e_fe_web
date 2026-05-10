@@ -9,14 +9,14 @@ import type {
   Shop,
   ShopStatus,
   User,
-} from '../api/types';
-import { getPublicProducts } from '../api/products.api';
-import { getPublicCategoryTree } from '../api/categories.api';
-import { getMe } from '../api/users.api';
-import { getMyShop } from '../api/shop.api';
-import { AuthApi } from '../api/auth.api';
-import { clearAccessToken, getAccessToken } from '../api/authToken';
-import { getMainImageUrl } from '../utils/productImage';
+} from '../../api/types';
+import { getPublicProducts } from '../../api/products.api';
+import { getPublicCategoryTree } from '../../api/categories.api';
+import { getMe } from '../../api/users.api';
+import { getMyShop } from '../../api/shop.api';
+import { AuthApi } from '../../api/auth.api';
+import { clearAccessToken, getAccessToken } from '../../api/authToken';
+import { getMainImageUrl } from '../../utils/productImage';
 import './HomePage.css';
 
 type QuickKey = 'all' | 'new' | 'discount' | 'sold' | 'suggest';
@@ -115,7 +115,7 @@ function isProductNew(product: ProductListItem): boolean {
   return Date.now() - createdTime <= sevenDays;
 }
 
-export function HomePage() {
+export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const menuRef = useRef<HTMLDivElement | null>(null);
