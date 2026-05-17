@@ -1,22 +1,39 @@
 // src/api/http.ts
 import axios, {
   AxiosError,
-  type AxiosInstance, type InternalAxiosRequestConfig,
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
 } from 'axios';
 import { getAccessToken, setAccessToken, clearAccessToken } from './authToken';
 import type { ApiResponse, RefreshResponse } from './types';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const http: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // để gửi cookie refresh_token
+  withCredentials: true, // gửi cookie refreshToken
 });
 
-// ====== Decode JWT & check hết hạn ======
+// ====== Auth routes không nên tự refresh ======
+function shouldSkipAutoRefresh(url?: string): boolean {
+  if (!url) return false;
+
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/register') ||
+    url.includes('/auth/forgot-password') ||
+    url.includes('/auth/reset-password') ||
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/logout') ||
+    url.includes('/auth/request-verify') ||
+    url.includes('/auth/verify-account') ||
+    url.includes('/auth/account/recover')
+  );
+}
+
+// ====== Decode JWT & check gần hết hạn ======
 interface JwtPayload {
-  exp?: number; // seconds since epoch
+  exp?: number;
   [key: string]: any;
 }
 
@@ -24,25 +41,26 @@ function decodeJwt(token: string): JwtPayload | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = parts[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/'); // base64url -> base64
+
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const json = atob(payload);
+
     return JSON.parse(json);
   } catch {
     return null;
   }
 }
 
-// offsetSeconds: khoảng cách “sắp hết hạn” (vd: 60s)
 function isTokenNearExpiry(token: string, offsetSeconds = 60): boolean {
   const payload = decodeJwt(token);
+
   if (!payload?.exp) return false;
+
   const now = Math.floor(Date.now() / 1000);
   return payload.exp - now <= offsetSeconds;
 }
 
-// ====== Cơ chế refresh queue (tránh gọi /auth/refresh nhiều lần 1 lúc) ======
+// ====== Refresh queue: tránh gọi /auth/refresh nhiều lần cùng lúc ======
 let isRefreshing = false;
 let pendingRequests: (() => void)[] = [];
 
@@ -50,17 +68,17 @@ async function doRefreshAccessToken(): Promise<string> {
   const res = await axios.post<ApiResponse<RefreshResponse>>(
     `${API_BASE_URL}/auth/refresh`,
     {},
-    { withCredentials: true }
+    { withCredentials: true },
   );
 
   const newAccessToken = res.data.data.access_token;
   setAccessToken(newAccessToken);
+
   return newAccessToken;
 }
 
 async function queueRefreshToken(): Promise<void> {
   if (isRefreshing) {
-    // Nếu đã có 1 thằng đang refresh, chờ nó xong
     await new Promise<void>((resolve) => {
       pendingRequests.push(resolve);
     });
@@ -68,6 +86,7 @@ async function queueRefreshToken(): Promise<void> {
   }
 
   isRefreshing = true;
+
   try {
     await doRefreshAccessToken();
   } finally {
@@ -77,23 +96,23 @@ async function queueRefreshToken(): Promise<void> {
   }
 }
 
-// ====== Request interceptor: gắn token + refresh trước khi hết hạn ======
+// ====== Request interceptor: gắn token + refresh trước khi token gần hết hạn ======
 http.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const currentToken = getAccessToken();
+    const url = config.url || '';
 
     if (currentToken) {
-      // Nếu token sắp hết hạn → refresh trước khi gửi request
-      if (isTokenNearExpiry(currentToken, 60)) {
+      if (!shouldSkipAutoRefresh(url) && isTokenNearExpiry(currentToken, 60)) {
         try {
           await queueRefreshToken();
-        } catch (err) {
-          // Refresh thất bại → xoá token, để request tiếp theo nhận 401
+        } catch {
           clearAccessToken();
         }
       }
 
       const latestToken = getAccessToken();
+
       if (latestToken) {
         config.headers = config.headers ?? {};
         config.headers.Authorization = `Bearer ${latestToken}`;
@@ -102,10 +121,10 @@ http.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
-// ====== Response interceptor: 401 -> refresh rồi retry ======
+// ====== Response interceptor: gặp 401 thì refresh rồi retry request cũ ======
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
@@ -119,15 +138,7 @@ http.interceptors.response.use(
     if (status === 401 && originalRequest && !originalRequest._retry) {
       const url = originalRequest.url || '';
 
-      // Không tự refresh cho các route auth đặc biệt
-      if (
-        url.includes('/auth/login') ||
-        url.includes('/auth/register') ||
-        url.includes('/auth/forgot-password') ||
-        url.includes('/auth/reset-password') ||
-        url.includes('/auth/refresh') ||
-        url.includes('/auth/account/recover')
-      ) {
+      if (shouldSkipAutoRefresh(url)) {
         return Promise.reject(error);
       }
 
@@ -137,6 +148,7 @@ http.interceptors.response.use(
         await queueRefreshToken();
 
         const newToken = getAccessToken();
+
         if (newToken) {
           originalRequest.headers = originalRequest.headers ?? {};
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -145,12 +157,10 @@ http.interceptors.response.use(
         return http(originalRequest);
       } catch (refreshErr) {
         clearAccessToken();
-        // Tuỳ bạn có muốn redirect luôn sang /login không:
-        // window.location.href = '/login';
         return Promise.reject(refreshErr);
       }
     }
 
     return Promise.reject(error);
-  }
+  },
 );

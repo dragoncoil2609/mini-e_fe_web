@@ -1,186 +1,187 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import type { FormEvent } from "react";
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+
 import { AuthApi } from '../../api/auth.api';
-import { getBeMessage, getBeStatus } from '../../api/apiError';
-import { AuthCard } from './components/AuthCard';
-import { PasswordInput } from './components/PasswordInput';
-import { AuthMessage } from './components/AuthMessage';
-import { guessAuthFieldFromMessage } from './utils/authError';
+import AuthCard from './components/AuthCard';
+import AuthMessage from './components/AuthMessage';
+import PasswordInput from './components/PasswordInput';
+import { getAuthErrorMessage } from './utils/authError';
+
+import loginBunnyBear from '../../assets/brand/login_bunny_bear.png';
+import basketChick from '../../assets/brand/basket_chick.png';
+
 import './style/auth.css';
 
-interface RecoverInfo {
-  identifier: string;
-  via?: string;
-}
+type LoginLocationState = {
+  from?: string;
+  message?: string;
+  authRequired?: boolean;
+};
 
-function looksLikeEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
+function buildLoginPayload(identifier: string, password: string) {
+  const value = identifier.trim();
 
-function normalizePhone(raw: string) {
-  let v = raw.trim().replace(/[\s.-]/g, '');
-  if (!v) return v;
-  if (v.startsWith('+')) return v;
-  if (v.startsWith('0')) return `+84${v.slice(1)}`;
-  if (v.startsWith('84')) return `+${v}`;
-  return v;
+  if (value.includes('@')) {
+    return { email: value, password };
+  }
+
+  return { phone: value, password };
 }
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LoginLocationState | null;
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(true);
 
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<'identifier' | 'password', string>>
-  >({});
-  const [recoverInfo, setRecoverInfo] = useState<RecoverInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(
+    locationState?.authRequired
+      ? 'Bạn cần đăng nhập để sử dụng chức năng này.'
+      : locationState?.message ?? '',
+  );
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>(
+    locationState?.message ? 'success' : 'info',
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setFieldErrors({});
-    setRecoverInfo(null);
+
+    if (!identifier.trim()) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập email hoặc số điện thoại');
+      return;
+    }
+
+    if (!password) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập mật khẩu');
+      return;
+    }
+
     setLoading(true);
+    setMessage('');
 
     try {
-      const id = identifier.trim();
+      const data = await AuthApi.login(buildLoginPayload(identifier, password));
 
-      if (!id) {
-        const msg = 'Vui lòng nhập Email hoặc Số điện thoại.';
-        setError(msg);
-        setFieldErrors({ identifier: msg });
-        return;
-      }
-
-      const payload = looksLikeEmail(id)
-        ? { email: id.toLowerCase(), password }
-        : { phone: normalizePhone(id), password };
-
-      const data = await AuthApi.login(payload);
-
-      if (!data.user) {
-        setError('Phản hồi đăng nhập không hợp lệ. Thiếu thông tin người dùng.');
-        return;
-      }
-
-      try {
-        localStorage.setItem('current_user', JSON.stringify(data.user));
-      } catch (e) {
-        console.error('Cannot save user to localStorage', e);
-      }
-
-      if (!data.user.isVerified) {
-        navigate('/verify-account', {
+      if (data.needRecover) {
+        navigate('/auth/account/recover/request', {
+          replace: true,
           state: {
-            verifyInfo: data.verify ?? null,
+            identifier: data.identifier ?? identifier,
+            via: data.via,
+            needRecover: true,
           },
         });
         return;
       }
 
-      if (data.user.role === 'ADMIN') navigate('/admin');
-      else navigate('/home');
-    } catch (err: any) {
-      const status = getBeStatus(err);
-      const payload = err?.response?.data;
-
-      if (status === 423 && payload?.data?.needRecover) {
-        const identifier = payload.data.identifier as string | undefined;
-        const via = payload.data.via as string | undefined;
-        const msg = getBeMessage(
-          err,
-          'Tài khoản đã bị vô hiệu hoá. Vui lòng khôi phục trước khi đăng nhập.',
-        );
-
-        setError(msg);
-        setFieldErrors({ identifier: msg });
-
-        if (identifier) setRecoverInfo({ identifier, via });
-      } else {
-        const msg = getBeMessage(err, 'Đăng nhập thất bại, vui lòng kiểm tra lại.');
-        setError(msg);
-
-        const beField = guessAuthFieldFromMessage(msg);
-        const mappedField =
-          beField === 'email' || beField === 'phone' || beField === 'identifier'
-            ? 'identifier'
-            : beField === 'password'
-              ? 'password'
-              : null;
-
-        setFieldErrors(mappedField ? { [mappedField]: msg } : {});
+      if (data.verificationOnly || data.verify?.required || data.user?.isVerified === false) {
+        navigate('/verify-account', {
+          replace: true,
+          state: {
+            identifier,
+            verify: data.verify,
+            from: locationState?.from ?? '/home',
+          },
+        });
+        return;
       }
+
+      navigate(locationState?.from ?? '/home', { replace: true });
+    } catch (error) {
+      setMessageType('error');
+      setMessage(getAuthErrorMessage(error, 'Đăng nhập thất bại'));
     } finally {
       setLoading(false);
     }
   }
 
-  function handleRecoverAccount() {
-    if (!recoverInfo?.identifier) return;
-
-    navigate('/auth/account/recover/request', {
-      state: { identifier: recoverInfo.identifier },
-    });
-  }
-
   return (
-    <AuthCard
-      title="Đăng nhập"
-      description="Nhập email hoặc số điện thoại và mật khẩu để tiếp tục."
-    >
-      <form onSubmit={handleSubmit}>
-        <div className="auth-form-group">
-          <label className="auth-label">Email hoặc Số điện thoại</label>
-          <input
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            type="text"
-            placeholder="vd: user@gmail.com hoặc 0353xxxxxx"
-            className={`auth-input ${fieldErrors.identifier ? 'auth-input-error' : ''}`}
-            autoComplete="username"
-          />
-          {fieldErrors.identifier && (
-            <div className="auth-field-error">{fieldErrors.identifier}</div>
-          )}
-        </div>
+    <AuthCard variant="wide">
+      <div className="auth-card-split">
+        <div>
+          <h1 className="auth-title">Đăng nhập</h1>
+          <p className="auth-subtitle">Chào mừng bạn quay trở lại Mochi 💗</p>
 
-        <PasswordInput
-          label="Mật khẩu"
-          value={password}
-          onChange={setPassword}
-          placeholder="Nhập mật khẩu"
-          autoComplete="current-password"
-          error={fieldErrors.password ?? null}
-        />
+          <AuthMessage type={messageType} message={message} />
 
-        <AuthMessage type="error" text={error} />
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <label className="auth-field">
+              <span className="auth-label">Email hoặc số điện thoại</span>
+              <span className="auth-input-wrap">
+                <span className="auth-input-icon">👤</span>
+                <input
+                  className="auth-input auth-input-has-icon"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="Nhập email hoặc số điện thoại"
+                  autoComplete="username"
+                />
+              </span>
+            </label>
 
-        {recoverInfo && (
-          <div style={{ marginTop: 16 }}>
-            <button type="button" onClick={handleRecoverAccount} className="auth-btn-warning">
-              Khôi phục tài khoản
+            <PasswordInput
+              label="Mật khẩu"
+              value={password}
+              autoComplete="current-password"
+              onChange={setPassword}
+            />
+
+            <div className="auth-options">
+              <label className="auth-check">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
+                <span>Ghi nhớ đăng nhập</span>
+              </label>
+
+              <Link to="/forgot-password" className="auth-link">
+                Quên mật khẩu?
+              </Link>
+            </div>
+
+            <button className="auth-btn" disabled={loading}>
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
+
+            <div className="auth-divider">Hoặc đăng nhập với</div>
+
+            <div className="auth-socials">
+              <button type="button" className="auth-social-btn">
+                🌈 Google
+              </button>
+              <button type="button" className="auth-social-btn">
+                🔵 Facebook
+              </button>
+              <button type="button" className="auth-social-btn">
+                 Apple
+              </button>
+            </div>
+          </form>
+
+          <div className="auth-footer">
+            Chưa có tài khoản?{' '}
+            <Link to="/register" className="auth-link">
+              Đăng ký ngay
+            </Link>
           </div>
-        )}
-
-        <div style={{ marginTop: 18 }}>
-          <button type="submit" disabled={loading} className="auth-btn">
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
         </div>
-      </form>
 
-      <div className="auth-links">
-        <Link to="/register" className="auth-link">
-          Tạo tài khoản
-        </Link>
-        <Link to="/forgot-password" className="auth-link">
-          Quên mật khẩu?
-        </Link>
+        <div>
+          <img className="auth-art" src={loginBunnyBear} alt="Đăng nhập Mochi" />
+        </div>
+      </div>
+
+      <div className="auth-bottom-art">
+        <img src={basketChick} alt="Mochi cute basket" />
       </div>
     </AuthCard>
   );

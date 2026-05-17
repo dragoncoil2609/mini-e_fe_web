@@ -1,149 +1,238 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import type { FormEvent, KeyboardEvent } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+
 import { AuthApi } from '../../api/auth.api';
-import { getBeMessage } from '../../api/apiError';
-import { AuthCard } from './components/AuthCard';
-import { PasswordInput } from './components/PasswordInput';
-import { AuthMessage } from './components/AuthMessage';
-import { guessAuthFieldFromMessage } from './utils/authError';
+import AuthCard from './components/AuthCard';
+import AuthMessage from './components/AuthMessage';
+import PasswordInput from './components/PasswordInput';
+import { getAuthErrorMessage } from './utils/authError';
+
+import otpPhone from '../../assets/brand/otp_phone.png';
+import newPasswordLock from '../../assets/brand/new_password_lock.png';
+import restoreSuccessHeart from '../../assets/brand/restore_success_heart.png';
+
 import './style/auth.css';
 
-interface ResetLocationState {
-  email?: string;
+type RecoverConfirmState = {
   identifier?: string;
-}
+  devOtp?: string;
+  expiresAt?: string;
+};
 
-export default function ResetPasswordPage() {
-  const navigate = useNavigate();
+export default function RecoverConfirmPage() {
   const location = useLocation();
-  const state = location.state as ResetLocationState | null;
+  const locationState = location.state as RecoverConfirmState | null;
 
-  const initialEmail = (state?.email ?? state?.identifier ?? '').trim();
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const [email] = useState(initialEmail);
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
+  const [stage, setStage] = useState<'otp' | 'password' | 'success'>('otp');
+
+  const [identifier, setIdentifier] = useState(locationState?.identifier ?? '');
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
+
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<'otp' | 'password' | 'confirmPassword' | 'email', string>>
-  >({});
 
-  async function handleSubmit(e: FormEvent) {
+  const [message, setMessage] = useState(
+    locationState?.devOtp ? 'Mã khôi phục đã được gửi. Bạn có thể dùng OTP test bên dưới.' : '',
+  );
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('info');
+
+  const otp = useMemo(() => otpValues.join(''), [otpValues]);
+
+  function handleOtpChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, '').slice(-1);
+
+    setOtpValues((current) => {
+      const next = [...current];
+      next[index] = digit;
+      return next;
+    });
+
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handleKeyDown(index: number, e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handleConfirmOtp(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setFieldErrors({});
-    setLoading(true);
 
-    if (!email) {
-      const msg = 'Thiếu email. Vui lòng quay lại bước Quên mật khẩu.';
-      setError(msg);
-      setFieldErrors({ email: msg });
-      setLoading(false);
+    if (!identifier.trim()) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập email hoặc số điện thoại');
       return;
     }
 
+    if (otp.length !== 6) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập đủ 6 số OTP');
+      return;
+    }
+
+    setMessage('');
+    setStage('password');
+  }
+
+  async function handleRecover(e: FormEvent) {
+    e.preventDefault();
+
+    if (!newPassword || !confirmPassword) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập đầy đủ mật khẩu mới');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessageType('error');
+      setMessage('Xác nhận mật khẩu chưa khớp');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
     try {
-      const data = await AuthApi.resetPassword({
-        email,
-        otp: otp.trim(),
-        password,
+      await AuthApi.recoverConfirm({
+        email: identifier.trim(),
+        otp,
+        newPassword,
         confirmPassword,
       });
 
-      if (data.reset) {
-        setSuccess('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập.');
-        setTimeout(() => {
-          navigate('/login');
-        }, 1500);
-      } else {
-        setError('Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
-      }
-    } catch (err: any) {
-      const msg = getBeMessage(err, 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.');
-      setError(msg);
-
-      const beField = guessAuthFieldFromMessage(msg);
-      const mapped =
-        beField === 'otp' || beField === 'password' || beField === 'confirmPassword'
-          ? beField
-          : beField === 'email'
-            ? 'email'
-            : null;
-
-      setFieldErrors(mapped ? { [mapped]: msg } : {});
+      setStage('success');
+    } catch (error) {
+      setMessageType('error');
+      setMessage(getAuthErrorMessage(error, 'Khôi phục tài khoản thất bại'));
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <AuthCard title="Đặt lại mật khẩu" description="Nhập mã OTP và mật khẩu mới cho email của bạn.">
-      <form onSubmit={handleSubmit}>
-        <div className="auth-form-group">
-          <label className="auth-label">Email</label>
-          <input type="text" value={email} readOnly className="auth-input-readonly" />
-          {!email && (
-            <div className="auth-error-small">
-              Không có email. Vui lòng quay lại bước Quên mật khẩu.
-            </div>
-          )}
-          {fieldErrors.email && <div className="auth-field-error">{fieldErrors.email}</div>}
+  if (stage === 'success') {
+    return (
+      <AuthCard variant="compact">
+        <div className="auth-title-center">
+          <img className="auth-art" src={restoreSuccessHeart} alt="Khôi phục thành công" />
         </div>
 
-        <div className="auth-form-group">
-          <label className="auth-label">Mã OTP</label>
-          <input
-            type="text"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            className={`auth-input ${fieldErrors.otp ? 'auth-input-error' : ''}`}
-            placeholder="Nhập mã OTP 6 số"
-            inputMode="numeric"
+        <div className="auth-steps-note">Bước 3/3</div>
+        <h1 className="auth-title auth-title-center">Khôi phục thành công</h1>
+
+        <p className="auth-subtitle auth-subtitle-center">
+          Tài khoản của bạn đã được khôi phục thành công! Bạn có thể đăng nhập và tiếp tục sử dụng.
+        </p>
+
+        <Link to="/login" className="auth-btn" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
+          Đăng nhập ngay
+        </Link>
+
+        <div className="auth-resend">
+          <Link to="/home" className="auth-link">
+            Quay về trang chủ
+          </Link>
+        </div>
+      </AuthCard>
+    );
+  }
+
+  if (stage === 'password') {
+    return (
+      <AuthCard variant="compact">
+        <div className="auth-title-center">
+          <img className="auth-art" src={newPasswordLock} alt="Mật khẩu mới" />
+        </div>
+
+        <div className="auth-steps-note">Bước 3/3</div>
+        <h1 className="auth-title auth-title-center">Tạo mật khẩu mới</h1>
+
+        <AuthMessage type={messageType} message={message} />
+
+        <form className="auth-form" onSubmit={handleRecover}>
+          <PasswordInput
+            label="Mật khẩu mới"
+            value={newPassword}
+            placeholder="Nhập mật khẩu mới"
+            autoComplete="new-password"
+            onChange={setNewPassword}
           />
-          {fieldErrors.otp && <div className="auth-field-error">{fieldErrors.otp}</div>}
-        </div>
 
-        <PasswordInput
-          label="Mật khẩu mới"
-          value={password}
-          onChange={setPassword}
-          placeholder="Nhập mật khẩu mới"
-          autoComplete="new-password"
-          error={fieldErrors.password ?? null}
-        />
+          <PasswordInput
+            label="Xác nhận mật khẩu"
+            value={confirmPassword}
+            placeholder="Nhập lại mật khẩu mới"
+            autoComplete="new-password"
+            onChange={setConfirmPassword}
+          />
 
-        <PasswordInput
-          label="Nhập lại mật khẩu mới"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          placeholder="Nhập lại mật khẩu mới"
-          autoComplete="new-password"
-          error={fieldErrors.confirmPassword ?? null}
-        />
-
-        <AuthMessage type="error" text={error} />
-        <AuthMessage type="success" text={success} />
-
-        <div style={{ marginTop: 18 }}>
-          <button type="submit" disabled={loading} className="auth-btn">
-            {loading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
+          <button className="auth-btn" disabled={loading}>
+            {loading ? 'Đang khôi phục...' : 'Khôi phục tài khoản'}
           </button>
-        </div>
-      </form>
+        </form>
+      </AuthCard>
+    );
+  }
 
-      <div className="auth-links">
-        <Link to="/login" className="auth-link">
-          Đã đặt lại xong? Đăng nhập
-        </Link>
-        <Link to="/forgot-password" className="auth-link">
-          Chưa có OTP?
-        </Link>
+  return (
+    <AuthCard variant="compact">
+      <div className="auth-title-center">
+        <img className="auth-art" src={otpPhone} alt="Nhập mã xác thực" />
       </div>
+
+      <div className="auth-steps-note">Bước 2/3</div>
+      <h1 className="auth-title auth-title-center">Nhập mã xác thực</h1>
+
+      <div className="auth-otp-target">
+        Mã OTP đã được gửi đến
+        <br />
+        <strong>{identifier || 'tài khoản của bạn'}</strong>
+      </div>
+
+      <AuthMessage type={messageType} message={message} devOtp={locationState?.devOtp} />
+
+      <form className="auth-form" onSubmit={handleConfirmOtp}>
+        {!locationState?.identifier && (
+          <label className="auth-field">
+            <span className="auth-label">Email hoặc số điện thoại</span>
+            <span className="auth-input-wrap">
+              <span className="auth-input-icon">👤</span>
+              <input
+                className="auth-input auth-input-has-icon"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Email hoặc số điện thoại"
+              />
+            </span>
+          </label>
+        )}
+
+        <div className="auth-otp-grid">
+          {otpValues.map((value, index) => (
+            <input
+              key={index}
+              ref={(el) => {
+                inputRefs.current[index] = el;
+              }}
+              className="auth-otp-input"
+              value={value}
+              inputMode="numeric"
+              maxLength={1}
+              onChange={(e) => handleOtpChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+            />
+          ))}
+        </div>
+
+        <button className="auth-btn">Xác nhận</button>
+      </form>
     </AuthCard>
   );
 }

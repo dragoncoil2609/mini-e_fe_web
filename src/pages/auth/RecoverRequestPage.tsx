@@ -1,148 +1,143 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+
 import { AuthApi } from '../../api/auth.api';
-import { getBeMessage } from '../../api/apiError';
-import { AuthCard } from './components/AuthCard';
-import { PasswordInput } from './components/PasswordInput';
-import { AuthMessage } from './components/AuthMessage';
-import { guessAuthFieldFromMessage } from './utils/authError';
+import AuthCard from './components/AuthCard';
+import AuthMessage from './components/AuthMessage';
+import { getAuthErrorMessage } from './utils/authError';
+
+import restoreBunnyBear from '../../assets/brand/restore_bunny_bear.png';
+import restoreShield from '../../assets/brand/restore_shield.png';
+
 import './style/auth.css';
 
-interface ResetLocationState {
-  email?: string;
+type RecoverRequestState = {
   identifier?: string;
-}
+  needRecover?: boolean;
+};
 
-export default function ResetPasswordPage() {
+export default function RecoverRequestPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as ResetLocationState | null;
+  const locationState = location.state as RecoverRequestState | null;
 
-  const initialEmail = (state?.email ?? state?.identifier ?? '').trim();
-
-  const [email] = useState(initialEmail);
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
+  const [identifier, setIdentifier] = useState(locationState?.identifier ?? '');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<'otp' | 'password' | 'confirmPassword' | 'email', string>>
-  >({});
+
+  const [message, setMessage] = useState(
+    locationState?.needRecover
+      ? 'Tài khoản của bạn đang bị vô hiệu hóa. Vui lòng khôi phục để tiếp tục sử dụng.'
+      : '',
+  );
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('info');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setFieldErrors({});
-    setLoading(true);
 
-    if (!email) {
-      const msg = 'Thiếu email. Vui lòng quay lại bước Quên mật khẩu.';
-      setError(msg);
-      setFieldErrors({ email: msg });
-      setLoading(false);
+    if (!identifier.trim()) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập email hoặc số điện thoại');
       return;
     }
 
+    setLoading(true);
+    setMessage('');
+
     try {
-      const data = await AuthApi.resetPassword({
-        email,
-        otp: otp.trim(),
-        password,
-        confirmPassword,
+      const data = await AuthApi.recoverRequest(identifier.trim());
+
+      navigate('/auth/account/recover/confirm', {
+        replace: true,
+        state: {
+          identifier: identifier.trim(),
+          expiresAt: data?.expiresAt,
+          devOtp: data?.devOtp ?? data?.otp,
+        },
       });
-
-      if (data.reset) {
-        setSuccess('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập.');
-        setTimeout(() => {
-          navigate('/login');
-        }, 1500);
-      } else {
-        setError('Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
-      }
-    } catch (err: any) {
-      const msg = getBeMessage(err, 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại thông tin.');
-      setError(msg);
-
-      const beField = guessAuthFieldFromMessage(msg);
-      const mapped =
-        beField === 'otp' || beField === 'password' || beField === 'confirmPassword'
-          ? beField
-          : beField === 'email'
-            ? 'email'
-            : null;
-
-      setFieldErrors(mapped ? { [mapped]: msg } : {});
+    } catch (error) {
+      setMessageType('error');
+      setMessage(getAuthErrorMessage(error, 'Không thể gửi yêu cầu khôi phục'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthCard title="Đặt lại mật khẩu" description="Nhập mã OTP và mật khẩu mới cho email của bạn.">
-      <form onSubmit={handleSubmit}>
-        <div className="auth-form-group">
-          <label className="auth-label">Email</label>
-          <input type="text" value={email} readOnly className="auth-input-readonly" />
-          {!email && (
-            <div className="auth-error-small">
-              Không có email. Vui lòng quay lại bước Quên mật khẩu.
+    <AuthCard variant="hero">
+      <div className="auth-hero-grid">
+        <div className="auth-hero-left">
+          <img className="auth-art-large" src={restoreBunnyBear} alt="Khôi phục tài khoản" />
+
+          <div>
+            <h1 className="auth-title">Khôi phục tài khoản</h1>
+            <p className="auth-subtitle">
+              Tài khoản của bạn đã bị xóa. Đừng lo! Bạn vẫn có thể khôi phục tài khoản
+              và lấy lại toàn bộ dữ liệu trước đây.
+            </p>
+
+            <div className="auth-help-box">
+              <div>♡ Bạn có 30 ngày kể từ ngày xóa để khôi phục tài khoản.</div>
+              <div>♡ Sau thời gian này, tài khoản và dữ liệu sẽ bị xóa vĩnh viễn.</div>
             </div>
-          )}
-          {fieldErrors.email && <div className="auth-field-error">{fieldErrors.email}</div>}
+
+            <div style={{ height: 20 }} />
+
+            <div className="auth-actions-row">
+              <button
+                className="auth-btn"
+                type="button"
+                onClick={() => {
+                  const form = document.getElementById('recover-form-input');
+                  form?.focus();
+                }}
+              >
+                Khôi phục ngay
+              </button>
+
+              <Link to="/home" className="auth-btn-outline" style={{ textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
+                Không, cảm ơn
+              </Link>
+            </div>
+          </div>
         </div>
 
-        <div className="auth-form-group">
-          <label className="auth-label">Mã OTP</label>
-          <input
-            type="text"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            className={`auth-input ${fieldErrors.otp ? 'auth-input-error' : ''}`}
-            placeholder="Nhập mã OTP 6 số"
-            inputMode="numeric"
-          />
-          {fieldErrors.otp && <div className="auth-field-error">{fieldErrors.otp}</div>}
+        <div>
+          <div className="auth-title-center">
+            <img className="auth-art" src={restoreShield} alt="Xác minh khôi phục" />
+          </div>
+
+          <div className="auth-steps-note">Bước 1/3</div>
+          <h2 className="auth-title auth-title-center" style={{ fontSize: 25 }}>
+            Xác minh tài khoản
+          </h2>
+
+          <p className="auth-subtitle auth-subtitle-center">
+            Nhập email hoặc số điện thoại của tài khoản đã bị xóa để bắt đầu khôi phục.
+          </p>
+
+          <AuthMessage type={messageType} message={message} />
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <label className="auth-field">
+              <span className="auth-input-wrap">
+                <span className="auth-input-icon">👤</span>
+                <input
+                  id="recover-form-input"
+                  className="auth-input auth-input-has-icon"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="Email hoặc số điện thoại"
+                  autoComplete="username"
+                />
+              </span>
+            </label>
+
+            <button className="auth-btn" disabled={loading}>
+              {loading ? 'Đang gửi...' : 'Tiếp tục'}
+            </button>
+          </form>
         </div>
-
-        <PasswordInput
-          label="Mật khẩu mới"
-          value={password}
-          onChange={setPassword}
-          placeholder="Nhập mật khẩu mới"
-          autoComplete="new-password"
-          error={fieldErrors.password ?? null}
-        />
-
-        <PasswordInput
-          label="Nhập lại mật khẩu mới"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          placeholder="Nhập lại mật khẩu mới"
-          autoComplete="new-password"
-          error={fieldErrors.confirmPassword ?? null}
-        />
-
-        <AuthMessage type="error" text={error} />
-        <AuthMessage type="success" text={success} />
-
-        <div style={{ marginTop: 18 }}>
-          <button type="submit" disabled={loading} className="auth-btn">
-            {loading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
-          </button>
-        </div>
-      </form>
-
-      <div className="auth-links">
-        <Link to="/login" className="auth-link">
-          Đã đặt lại xong? Đăng nhập
-        </Link>
-        <Link to="/forgot-password" className="auth-link">
-          Chưa có OTP?
-        </Link>
       </div>
     </AuthCard>
   );

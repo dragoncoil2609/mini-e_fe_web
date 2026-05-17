@@ -1,84 +1,92 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import type { FormEvent } from "react";
+import { useNavigate } from 'react-router-dom';
+
 import { AuthApi } from '../../api/auth.api';
-import { getBeMessage } from '../../api/apiError';
-import { AuthCard } from './components/AuthCard';
-import { AuthMessage } from './components/AuthMessage';
-import { guessAuthFieldFromMessage } from './utils/authError';
+import AuthCard from './components/AuthCard';
+import AuthMessage from './components/AuthMessage';
+import { getAuthErrorMessage } from './utils/authError';
+
+import forgotPasswordSearch from '../../assets/brand/forgot_password_search.png';
+
 import './style/auth.css';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
+
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('info');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setFieldError(null);
-    setLoading(true);
 
-    const trimmedEmail = email.trim();
-
-    if (!trimmedEmail) {
-      const msg = 'Email không được để trống';
-      setError(msg);
-      setFieldError(msg);
-      setLoading(false);
+    if (!identifier.trim()) {
+      setMessageType('error');
+      setMessage('Vui lòng nhập email hoặc số điện thoại');
       return;
     }
 
+    setLoading(true);
+    setMessage('');
+
     try {
-      await AuthApi.forgotPassword(trimmedEmail);
+      const data = await AuthApi.forgotPassword(identifier.trim());
 
       navigate('/reset-password', {
-        state: { email: trimmedEmail },
+        replace: true,
+        state: {
+          identifier: identifier.trim(),
+          target: data.target ?? data.email ?? data.phone ?? identifier.trim(),
+          expiresAt: data.expiresAt,
+          devOtp: data.devOtp ?? data.otp,
+        },
       });
-    } catch (err: any) {
-      const msg = getBeMessage(err, 'Không gửi được OTP. Vui lòng thử lại.');
-      setError(msg);
-
-      const beField = guessAuthFieldFromMessage(msg);
-      const mapped = beField === 'email' ? 'email' : null;
-      setFieldError(mapped ? msg : null);
+    } catch (error) {
+      setMessageType('error');
+      setMessage(getAuthErrorMessage(error, 'Không thể gửi mã đặt lại mật khẩu'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthCard title="Quên mật khẩu" description="Nhập email đã đăng ký để nhận mã OTP đặt lại mật khẩu.">
-      <form onSubmit={handleSubmit}>
-        <div className="auth-form-group">
-          <label className="auth-label">Email</label>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            className={`auth-input ${fieldError ? 'auth-input-error' : ''}`}
-            placeholder="user@gmail.com"
-            autoComplete="email"
-          />
-          {fieldError && <div className="auth-field-error">{fieldError}</div>}
-        </div>
+    <AuthCard variant="compact">
+      <div className="auth-title-center">
+        <img className="auth-art" src={forgotPasswordSearch} alt="Quên mật khẩu" />
+      </div>
 
-        <AuthMessage type="error" text={error} />
+      <h1 className="auth-title auth-title-center">Quên mật khẩu</h1>
+      <p className="auth-subtitle auth-subtitle-center">
+        Nhập email hoặc số điện thoại để tìm tài khoản của bạn
+      </p>
 
-        <div style={{ marginTop: 18 }}>
-          <button type="submit" disabled={loading} className="auth-btn">
-            {loading ? 'Đang gửi OTP...' : 'Gửi OTP'}
-          </button>
+      <AuthMessage type={messageType} message={message} />
+
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <label className="auth-field">
+          <span className="auth-input-wrap">
+            <span className="auth-input-icon">✉️</span>
+            <input
+              className="auth-input auth-input-has-icon"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Email hoặc số điện thoại"
+              autoComplete="username"
+            />
+          </span>
+        </label>
+
+        <button className="auth-btn" disabled={loading}>
+          {loading ? 'Đang xử lý...' : 'Tiếp tục'}
+        </button>
+
+        <div className="auth-help-box">
+          🛡️ Chúng tôi cam kết bảo mật thông tin của bạn theo chính sách bảo mật.
         </div>
       </form>
-
-      <div className="auth-link-center">
-        <Link to="/login" className="auth-link">
-          Đã nhớ mật khẩu? Đăng nhập
-        </Link>
-      </div>
     </AuthCard>
   );
 }

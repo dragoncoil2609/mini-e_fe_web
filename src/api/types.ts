@@ -1,3 +1,5 @@
+// src/api/types.ts
+
 // ================== COMMON ==================
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
@@ -9,7 +11,7 @@ export interface ApiResponse<T> {
   statusCode?: number;
   data: T;
   message?: string;
-  error?: string; // ví dụ "Bad Request", "Unauthorized"
+  error?: string;
 }
 
 // Meta phân trang
@@ -20,7 +22,7 @@ export interface PaginationMeta {
   pageCount?: number;
 }
 
-// Kết quả phân trang chung (một số API cũ có thể vẫn dùng kiểu này)
+// Kết quả phân trang chung
 export interface PaginatedResult<T> {
   items: T[];
   page: number;
@@ -28,7 +30,7 @@ export interface PaginatedResult<T> {
   total: number;
 }
 
-// Kết quả phân trang chuẩn mới của users.service.ts
+// Kết quả phân trang chuẩn mới
 export interface PaginatedData<T> {
   items: T[];
   meta: PaginationMeta;
@@ -36,7 +38,6 @@ export interface PaginatedData<T> {
 
 // ================== AUTH ==================
 
-// Kiểu User cơ bản trong phần auth
 export interface AuthUser {
   id: number;
   name: string;
@@ -47,7 +48,6 @@ export interface AuthUser {
   createdAt?: string;
 }
 
-// Kiểu User đầy đủ ở module users
 export interface User {
   id: number;
   name: string;
@@ -68,7 +68,6 @@ export interface User {
   deletedAt?: string | null;
 }
 
-// Query list user
 export interface UserListQuery {
   page?: number;
   limit?: number;
@@ -87,18 +86,19 @@ export interface UserListQuery {
   sortOrder?: 'ASC' | 'DESC';
 }
 
-// Login / register / refresh response
 export interface LoginResponse {
   access_token?: string;
-  refresh_token?: string; // backend hiện có thể vẫn trả, nhưng FE không nên bắt buộc
+  refresh_token?: string;
   user?: AuthUser;
 
-  // user bị soft delete -> cần khôi phục
+  // Tài khoản bị soft-delete, cần khôi phục
   needRecover?: true;
   identifier?: string;
   via?: 'email' | 'phone';
 
-  // login thành công nhưng chưa verify
+  // Login được nhưng chưa verify
+  verificationOnly?: boolean;
+
   verify?: {
     required: true;
     via: 'email' | 'phone';
@@ -106,6 +106,12 @@ export interface LoginResponse {
     expiresAt: string;
     sent: boolean;
     cooldownRemaining?: number;
+
+    // BE dev mode trả OTP ra Postman/FE để test
+    devOtp?: string;
+
+    // Giữ lại otp để tương thích code cũ nếu trước đó BE trả otp
+    otp?: string;
   };
 }
 
@@ -120,7 +126,8 @@ export interface ForgotPasswordResponse {
   via?: 'email' | 'phone';
   target?: string;
 
-  otp?: string; // dev mode có thể nhận OTP
+  devOtp?: string;
+  otp?: string;
   expiresAt?: string;
 }
 
@@ -130,6 +137,7 @@ export interface RequestVerifyResponse {
   via?: 'email' | 'phone';
   target?: string;
 
+  devOtp?: string;
   otp?: string;
   expiresAt?: string;
   isVerified?: boolean;
@@ -142,6 +150,8 @@ export interface RequestVerifyResponse {
 export interface VerifyAccountResponse {
   verified?: boolean;
   isVerified?: boolean;
+  access_token?: string;
+  user?: AuthUser;
 }
 
 export interface ResetPasswordResponse {
@@ -193,6 +203,10 @@ export interface Category {
   sortOrder: number;
   isActive: boolean;
 
+  imageUrl?: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
@@ -211,6 +225,10 @@ export interface CreateCategoryDto {
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;
+
+  imageUrl?: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
 }
 
 export interface UpdateCategoryDto {
@@ -220,6 +238,10 @@ export interface UpdateCategoryDto {
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;
+
+  imageUrl?: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
 }
 
 export interface DeleteCategoryResponse {
@@ -229,12 +251,13 @@ export interface DeleteCategoryResponse {
 
 // ================== PRODUCT ==================
 
-export type ProductStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED' | string;
+export type ProductStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED' | 'PUBLISHED' | string;
 
 export interface ProductImage {
   id: number;
   productId: number;
   url: string;
+  alt?: string | null;
   position: number;
   isMain: boolean;
   createdAt?: string;
@@ -297,24 +320,6 @@ export interface ProductDetail {
   images?: ProductImage[];
 
   mainImageUrl?: string | null;
-}
-
-export interface CreateProductJsonDto {
-  title: string;
-  slug?: string;
-  description?: string;
-  price: number;
-  categoryId?: number | null;
-  images?: string[];
-}
-
-export interface UpdateProductDto {
-  title?: string;
-  slug?: string;
-  description?: string;
-  price?: number;
-  status?: ProductStatus;
-  categoryId?: number | null;
 }
 
 // ================== VARIANTS ==================
@@ -464,10 +469,9 @@ export interface UpdateAddressDto {
 
 // ================== ORDERS ==================
 
-// ================== ORDERS ==================
-
 export type PaymentMethod = 'COD' | 'VNPAY';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
+
 export type ShippingStatus =
   | 'PENDING'
   | 'PICKED'
@@ -596,12 +600,21 @@ export interface CreateOrderDto {
 
 export type CreateOrderResponse =
   | {
-      orders: Array<{ orderId: string; code: string; total: number }>;
+      orders: Array<{
+        orderId: string;
+        code: string;
+        total: number;
+      }>;
     }
   | {
-      session: { code: string; amount: number; status: string };
+      session: {
+        code: string;
+        amount: number;
+        status: string;
+      };
       paymentUrl: string;
     };
+
 // ================== REVIEWS ==================
 
 export interface ReviewUserPublic {

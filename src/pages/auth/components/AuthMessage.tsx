@@ -1,21 +1,28 @@
-import '../style/auth.css';
+type AuthMessageType = 'error' | 'success' | 'info';
 
-interface AuthMessageProps {
-  type: 'error' | 'success' | 'verified' | 'not-verified';
-  text?: string | null;
-}
+type AuthMessageProps = {
+  type?: AuthMessageType;
+  message?: string;
+  devOtp?: string;
+};
 
-export function AuthMessage({ type, text }: AuthMessageProps) {
-  if (!text) return null;
+export default function AuthMessage({
+  type = 'info',
+  message,
+  devOtp,
+}: AuthMessageProps) {
+  if (!message && !devOtp) return null;
 
-  const className =
-    type === 'error'
-      ? 'auth-error'
-      : type === 'success'
-        ? 'auth-success'
-        : type === 'verified'
-          ? 'auth-verified'
-          : 'auth-not-verified';
+  return (
+    <div className={`auth-message auth-message-${type}`}>
+      {message && <div>{message}</div>}
 
-  return <div className={className}>{text}</div>;
+      {devOtp && (
+        <div className="auth-dev-otp">
+          <span>OTP test:</span>
+          <span>{devOtp}</span>
+        </div>
+      )}
+    </div>
+  );
 }

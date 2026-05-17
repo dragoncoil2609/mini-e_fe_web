@@ -1,19 +1,20 @@
-export function guessAuthFieldFromMessage(message?: string | null) {
-  const msg = (message ?? '').toLowerCase();
+export function getAuthErrorMessage(error: unknown, fallback = 'Có lỗi xảy ra, vui lòng thử lại') {
+  const err = error as any;
 
-  if (!msg) return null;
+  const data = err?.response?.data;
+  const message = data?.message ?? err?.message;
 
-  if (msg.includes('email')) return 'email';
-  if (msg.includes('số điện thoại') || msg.includes('so dien thoai') || msg.includes('phone'))
-    return 'phone';
-  if (msg.includes('otp')) return 'otp';
-  if (msg.includes('confirm')) return 'confirmPassword';
-  if (msg.includes('mật khẩu mới') || msg.includes('mat khau moi') || msg.includes('newpassword'))
-    return 'newPassword';
-  if (msg.includes('mật khẩu') || msg.includes('mat khau') || msg.includes('password'))
-    return 'password';
-  if (msg.includes('họ tên') || msg.includes('ho ten') || msg.includes('name')) return 'name';
-  if (msg.includes('identifier')) return 'identifier';
+  if (Array.isArray(message)) {
+    return message[0] || fallback;
+  }
 
-  return null;
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+
+  if (typeof data?.error === 'string' && data.error.trim()) {
+    return data.error;
+  }
+
+  return fallback;
 }

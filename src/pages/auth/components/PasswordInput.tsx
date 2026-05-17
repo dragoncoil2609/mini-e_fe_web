@@ -1,51 +1,50 @@
 import { useState } from 'react';
-import '../style/auth.css';
 
-interface PasswordInputProps {
+type PasswordInputProps = {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  name?: string;
   placeholder?: string;
   autoComplete?: string;
-  error?: string | null;
-}
+  onChange: (value: string) => void;
+};
 
-export function PasswordInput({
+export default function PasswordInput({
   label,
   value,
-  onChange,
-  placeholder,
+  name,
+  placeholder = 'Nhập mật khẩu',
   autoComplete,
-  error,
+  onChange,
 }: PasswordInputProps) {
-  const [show, setShow] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   return (
-    <div className="auth-form-group">
-      <label className="auth-label">{label}</label>
+    <label className="auth-field">
+      <span className="auth-label">{label}</span>
 
-      <div className="auth-password-wrap">
+      <span className="auth-input-wrap">
+        <span className="auth-input-icon">🔒</span>
+
         <input
-          type={show ? 'text' : 'password'}
+          className="auth-input auth-input-has-icon auth-input-password"
+          type={visible ? 'text' : 'password'}
+          name={name}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={`auth-input auth-password-input ${error ? 'auth-input-error' : ''}`}
           placeholder={placeholder}
           autoComplete={autoComplete}
+          onChange={(e) => onChange(e.target.value)}
         />
 
         <button
           type="button"
           className="auth-password-toggle"
-          onClick={() => setShow((v) => !v)}
-          aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-          title={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
         >
-          {show ? '🙈' : '👁'}
+          {visible ? '🙈' : '👁'}
         </button>
-      </div>
-
-      {error ? <div className="auth-field-error">{error}</div> : null}
-    </div>
+      </span>
+    </label>
   );
 }
