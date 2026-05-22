@@ -161,3 +161,54 @@
 .mochi-product-card-compact .mochi-product-title {
   font-size: 13px;
 }
+
+/* =========================================================
+   FAVORITE BUTTON
+   ========================================================= */
+
+.mochi-product-favorite {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--mochi-primary);
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    transform var(--transition-base),
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.mochi-product-favorite:hover {
+  transform: scale(1.08);
+  background: var(--mochi-primary-soft);
+  border-color: var(--mochi-primary);
+}
+
+.mochi-product-favorite.is-active {
+  background: var(--mochi-primary);
+  color: #ffffff;
+  border-color: var(--mochi-primary);
+}
+
+.mochi-product-favorite:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* Dịch tag hết hàng sang trái để không đè lên nút tim */
+.mochi-product-out {
+  right: 56px;
+}

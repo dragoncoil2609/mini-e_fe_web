@@ -1,10 +1,9 @@
-// src/api/cart.api.ts
 import { http } from './http';
 import type { ApiResponse, Cart, AddItemDto, UpdateItemDto } from './types';
 
 /**
- * API cho giỏ hàng (Cart)
- * Tất cả endpoints đều yêu cầu authentication (AccessTokenGuard)
+ * API cho giỏ hàng.
+ * Tất cả endpoint đều yêu cầu đăng nhập.
  */
 
 export async function getCart(): Promise<ApiResponse<Cart>> {
@@ -12,10 +11,6 @@ export async function getCart(): Promise<ApiResponse<Cart>> {
   return res.data;
 }
 
-/**
- * ✅ BE mới: Thêm vào cart bắt buộc phải có variantId
- * POST /cart/items
- */
 export async function addItem(dto: AddItemDto): Promise<ApiResponse<Cart>> {
   const res = await http.post<ApiResponse<Cart>>('/cart/items', dto);
   return res.data;
@@ -34,15 +29,18 @@ export async function removeItem(itemId: number): Promise<ApiResponse<Cart>> {
   return res.data;
 }
 
-export async function clear(): Promise<ApiResponse<Cart>> {
+export async function clearCart(): Promise<ApiResponse<Cart>> {
   const res = await http.delete<ApiResponse<Cart>>('/cart');
   return res.data;
 }
+
+export const clear = clearCart;
 
 export const CartApi = {
   getCart,
   addItem,
   updateItem,
   removeItem,
-  clear,
+  clear: clearCart,
+  clearCart,
 };

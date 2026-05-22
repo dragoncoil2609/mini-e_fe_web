@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getPublicProducts } from '../../api/products.api';
+import {
+  getFavoriteProducts,
+  getRecommendedProducts,
+  type RecommendedProduct,
+} from '../../api/recommendations.api';
 import type { ProductListItem } from '../../api/types';
 
 import ProductGrid from '../../components/product/ProductGrid';
@@ -31,49 +36,124 @@ function toNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function getPublicItems(response: any): HomeProduct[] {
+  const items =
+    response?.data?.items ??
+    response?.data?.data?.items ??
+    response?.data?.data ??
+    response?.data ??
+    [];
+
+  return Array.isArray(items) ? (items as HomeProduct[]) : [];
+}
+
+function filterVisibleProducts<T extends { status?: string }>(items: T[]): T[] {
+  return items.filter((item) => {
+    if (!item.status) return true;
+    return item.status === 'ACTIVE' || item.status === 'OUT_OF_STOCK';
+  });
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<HomeProduct[]>([]);
+  const [favoriteProducts, setFavoriteProducts] = useState<RecommendedProduct[]>(
+    [],
+  );
+  const [recommendedProducts, setRecommendedProducts] = useState<
+    RecommendedProduct[]
+  >([]);
+
   const [loading, setLoading] = useState(true);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
+
   const [errorMessage, setErrorMessage] = useState('');
+  const [recommendationSource, setRecommendationSource] = useState<
+    'personalized' | 'fallback' | 'public'
+  >('public');
 
   useEffect(() => {
     let mounted = true;
 
     async function loadHomeProducts() {
-      try {
-        setLoading(true);
-        setErrorMessage('');
+      setLoading(true);
+      setLoadingFavorites(true);
+      setLoadingRecommendations(true);
+      setErrorMessage('');
 
+      let publicItems: HomeProduct[] = [];
+
+      try {
         const res = await getPublicProducts({
           page: 1,
           limit: 60,
         });
 
-        const items = (res.data?.items ?? []) as HomeProduct[];
+        publicItems = filterVisibleProducts(getPublicItems(res));
 
-        if (!mounted) return;
-
-        const visibleItems = items.filter((item) => {
-          if (!item.status) return true;
-          return item.status === 'ACTIVE' || item.status === 'OUT_OF_STOCK';
-        });
-
-        setProducts(visibleItems);
+        if (mounted) {
+          setProducts(publicItems);
+        }
       } catch (error: any) {
-        if (!mounted) return;
-
-        setErrorMessage(
-          error?.response?.data?.message ||
-            'Không thể tải sản phẩm trang chủ. Vui lòng thử lại sau.',
-        );
+        if (mounted) {
+          setErrorMessage(
+            error?.response?.data?.message ||
+              'Không thể tải sản phẩm trang chủ. Vui lòng thử lại sau.',
+          );
+        }
       } finally {
         if (mounted) {
           setLoading(false);
         }
       }
+
+      try {
+        const favorites = await getFavoriteProducts({
+          page: 1,
+          limit: 12,
+        });
+
+        if (mounted) {
+          setFavoriteProducts(
+            (favorites.items ?? []).map((item) => ({
+              ...item,
+              isFavorite: true,
+            })),
+          );
+        }
+      } catch {
+        if (mounted) {
+          setFavoriteProducts([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoadingFavorites(false);
+        }
+      }
+
+      try {
+        const recommendations = await getRecommendedProducts({
+          page: 1,
+          limit: 18,
+        });
+
+        if (mounted) {
+          setRecommendedProducts(recommendations.items ?? []);
+          setRecommendationSource(recommendations.source ?? 'personalized');
+        }
+      } catch {
+        if (mounted) {
+          setRecommendedProducts(publicItems.slice(0, 18));
+          setRecommendationSource('public');
+        }
+      } finally {
+        if (mounted) {
+          setLoadingRecommendations(false);
+        }
+      }
     }
 
-    loadHomeProducts();
+    void loadHomeProducts();
 
     return () => {
       mounted = false;
@@ -86,9 +166,13 @@ export default function HomePage() {
       .slice(0, 6);
   }, [products]);
 
-  const recommendedProducts = useMemo(() => {
+  const safeRecommendedProducts = useMemo(() => {
+    if (recommendedProducts.length > 0) {
+      return recommendedProducts;
+    }
+
     return products.slice(0, 18);
-  }, [products]);
+  }, [products, recommendedProducts]);
 
   return (
     <div className="home-page">
@@ -123,7 +207,11 @@ export default function HomePage() {
             <div className="home-hero-blob" />
 
             <img className="home-hero-bunny" src={heroBunny} alt="Mochi bunny" />
-            <img className="home-hero-basket" src={basketChick} alt="Cute basket" />
+            <img
+              className="home-hero-basket"
+              src={basketChick}
+              alt="Cute basket"
+            />
 
             <span className="home-deco heart">💗</span>
             <span className="home-deco star">⭐</span>
@@ -169,7 +257,13 @@ export default function HomePage() {
 
         <section className="mochi-section">
           <div className="mochi-section-header">
-            <h2 className="mochi-section-title">Sản phẩm bán chạy 🌟</h2>
+            <div>
+              <h2 className="mochi-section-title">Sản phẩm bán chạy 🌟</h2>
+              <p className="home-section-subtitle">
+                Các sản phẩm được mua nhiều nhất.
+              </p>
+            </div>
+
             <Link to="/products" className="mochi-section-link">
               Xem tất cả →
             </Link>
@@ -186,18 +280,45 @@ export default function HomePage() {
 
         <section className="mochi-section">
           <div className="mochi-section-header">
-            <h2 className="mochi-section-title">Sản phẩm gợi ý 💕</h2>
+            <div>
+              <h2 className="mochi-section-title">Sản phẩm yêu thích 💗</h2>
+              <p className="home-section-subtitle">
+                Những sản phẩm bạn đã bấm yêu thích.
+              </p>
+            </div>
+          </div>
+
+          <ProductGrid
+            products={favoriteProducts}
+            loading={loadingFavorites}
+            columns={6}
+            emptyTitle="Chưa có sản phẩm yêu thích"
+            emptyDescription="Hãy bấm trái tim ở sản phẩm bạn thích để lưu lại tại đây."
+          />
+        </section>
+
+        <section className="mochi-section">
+          <div className="mochi-section-header">
+            <div>
+              <h2 className="mochi-section-title">Sản phẩm gợi ý 💕</h2>
+              <p className="home-section-subtitle">
+                {recommendationSource === 'personalized'
+                  ? 'Dựa trên sản phẩm bạn đã xem, click, thêm giỏ hoặc yêu thích.'
+                  : 'Gợi ý từ các sản phẩm phổ biến hiện có.'}
+              </p>
+            </div>
+
             <Link to="/products" className="mochi-section-link">
               Xem tất cả →
             </Link>
           </div>
 
           <ProductGrid
-            products={recommendedProducts}
-            loading={loading}
+            products={safeRecommendedProducts}
+            loading={loadingRecommendations}
             columns={6}
-            emptyTitle="Chưa có sản phẩm"
-            emptyDescription="Hiện chưa có sản phẩm đang bán để hiển thị."
+            emptyTitle="Chưa có sản phẩm gợi ý"
+            emptyDescription="Hãy xem thêm sản phẩm để hệ thống gợi ý chính xác hơn."
           />
         </section>
       </div>

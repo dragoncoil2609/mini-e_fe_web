@@ -1,5 +1,5 @@
 // src/router/index.tsx
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 
 // ==================== LAYOUT ====================
 import MainLayout from '../components/layout/MainLayout';
@@ -18,7 +18,19 @@ import HomePage from '../pages/home/HomePage';
 import MeProfilePage from '../pages/me/MeProfilePage';
 import AddressesPage from '../pages/addresses/AddressesPage';
 
+// ==================== CART / CHECKOUT ====================
+import CartPage from '../pages/cart/CartPage';
+// import CheckoutPage from '../pages/checkout/CheckoutPage';
+
+// // ==================== ORDERS ====================
+// import OrdersPage from '../pages/orders/OrdersPage';
+// import OrderDetailPage from '../pages/orders/OrderDetailPage';
+
+// // ==================== PAYMENT ====================
+// import PaymentResultPage from '../pages/payments/PaymentResultPage';
+
 // ==================== PRODUCTS ====================
+import ProductsListPage from '../pages/products/ProductsListPage';
 import ProductDetailPage from '../pages/products/ProductDetailPage';
 import ProductCreatePage from '../pages/products/ProductCreatePage';
 import ProductEditPage from '../pages/products/ProductEditPage';
@@ -34,11 +46,21 @@ import ShopRevenuePage from '../pages/shops/ShopRevenuePage';
 import ShopReviewsPage from '../pages/shops/ShopReviewsPage';
 import ShopSettingsPage from '../pages/shops/ShopSettingsPage';
 
-// ==================== ADMIN - TẠM THỜI ====================
+// ==================== ADMIN ====================
 import AdminCategoriesPage from '../pages/admin/categories/AdminCategoriesPage';
-
 import AdminShopsListPage from '../pages/admin/shops/AdminShopsListPage';
-import ProductsListPage from '../pages/products/ProductsListPage';
+
+function ProductEditAlias() {
+  const { id } = useParams();
+
+  return <Navigate to={`/shops/me/products/${id}/edit`} replace />;
+}
+
+function ProductVariantsAlias() {
+  const { id } = useParams();
+
+  return <Navigate to={`/shops/me/products/${id}/variants`} replace />;
+}
 
 export default function AppRoutes() {
   return (
@@ -82,6 +104,18 @@ export default function AppRoutes() {
           element={<Navigate to="/addresses" replace />}
         />
 
+        {/* ---------- CART / CHECKOUT ---------- */}
+        <Route path="/cart" element={<CartPage />} />
+        {/* <Route path="/checkout" element={<CheckoutPage />} /> */}
+
+        {/* ---------- ORDERS ---------- */}
+        {/* <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/:id" element={<OrderDetailPage />} /> */}
+
+        {/* ---------- PAYMENT ---------- */}
+        {/* <Route path="/payments/result" element={<PaymentResultPage />} />
+        <Route path="/payment-result" element={<PaymentResultPage />} /> */}
+
         {/* ---------- SHOP OWNER ---------- */}
         <Route path="/shops" element={<Navigate to="/shops/me" replace />} />
         <Route path="/shops/me" element={<MyShopPage />} />
@@ -93,7 +127,6 @@ export default function AppRoutes() {
         <Route path="/shops/me/reviews" element={<ShopReviewsPage />} />
         <Route path="/shops/me/settings" element={<ShopSettingsPage />} />
 
-        {/* Shop owner - thêm/sửa/biến thể sản phẩm */}
         <Route
           path="/shops/me/products/create"
           element={<ProductCreatePage />}
@@ -121,25 +154,20 @@ export default function AppRoutes() {
           element={<Navigate to="/shops/me/products/create" replace />}
         />
 
-
-
-        <Route
-          path="/products/:id/edit"
-          element={<Navigate to="/shops/me/products/:id/edit" replace />}
-        />
+        <Route path="/products/:id/edit" element={<ProductEditAlias />} />
 
         <Route
           path="/products/:id/variants"
-          element={<Navigate to="/shops/me/products/:id/variants" replace />}
+          element={<ProductVariantsAlias />}
         />
 
         {/* ---------- ADMIN TẠM THỜI ---------- */}
         <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+        <Route path="/admin/shops" element={<AdminShopsListPage />} />
       </Route>
 
       {/* ==================== FALLBACK ==================== */}
       <Route path="*" element={<Navigate to="/home" replace />} />
-      <Route path="/admin/shops" element={<AdminShopsListPage />} />
     </Routes>
   );
 }

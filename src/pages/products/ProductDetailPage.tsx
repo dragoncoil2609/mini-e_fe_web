@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
   getProductVariants,
   getPublicProductDetail,
 } from '../../api/products.api';
+import { addItem } from '../../api/cart.api';
+import {
+  addFavoriteProduct,
+  recordProductEvent,
+  removeFavoriteProduct,
+} from '../../api/recommendations.api';
 
 import bunnyImg from '../../assets/brand/bunny_bear_original.png';
 
@@ -33,6 +39,7 @@ type ProductView = {
   images?: ProductImage[];
   mainImageUrl?: string | null;
   imageUrl?: string | null;
+  isFavorite?: boolean | 0 | 1 | '0' | '1';
 };
 
 type VariantRow = {
@@ -112,22 +119,39 @@ function getDiscountPercent(product?: ProductView | null) {
   return Math.round((1 - price / compareAt) * 100);
 }
 
+function normalizeFavorite(value: ProductView['isFavorite']) {
+  return value === true || value === 1 || value === '1';
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const productId = Number(id);
 
   const [product, setProduct] = useState<ProductView | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
+    null,
+  );
   const [activeImageUrl, setActiveImageUrl] = useState('');
   const [quantity, setQuantity] = useState(1);
 
   const [loading, setLoading] = useState(true);
+  const [addingCart, setAddingCart] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+
   const [error, setError] = useState('');
+  const [cartMessage, setCartMessage] = useState('');
+  const [cartMessageType, setCartMessageType] = useState<'success' | 'error'>(
+    'success',
+  );
 
   const productImages = useMemo(() => getProductImages(product), [product]);
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
+
+  const selectedVariant =
+    variants.find((variant) => variant.id === selectedVariantId) ?? null;
 
   const displayPrice =
     selectedVariant?.price !== null &&
@@ -144,6 +168,9 @@ export default function ProductDetailPage() {
   const isOutOfStock =
     product?.status === 'OUT_OF_STOCK' || toNumber(displayStock) <= 0;
 
+  const canAddToCart =
+    Boolean(selectedVariantId) && !isOutOfStock && !addingCart;
+
   const discountPercent = getDiscountPercent(product);
 
   async function loadProductDetail() {
@@ -155,6 +182,7 @@ export default function ProductDetailPage() {
 
     setLoading(true);
     setError('');
+    setCartMessage('');
 
     try {
       const [productResponse, variantsResponse] = await Promise.all([
@@ -172,6 +200,7 @@ export default function ProductDetailPage() {
 
       setProduct(productData);
       setVariants(safeVariants);
+      setIsFavorite(normalizeFavorite(productData?.isFavorite));
 
       if (safeVariants.length > 0) {
         const firstAvailable =
@@ -202,6 +231,7 @@ export default function ProductDetailPage() {
     }
 
     setQuantity(1);
+    setCartMessage('');
   }
 
   function changeQuantity(next: number) {
@@ -211,16 +241,102 @@ export default function ProductDetailPage() {
     setQuantity(safe);
   }
 
-  function handleAddToCart() {
-    // Tạm thời chỉ hiển thị thông báo.
-    // Khi bạn muốn nối cart thật, chỗ này gọi API add item vào cart.
-    alert('Phần thêm giỏ hàng sẽ nối API cart sau.');
+  async function handleAddToCart(): Promise<boolean> {
+    if (!product) return false;
+
+    if (!selectedVariantId) {
+      setCartMessageType('error');
+      setCartMessage('Vui lòng chọn biến thể trước khi thêm vào giỏ hàng.');
+      return false;
+    }
+
+    setAddingCart(true);
+    setCartMessage('');
+
+    try {
+      await addItem({
+        productId: product.id,
+        variantId: selectedVariantId,
+        quantity,
+      });
+
+      recordProductEvent({
+        productId: product.id,
+        eventType: 'ADD_TO_CART',
+        metadata: {
+          source: 'product_detail',
+          quantity,
+          variantId: selectedVariantId,
+        },
+      }).catch(() => {});
+
+      setCartMessageType('success');
+      setCartMessage('Đã thêm sản phẩm vào giỏ hàng.');
+
+      window.dispatchEvent(new Event('mochi-cart-updated'));
+      return true;
+    } catch (err: any) {
+      setCartMessageType('error');
+      setCartMessage(getApiMessage(err));
+      return false;
+    } finally {
+      setAddingCart(false);
+    }
+  }
+
+  async function handleBuyNow() {
+    const added = await handleAddToCart();
+
+    if (added) {
+      navigate('/cart');
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (!product || favoriteLoading) return;
+
+    const previous = isFavorite;
+
+    try {
+      setFavoriteLoading(true);
+      setIsFavorite(!previous);
+
+      if (previous) {
+        await removeFavoriteProduct(product.id);
+      } else {
+        await addFavoriteProduct(product.id);
+      }
+    } catch (err: any) {
+      setIsFavorite(previous);
+      setCartMessageType('error');
+      setCartMessage(
+        err?.response?.status === 401
+          ? 'Bạn cần đăng nhập để yêu thích sản phẩm.'
+          : getApiMessage(err),
+      );
+    } finally {
+      setFavoriteLoading(false);
+    }
   }
 
   useEffect(() => {
     void loadProductDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+
+    recordProductEvent({
+      productId: product.id,
+      eventType: 'VIEW_DETAIL',
+      metadata: {
+        source: 'product_detail',
+      },
+    }).catch(() => {
+      // User chưa đăng nhập hoặc tracking lỗi thì bỏ qua.
+    });
+  }, [product?.id]);
 
   if (loading) {
     return (
@@ -244,7 +360,10 @@ export default function ProductDetailPage() {
               {error || 'Sản phẩm không tồn tại hoặc đã ngừng bán.'}
             </p>
 
-            <Link to="/products" className="mochi-btn mochi-btn-primary product-detail-back">
+            <Link
+              to="/products"
+              className="mochi-btn mochi-btn-primary product-detail-back"
+            >
               Xem sản phẩm khác
             </Link>
           </div>
@@ -268,14 +387,19 @@ export default function ProductDetailPage() {
           <div className="product-detail-gallery">
             <div className="product-detail-main-image">
               {discountPercent ? (
-                <span className="product-detail-discount">-{discountPercent}%</span>
+                <span className="product-detail-discount">
+                  -{discountPercent}%
+                </span>
               ) : null}
 
               {isOutOfStock ? (
                 <span className="product-detail-stock-tag">Hết hàng</span>
               ) : null}
 
-              <img src={activeImageUrl || bunnyImg} alt={getProductName(product)} />
+              <img
+                src={activeImageUrl || bunnyImg}
+                alt={getProductName(product)}
+              />
             </div>
 
             <div className="product-detail-thumbs">
@@ -320,7 +444,10 @@ export default function ProductDetailPage() {
                 <div className="product-detail-variants">
                   {variants.map((variant) => {
                     const variantStock = toNumber(variant.stock);
-                    const variantImageUrl = getVariantImageUrl(productImages, variant);
+                    const variantImageUrl = getVariantImageUrl(
+                      productImages,
+                      variant,
+                    );
                     const selected = selectedVariantId === variant.id;
 
                     return (
@@ -332,17 +459,31 @@ export default function ProductDetailPage() {
                         onClick={() => handleSelectVariant(variant)}
                       >
                         {variantImageUrl ? (
-                          <img src={variantImageUrl} alt={variant.name || 'Biến thể'} />
+                          <img
+                            src={variantImageUrl}
+                            alt={variant.name || 'Biến thể'}
+                          />
                         ) : null}
 
-                        <span>{variant.name || variant.sku || `Biến thể #${variant.id}`}</span>
-                        <small>{variantStock > 0 ? `Còn ${variantStock}` : 'Hết hàng'}</small>
+                        <span>
+                          {variant.name || variant.sku || `Biến thể #${variant.id}`}
+                        </span>
+                        <small>
+                          {variantStock > 0 ? `Còn ${variantStock}` : 'Hết hàng'}
+                        </small>
                       </button>
                     );
                   })}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="product-detail-section">
+                <h2>Biến thể</h2>
+                <p className="product-detail-cart-message is-error">
+                  Sản phẩm này chưa có biến thể nên chưa thể thêm vào giỏ hàng.
+                </p>
+              </div>
+            )}
 
             <div className="product-detail-section">
               <h2>Số lượng</h2>
@@ -372,22 +513,44 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
+            {cartMessage ? (
+              <div className={`product-detail-cart-message is-${cartMessageType}`}>
+                {cartMessage}
+              </div>
+            ) : null}
+
             <div className="product-detail-actions">
               <button
                 type="button"
                 className="mochi-btn mochi-btn-primary"
-                disabled={isOutOfStock}
+                disabled={!canAddToCart}
                 onClick={handleAddToCart}
               >
-                Thêm vào giỏ hàng
+                {addingCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
               </button>
 
               <button
                 type="button"
                 className="mochi-btn mochi-btn-outline"
-                disabled={isOutOfStock}
+                disabled={!canAddToCart}
+                onClick={handleBuyNow}
               >
                 Mua ngay
+              </button>
+
+              <button
+                type="button"
+                className={`mochi-btn mochi-btn-outline product-detail-favorite-btn ${
+                  isFavorite ? 'is-active' : ''
+                }`}
+                disabled={favoriteLoading}
+                onClick={handleToggleFavorite}
+              >
+                {favoriteLoading
+                  ? 'Đang xử lý...'
+                  : isFavorite
+                    ? '♥ Đã yêu thích'
+                    : '♡ Yêu thích'}
               </button>
             </div>
 

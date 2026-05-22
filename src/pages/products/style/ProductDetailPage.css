@@ -310,3 +310,38 @@
     font-size: 26px;
   }
 }
+
+.product-detail-cart-message {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.product-detail-cart-message.is-success {
+  color: var(--mochi-success);
+  background: var(--mochi-success-soft);
+  border: 1px solid rgba(53, 200, 120, 0.18);
+}
+
+.product-detail-cart-message.is-error {
+  color: var(--mochi-danger);
+  background: var(--mochi-danger-soft);
+  border: 1px solid rgba(255, 91, 110, 0.18);
+}
+
+/* =========================================================
+   FAVORITE BUTTON
+   ========================================================= */
+
+.product-detail-favorite-btn.is-active {
+  color: #ffffff;
+  background: var(--mochi-primary);
+  border-color: var(--mochi-primary);
+}
+
+.product-detail-favorite-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}

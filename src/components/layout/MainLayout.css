@@ -2,7 +2,10 @@
   min-height: 100vh;
 }
 
-/* Topbar */
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+
 .mochi-topbar {
   height: 36px;
   background: linear-gradient(90deg, #ffe0ea, #fff3f7);
@@ -24,11 +27,20 @@
   gap: 36px;
 }
 
+.topbar-left span,
 .topbar-right a {
   color: var(--mochi-text);
+  font-weight: 700;
 }
 
-/* Header */
+.topbar-right a:hover {
+  color: var(--mochi-primary);
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .mochi-header {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
@@ -73,8 +85,8 @@
 .mochi-search {
   max-width: 520px;
   width: 100%;
-  margin: 0 auto;
   height: 48px;
+  margin: 0 auto;
   display: flex;
   overflow: hidden;
   border: 1px solid var(--mochi-border);
@@ -85,11 +97,16 @@
 
 .mochi-search input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   padding: 0 20px;
   font-size: 14px;
   color: var(--mochi-text);
+}
+
+.mochi-search input::placeholder {
+  color: var(--mochi-placeholder);
 }
 
 .mochi-search button {
@@ -98,6 +115,10 @@
   color: #fff;
   background: linear-gradient(135deg, var(--mochi-primary), var(--mochi-primary-dark));
   font-size: 18px;
+}
+
+.mochi-search button:hover {
+  filter: brightness(1.02);
 }
 
 .mochi-header-actions {
@@ -112,9 +133,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--mochi-text);
   font-size: 14px;
   font-weight: 800;
-  color: var(--mochi-text);
   transition:
     color var(--transition-fast),
     transform var(--transition-fast);
@@ -129,7 +150,14 @@
   font-size: 22px;
 }
 
-/* Account avatar */
+.header-action-label {
+  white-space: nowrap;
+}
+
+/* =========================================================
+   ACCOUNT AVATAR
+   ========================================================= */
+
 .account-action {
   min-width: 128px;
   max-width: 190px;
@@ -166,9 +194,9 @@
 }
 
 .header-action-text small {
+  color: var(--mochi-text-soft);
   font-size: 11px;
   font-weight: 700;
-  color: var(--mochi-text-soft);
 }
 
 .header-action-text strong {
@@ -190,6 +218,14 @@
   color: var(--mochi-primary);
 }
 
+/* =========================================================
+   CART BADGE
+   ========================================================= */
+
+.cart-header-action {
+  padding-right: 4px;
+}
+
 .cart-badge {
   position: absolute;
   top: -12px;
@@ -201,11 +237,17 @@
   background: var(--mochi-primary);
   color: #fff;
   font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
   display: grid;
   place-items: center;
+  box-shadow: 0 8px 18px rgba(255, 79, 135, 0.28);
 }
 
-/* Nav */
+/* =========================================================
+   NAV
+   ========================================================= */
+
 .mochi-nav {
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid var(--mochi-border-soft);
@@ -227,11 +269,13 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  color: var(--mochi-text);
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
-  color: var(--mochi-text);
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .mochi-nav-inner a:hover,
@@ -240,7 +284,10 @@
   background: var(--mochi-primary-soft);
 }
 
-/* Category bar */
+/* =========================================================
+   CATEGORY BAR
+   ========================================================= */
+
 .mochi-category-bar {
   background: linear-gradient(180deg, #fff, #fff7fa);
   border-bottom: 1px solid var(--mochi-border-soft);
@@ -255,15 +302,15 @@
 }
 
 .mochi-category-header span {
+  color: var(--mochi-text);
   font-size: 15px;
   font-weight: 900;
-  color: var(--mochi-text);
 }
 
 .mochi-category-header small {
+  color: var(--mochi-text-soft);
   font-size: 12px;
   font-weight: 700;
-  color: var(--mochi-text-soft);
 }
 
 .mochi-category-scroll {
@@ -320,16 +367,160 @@
 
 .mochi-category-name {
   width: 100%;
+  color: var(--mochi-text);
   font-size: 13px;
   font-weight: 800;
-  color: var(--mochi-text);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Responsive */
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.main-layout-main {
+  min-height: calc(100vh - 186px);
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.mochi-footer {
+  margin-top: 16px;
+  padding: 28px 0 0;
+}
+
+.mochi-footer-inner {
+  padding: 28px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background:
+    radial-gradient(circle at bottom right, rgba(255, 143, 179, 0.12), transparent 26%),
+    #ffffff;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(130px, 1fr));
+  gap: 28px;
+}
+
+.mochi-footer-brand p {
+  max-width: 280px;
+  margin: 14px 0 0;
+  color: var(--mochi-text-soft);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mochi-footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mochi-footer-logo img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.mochi-footer-logo strong {
+  display: block;
+  color: var(--mochi-primary);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.mochi-footer-logo span {
+  display: block;
+  margin-top: 5px;
+  color: #9b4b5f;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mochi-footer-col {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.mochi-footer-col h3 {
+  margin: 0 0 4px;
+  color: var(--mochi-primary);
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.mochi-footer-col a {
+  color: var(--mochi-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mochi-footer-col a:hover {
+  color: var(--mochi-primary);
+}
+
+.mochi-socials {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mochi-socials a {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--mochi-primary-light);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 950;
+  box-shadow: var(--shadow-xs);
+}
+
+.mochi-socials a:hover {
+  color: #fff;
+  background: var(--mochi-primary);
+  transform: translateY(-1px);
+}
+
+.mochi-footer-bottom {
+  padding: 14px 28px 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-top: none;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: #ffffff;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1180px) {
+  .mochi-header-inner {
+    grid-template-columns: 220px 1fr 240px;
+    gap: 20px;
+  }
+
+  .mochi-footer-inner {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mochi-footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 1024px) {
   .mochi-topbar {
     display: none;
@@ -356,6 +547,20 @@
 
   .mochi-nav-inner {
     justify-content: flex-start;
+  }
+
+  .main-layout-main {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .mochi-footer-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mochi-footer-brand {
+    grid-column: 1 / -1;
   }
 }
 
@@ -386,8 +591,13 @@
     max-width: 82px;
   }
 
-  .header-action:not(.account-action) span:last-child {
+  .header-action-label {
     display: none;
+  }
+
+  .cart-badge {
+    top: -10px;
+    right: -10px;
   }
 
   .mochi-category-pill {
@@ -398,8 +608,13 @@
     width: 48px;
     height: 48px;
   }
-}
 
-.main-layout-main {
-  min-height: calc(100vh - 186px);
+  .mochi-footer-inner {
+    padding: 22px;
+    grid-template-columns: 1fr;
+  }
+
+  .mochi-footer-bottom {
+    padding: 14px 22px 18px;
+  }
 }

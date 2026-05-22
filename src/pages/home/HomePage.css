@@ -235,3 +235,14 @@
     right: 8%;
   }
 }
+
+/* =========================================================
+   HOME SECTION SUBTITLE
+   ========================================================= */
+
+.home-section-subtitle {
+  margin: 6px 0 0;
+  color: var(--mochi-text-soft);
+  font-size: 14px;
+  font-weight: 700;
+}

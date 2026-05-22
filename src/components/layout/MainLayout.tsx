@@ -13,6 +13,7 @@ import defaultAvatarImg from '../../assets/brand/login_bunny_bear.png';
 
 import { getAccessToken } from '../../api/authToken';
 import { getMe } from '../../api/users.api';
+import { getCart } from '../../api/cart.api';
 import {
   getPublicCategoryTree,
   type Category,
@@ -39,9 +40,24 @@ function getShortName(name?: string | null) {
 }
 
 function getParentCategories(categories: Category[]) {
-  // API /categories/tree trả về mảng ngoài là category cha.
-  // children vẫn có trong object nhưng MainLayout không render children.
   return categories.slice(0, 10);
+}
+
+function getSafeCartQuantity(cart: any): number {
+  const itemsQuantity = Number(cart?.itemsQuantity ?? 0);
+
+  if (Number.isFinite(itemsQuantity) && itemsQuantity > 0) {
+    return itemsQuantity;
+  }
+
+  if (Array.isArray(cart?.items)) {
+    return cart.items.reduce((sum: number, item: any) => {
+      const quantity = Number(item?.quantity ?? 0);
+      return sum + (Number.isFinite(quantity) ? quantity : 0);
+    }, 0);
+  }
+
+  return 0;
 }
 
 export default function MainLayout() {
@@ -51,6 +67,7 @@ export default function MainLayout() {
   const [keyword, setKeyword] = useState('');
   const [accountName, setAccountName] = useState('');
   const [accountAvatar, setAccountAvatar] = useState('');
+  const [cartQuantity, setCartQuantity] = useState(0);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -67,6 +84,18 @@ export default function MainLayout() {
     const params = new URLSearchParams(location.search);
     return params.get('category') ?? '';
   }, [location.search]);
+
+  const accountPath = isLoggedIn ? '/me' : '/login';
+
+  const accountLabel = useMemo(() => {
+    if (!isLoggedIn) return 'Đăng nhập';
+
+    const shortName = getShortName(accountName);
+
+    if (shortName) return shortName;
+
+    return 'Tài khoản';
+  }, [accountName, isLoggedIn]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -86,12 +115,13 @@ export default function MainLayout() {
       }
 
       try {
-        const user = await getMe();
+        const response = await getMe();
+        const user = (response as any)?.data ?? response;
 
         if (!mounted) return;
 
-        setAccountName(user.name || user.email || user.phone || '');
-        setAccountAvatar(user.avatarUrl || '');
+        setAccountName(user?.name || user?.email || user?.phone || '');
+        setAccountAvatar(user?.avatarUrl || '');
       } catch {
         if (!mounted) return;
 
@@ -104,6 +134,43 @@ export default function MainLayout() {
 
     return () => {
       mounted = false;
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCartQuantity() {
+      const currentToken = getFallbackToken();
+
+      if (!currentToken) {
+        if (mounted) setCartQuantity(0);
+        return;
+      }
+
+      try {
+        const response = await getCart();
+        const cart = response?.data;
+
+        if (!mounted) return;
+
+        setCartQuantity(getSafeCartQuantity(cart));
+      } catch {
+        if (!mounted) return;
+
+        setCartQuantity(0);
+      }
+    }
+
+    void loadCartQuantity();
+
+    window.addEventListener('mochi-cart-updated', loadCartQuantity);
+    window.addEventListener('storage', loadCartQuantity);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('mochi-cart-updated', loadCartQuantity);
+      window.removeEventListener('storage', loadCartQuantity);
     };
   }, [location.pathname]);
 
@@ -152,21 +219,8 @@ export default function MainLayout() {
     navigate(`/products?q=${encodeURIComponent(q)}`);
   };
 
-  const accountPath = isLoggedIn ? '/me' : '/login';
-
-  const accountLabel = useMemo(() => {
-    if (!isLoggedIn) return 'Đăng nhập';
-
-    const shortName = getShortName(accountName);
-
-    if (shortName) return shortName;
-
-    return 'Tài khoản';
-  }, [accountName, isLoggedIn]);
-
   return (
     <div className="main-layout">
-      {/* Thanh thông tin nhỏ phía trên */}
       <div className="mochi-topbar">
         <div className="mochi-container mochi-topbar-inner">
           <div className="topbar-left">
@@ -181,11 +235,9 @@ export default function MainLayout() {
         </div>
       </div>
 
-      {/* Header chính */}
       <header className="mochi-header">
         <div className="mochi-container mochi-header-inner">
-          {/* Logo */}
-          <Link to="/" className="mochi-logo" aria-label="Mochi home">
+          <Link to="/home" className="mochi-logo" aria-label="Mochi home">
             <img src={logoImg} alt="Mochi" />
             <div>
               <strong>Mochi</strong>
@@ -193,7 +245,6 @@ export default function MainLayout() {
             </div>
           </Link>
 
-          {/* Search sản phẩm */}
           <form className="mochi-search" onSubmit={handleSearch}>
             <input
               value={keyword}
@@ -207,7 +258,6 @@ export default function MainLayout() {
             </button>
           </form>
 
-          {/* Action */}
           <div className="mochi-header-actions">
             <Link to={accountPath} className="header-action account-action">
               <span className="header-avatar-wrap">
@@ -224,41 +274,58 @@ export default function MainLayout() {
 
               <span className="header-action-text">
                 {isLoggedIn ? (
-                  <strong>{accountLabel}</strong>
+                  <>
+                    <small>Tài khoản</small>
+                    <strong>{accountLabel}</strong>
+                  </>
                 ) : (
                   <strong>Đăng nhập</strong>
                 )}
               </span>
             </Link>
 
-            <Link to="/cart" className="header-action">
+            <Link to="/cart" className="header-action cart-header-action">
               <span className="header-action-icon">🛒</span>
-              <span>Giỏ hàng</span>
+              <span className="header-action-label">Giỏ hàng</span>
+
+              {cartQuantity > 0 ? (
+                <span className="cart-badge">
+                  {cartQuantity > 99 ? '99+' : cartQuantity}
+                </span>
+              ) : null}
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Menu chính */}
       <nav className="mochi-nav">
         <div className="mochi-container mochi-nav-inner">
-          <NavLink to="/" end>
+          <NavLink to="/home">
             🏠 Trang chủ
           </NavLink>
 
-          <NavLink to="/products">🧸 Sản phẩm</NavLink>
+          <NavLink to="/products">
+            🧸 Sản phẩm
+          </NavLink>
 
-          <NavLink to="/shops/me">🏪 Cửa hàng</NavLink>
+          <NavLink to="/shops/me">
+            🏪 Cửa hàng
+          </NavLink>
 
-          <NavLink to="/orders">📦 Đơn hàng</NavLink>
+          <NavLink to="/orders">
+            📦 Đơn hàng
+          </NavLink>
 
-          <NavLink to="/me">💗 Tài khoản</NavLink>
+          <NavLink to="/me">
+            💗 Tài khoản
+          </NavLink>
 
-          <NavLink to="/cart">🛒 Giỏ hàng</NavLink>
+          <NavLink to="/cart">
+            🛒 Giỏ hàng
+          </NavLink>
         </div>
       </nav>
 
-      {/* Category cha */}
       <section className="mochi-category-bar">
         <div className="mochi-container">
           <div className="mochi-category-header">
@@ -272,6 +339,7 @@ export default function MainLayout() {
             <div className="mochi-category-scroll">
               {parentCategories.map((category) => {
                 const isActive = activeCategorySlug === category.slug;
+                const categoryImage = category.imageUrl || '';
 
                 return (
                   <Link
@@ -284,8 +352,8 @@ export default function MainLayout() {
                     }`}
                   >
                     <span className="mochi-category-thumb">
-                      {category.imageUrl ? (
-                        <img src={category.imageUrl} alt={category.name} />
+                      {categoryImage ? (
+                        <img src={categoryImage} alt={category.name} />
                       ) : (
                         <span>🐰</span>
                       )}
@@ -305,6 +373,58 @@ export default function MainLayout() {
       <main className="main-layout-main">
         <Outlet />
       </main>
+
+      <footer className="mochi-footer">
+        <div className="mochi-container mochi-footer-inner">
+          <div className="mochi-footer-brand">
+            <Link to="/home" className="mochi-footer-logo">
+              <img src={logoImg} alt="Mochi" />
+              <div>
+                <strong>Mochi</strong>
+                <span>Cute things for you ♡</span>
+              </div>
+            </Link>
+
+            <p>Những món đồ nhỏ xinh, dễ thương và đáng yêu dành cho bạn.</p>
+          </div>
+
+          <div className="mochi-footer-col">
+            <h3>Về Mochi</h3>
+            <Link to="/about">Giới thiệu</Link>
+            <Link to="/jobs">Tuyển dụng</Link>
+            <Link to="/news">Tin tức</Link>
+          </div>
+
+          <div className="mochi-footer-col">
+            <h3>Chính sách</h3>
+            <Link to="/privacy">Chính sách bảo mật</Link>
+            <Link to="/returns">Chính sách đổi trả</Link>
+            <Link to="/terms">Điều khoản sử dụng</Link>
+          </div>
+
+          <div className="mochi-footer-col">
+            <h3>Hỗ trợ</h3>
+            <Link to="/support">Trung tâm trợ giúp</Link>
+            <Link to="/guide">Hướng dẫn mua hàng</Link>
+            <Link to="/contact">Liên hệ với chúng tôi</Link>
+          </div>
+
+          <div className="mochi-footer-col">
+            <h3>Kết nối với chúng tôi</h3>
+
+            <div className="mochi-socials">
+              <a href="#" aria-label="Facebook">f</a>
+              <a href="#" aria-label="Instagram">◎</a>
+              <a href="#" aria-label="TikTok">♪</a>
+              <a href="#" aria-label="YouTube">▶</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mochi-container mochi-footer-bottom">
+          © 2024 Mochi Store. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }
