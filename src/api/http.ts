@@ -4,6 +4,7 @@ import axios, {
   type AxiosInstance,
   type InternalAxiosRequestConfig,
 } from 'axios';
+
 import { getAccessToken, setAccessToken, clearAccessToken } from './authToken';
 import type { ApiResponse, RefreshResponse } from './types';
 
@@ -11,10 +12,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const http: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // gửi cookie refreshToken
+  withCredentials: true,
 });
 
-// ====== Auth routes không nên tự refresh ======
+/**
+ * Các route auth không nên tự động refresh token.
+ */
 function shouldSkipAutoRefresh(url?: string): boolean {
   if (!url) return false;
 
@@ -31,7 +34,9 @@ function shouldSkipAutoRefresh(url?: string): boolean {
   );
 }
 
-// ====== Decode JWT & check gần hết hạn ======
+/**
+ * Decode JWT đơn giản để kiểm tra thời gian hết hạn.
+ */
 interface JwtPayload {
   exp?: number;
   [key: string]: any;
@@ -40,6 +45,7 @@ interface JwtPayload {
 function decodeJwt(token: string): JwtPayload | null {
   try {
     const parts = token.split('.');
+
     if (parts.length !== 3) return null;
 
     const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -60,7 +66,10 @@ function isTokenNearExpiry(token: string, offsetSeconds = 60): boolean {
   return payload.exp - now <= offsetSeconds;
 }
 
-// ====== Refresh queue: tránh gọi /auth/refresh nhiều lần cùng lúc ======
+/**
+ * Refresh queue:
+ * Tránh nhiều request cùng lúc đều gọi /auth/refresh.
+ */
 let isRefreshing = false;
 let pendingRequests: (() => void)[] = [];
 
@@ -82,6 +91,7 @@ async function queueRefreshToken(): Promise<void> {
     await new Promise<void>((resolve) => {
       pendingRequests.push(resolve);
     });
+
     return;
   }
 
@@ -96,7 +106,11 @@ async function queueRefreshToken(): Promise<void> {
   }
 }
 
-// ====== Request interceptor: gắn token + refresh trước khi token gần hết hạn ======
+/**
+ * Request interceptor:
+ * - Gắn access token vào header
+ * - Nếu token gần hết hạn thì refresh trước
+ */
 http.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const currentToken = getAccessToken();
@@ -124,11 +138,15 @@ http.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ====== Response interceptor: gặp 401 thì refresh rồi retry request cũ ======
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
+/**
+ * Response interceptor:
+ * - Nếu gặp 401 thì thử refresh token và gọi lại request cũ
+ * - Nếu refresh thất bại hoặc retry xong vẫn 401 thì clear token
+ */
 http.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -159,6 +177,16 @@ http.interceptors.response.use(
         clearAccessToken();
         return Promise.reject(refreshErr);
       }
+    }
+
+    /**
+     * Nếu request đã retry rồi mà vẫn 401:
+     * - token hết hạn thật
+     * - refresh token không hợp lệ
+     * - hoặc user đã bị vô hiệu hóa
+     */
+    if (status === 401 && originalRequest?._retry) {
+      clearAccessToken();
     }
 
     return Promise.reject(error);

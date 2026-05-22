@@ -1,4 +1,5 @@
 import { http } from './http';
+import { clearAccessToken } from './authToken';
 import type { ApiResponse, PaginatedData, User, UserListQuery } from './types';
 
 /**
@@ -23,7 +24,7 @@ function toQueryString(params: Record<string, any>): string {
 }
 
 /* ------------------------------------------------------------------
- * 1) SELF ENDPOINTS
+ * 1) USER HIỆN TẠI
  * ------------------------------------------------------------------ */
 
 export async function getMe(): Promise<User> {
@@ -33,37 +34,68 @@ export async function getMe(): Promise<User> {
 
 export interface UpdateMePayload {
   name?: string;
+  email?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;
   birthday?: string | null;
   gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
+
+  /**
+   * Giữ tạm để UI cũ không lỗi TypeScript.
+   * BE mới không cho đổi password qua /users/me nữa.
+   * Hàm updateMe sẽ tự bỏ field này trước khi gửi.
+   */
   password?: string;
 }
 
 export async function updateMe(payload: UpdateMePayload): Promise<User> {
-  const res = await http.patch<ApiResponse<User>>('/users/me', payload);
+  const { password: _password, ...safePayload } = payload;
+
+  const res = await http.patch<ApiResponse<User>>('/users/me', safePayload);
   return res.data.data;
 }
 
-export interface DeleteMeResult {
+export interface DeactivateUserResult {
   id: number;
-  deleted: boolean;
+  deactivated: boolean;
+  message?: string;
 }
 
-export async function deleteMe(): Promise<DeleteMeResult> {
-  const res = await http.delete<ApiResponse<DeleteMeResult>>('/users/me');
+/**
+ * User tự vô hiệu hóa tài khoản.
+ * BE sẽ:
+ * - đổi email/phone
+ * - set deletedAt
+ * - chặn login/call API
+ */
+export async function deactivateMe(): Promise<DeactivateUserResult> {
+  const res = await http.delete<ApiResponse<DeactivateUserResult>>('/users/me');
+
+  /**
+   * Sau khi tài khoản bị vô hiệu hóa, token cũ không nên giữ lại ở FE nữa.
+   */
+  clearAccessToken();
+
   return res.data.data;
+}
+
+/**
+ * Alias tạm cho UI cũ.
+ * Trước đây gọi là deleteMe, bây giờ bản chất là deactivateMe.
+ */
+export async function deleteMe(): Promise<DeactivateUserResult> {
+  return deactivateMe();
 }
 
 /* ------------------------------------------------------------------
- * 2) ADMIN ENDPOINTS
+ * 2) ADMIN QUẢN LÝ USER
  * ------------------------------------------------------------------ */
 
 export interface CreateUserPayload {
   name: string;
   password: string;
 
-  // theo hướng data mới: phải có ít nhất 1 trong 2
+  // BE yêu cầu có ít nhất 1 trong 2: email hoặc phone
   email?: string | null;
   phone?: string | null;
 
@@ -81,8 +113,11 @@ export async function createUser(payload: CreateUserPayload): Promise<User> {
 
 export type UserListResult = PaginatedData<User>;
 
-export async function getUsers(query: UserListQuery = {}): Promise<UserListResult> {
+export async function getUsers(
+  query: UserListQuery = {},
+): Promise<UserListResult> {
   const qs = toQueryString(query as Record<string, any>);
+
   const res = await http.get<ApiResponse<UserListResult>>(`/users${qs}`);
   return res.data.data;
 }
@@ -104,55 +139,83 @@ export interface UpdateUserPayload {
   role?: 'USER' | 'SELLER' | 'ADMIN';
 }
 
-export async function updateUser(id: number, payload: UpdateUserPayload): Promise<User> {
+export async function updateUser(
+  id: number,
+  payload: UpdateUserPayload,
+): Promise<User> {
   const res = await http.patch<ApiResponse<User>>(`/users/${id}`, payload);
   return res.data.data;
 }
 
-export interface SoftDeleteUserResult {
-  id: number;
-  deleted: boolean;
-}
-
-export async function softDeleteUser(id: number): Promise<SoftDeleteUserResult> {
-  const res = await http.delete<ApiResponse<SoftDeleteUserResult>>(`/users/${id}`);
-  return res.data.data;
-}
-
-export interface RestoreUserResult {
-  id: number;
-  restored: boolean;
-}
-
-export async function restoreUser(id: number): Promise<RestoreUserResult> {
-  const res = await http.post<ApiResponse<RestoreUserResult>>(
-    `/users/${id}/restore`,
-    {},
+/**
+ * Admin vô hiệu hóa user.
+ * Không xóa mềm, không xóa cứng.
+ * BE sẽ đổi email/phone và set deletedAt.
+ */
+export async function deactivateUser(id: number): Promise<DeactivateUserResult> {
+  const res = await http.delete<ApiResponse<DeactivateUserResult>>(
+    `/users/${id}`,
   );
+
   return res.data.data;
 }
 
-export async function hardDeleteUser(id: number): Promise<void> {
-  await http.delete<ApiResponse<null>>(`/users/${id}/hard`);
-}
-
-export async function getDeletedUsers(query: UserListQuery = {}): Promise<UserListResult> {
+/**
+ * Lấy danh sách user đã bị vô hiệu hóa.
+ * BE mới dùng route:
+ * GET /users/deactivated/all
+ */
+export async function getDeactivatedUsers(
+  query: UserListQuery = {},
+): Promise<UserListResult> {
   const qs = toQueryString(query as Record<string, any>);
-  const res = await http.get<ApiResponse<UserListResult>>(`/users/deleted/all${qs}`);
+
+  const res = await http.get<ApiResponse<UserListResult>>(
+    `/users/deactivated/all${qs}`,
+  );
+
   return res.data.data;
+}
+
+/* ------------------------------------------------------------------
+ * 3) ALIAS TẠM CHO GIAO DIỆN CŨ
+ * ------------------------------------------------------------------
+ * Giữ lại để các page cũ chưa bị lỗi import.
+ * Sau này sửa giao diện thì đổi tên lại cho đúng:
+ *
+ * softDeleteUser -> deactivateUser
+ * getDeletedUsers -> getDeactivatedUsers
+ *
+ * restoreUser và hardDeleteUser không còn dùng nữa.
+ */
+
+export const softDeleteUser = deactivateUser;
+export const getDeletedUsers = getDeactivatedUsers;
+
+export async function restoreUser(): Promise<never> {
+  throw new Error('Chức năng khôi phục user đã bị bỏ. User chỉ được vô hiệu hóa.');
+}
+
+export async function hardDeleteUser(): Promise<never> {
+  throw new Error('Chức năng xóa cứng user đã bị bỏ. User chỉ được vô hiệu hóa.');
 }
 
 export const UsersApi = {
   getMe,
   updateMe,
+  deactivateMe,
   deleteMe,
 
   createUser,
   getUsers,
   getUserById,
   updateUser,
+  deactivateUser,
+  getDeactivatedUsers,
+
+  // Alias tạm cho UI cũ
   softDeleteUser,
+  getDeletedUsers,
   restoreUser,
   hardDeleteUser,
-  getDeletedUsers,
 };
