@@ -332,3 +332,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.product-category-message {
+  display: block;
+  margin-top: 6px;
+  color: var(--mochi-text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.product-category-message.error {
+  color: var(--mochi-danger);
+}

@@ -1,11 +1,29 @@
-import { type ChangeEvent, type FormEvent, useMemo, useState } from 'react';
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { createProduct } from '../../api/products.api';
+import {
+  getPublicCategoryTree,
+  type Category,
+} from '../../api/categories.api';
 
 import bunnyImg from '../../assets/brand/bunny_bear_original.png';
 
 import './style/ProductCreatePage.css';
+
+type CategorySelectOption = {
+  id: number;
+  name: string;
+  label: string;
+  depth: number;
+  hasChildren: boolean;
+};
 
 function unwrapApiData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
@@ -25,8 +43,38 @@ function slugify(value: string) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function flattenCategoryTree(
+  categories: Category[],
+  depth = 0,
+): CategorySelectOption[] {
+  const result: CategorySelectOption[] = [];
+
+  for (const category of categories) {
+    const children = category.children ?? [];
+    const hasChildren = children.length > 0;
+
+    const prefix = depth === 0 ? '' : `${'— '.repeat(depth)}`;
+
+    result.push({
+      id: category.id,
+      name: category.name,
+      label: `${prefix}${category.name}${depth === 0 ? ' (Danh mục cha)' : ''}`,
+      depth,
+      hasChildren,
+    });
+
+    if (hasChildren) {
+      result.push(...flattenCategoryTree(children, depth + 1));
+    }
+  }
+
+  return result;
 }
 
 export default function ProductCreatePage() {
@@ -39,12 +87,56 @@ export default function ProductCreatePage() {
   const [categoryId, setCategoryId] = useState('');
   const [images, setImages] = useState<File[]>([]);
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const categoryOptions = useMemo(() => {
+    return flattenCategoryTree(categories);
+  }, [categories]);
 
   const previewUrls = useMemo(() => {
     return images.map((file) => URL.createObjectURL(file));
   }, [images]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCategories() {
+      try {
+        setCategoryLoading(true);
+        setCategoryError('');
+
+        const response = await getPublicCategoryTree();
+
+        if (!mounted) return;
+
+        setCategories(response.data ?? []);
+      } catch (err: any) {
+        if (!mounted) return;
+
+        setCategories([]);
+        setCategoryError(
+          err?.response?.data?.message ||
+            err?.message ||
+            'Không tải được danh mục.',
+        );
+      } finally {
+        if (mounted) {
+          setCategoryLoading(false);
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function handleTitleChange(value: string) {
     setTitle(value);
@@ -56,7 +148,6 @@ export default function ProductCreatePage() {
 
   function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-
     const validFiles = files.filter((file) => file.type.startsWith('image/'));
 
     if (validFiles.length > 6) {
@@ -129,7 +220,10 @@ export default function ProductCreatePage() {
             <div className="product-form-head">
               <div>
                 <h1>Thêm sản phẩm mới</h1>
-                <p>Nhập thông tin cơ bản của sản phẩm. Sau khi tạo xong bạn có thể tạo biến thể.</p>
+                <p>
+                  Nhập thông tin cơ bản của sản phẩm. Sau khi tạo xong bạn có
+                  thể tạo biến thể.
+                </p>
               </div>
             </div>
 
@@ -174,14 +268,37 @@ export default function ProductCreatePage() {
                   </div>
 
                   <div className="mochi-form-group">
-                    <label className="mochi-label">ID danh mục</label>
-                    <input
-                      className="mochi-input"
+                    <label className="mochi-label">Danh mục</label>
+
+                    <select
+                      className="mochi-select"
                       value={categoryId}
                       onChange={(event) => setCategoryId(event.target.value)}
-                      placeholder="Bỏ trống nếu chưa chọn danh mục"
-                      inputMode="numeric"
-                    />
+                      disabled={categoryLoading}
+                    >
+                      <option value="">
+                        {categoryLoading
+                          ? 'Đang tải danh mục...'
+                          : 'Chọn danh mục cho sản phẩm'}
+                      </option>
+
+                      {categoryOptions.map((category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                          disabled={category.hasChildren}
+                        >
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {categoryError ? (
+                      <small className="product-category-message error">
+                        {categoryError}
+                      </small>
+                    ) : null
+                    }
                   </div>
                 </div>
 
@@ -236,7 +353,8 @@ export default function ProductCreatePage() {
             <h2>Hoàn tất</h2>
 
             <p>
-              Sản phẩm mới sẽ được tạo ở trạng thái <b>Đang bán</b>. Bạn có thể chỉnh về hết hàng ở trang sửa.
+              Sản phẩm mới sẽ được tạo ở trạng thái <b>Đang bán</b>. Bạn có thể
+              chỉnh về hết hàng ở trang sửa.
             </p>
 
             <button
@@ -247,7 +365,10 @@ export default function ProductCreatePage() {
               {submitting ? 'Đang tạo...' : 'Tạo sản phẩm'}
             </button>
 
-            <Link to="/shops/me/products" className="mochi-btn mochi-btn-outline product-submit-btn">
+            <Link
+              to="/shops/me/products"
+              className="mochi-btn mochi-btn-outline product-submit-btn"
+            >
               Hủy
             </Link>
           </aside>

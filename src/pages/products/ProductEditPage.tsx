@@ -1,7 +1,12 @@
-import { type FormEvent, useEffect, useState } from 'react';
+// src/pages/products/ProductEditPage.tsx
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { getProductDetail, updateProduct } from '../../api/products.api';
+import {
+  getPublicCategoryTree,
+  type Category,
+} from '../../api/categories.api';
 
 import './style/ProductEditPage.css';
 
@@ -15,6 +20,14 @@ type ProductFormData = {
   status?: string;
   deletedAt?: string | null;
   images?: { id?: number; url: string; isMain?: boolean }[];
+};
+
+type CategorySelectOption = {
+  id: number;
+  name: string;
+  label: string;
+  depth: number;
+  hasChildren: boolean;
 };
 
 function unwrapApiData<T>(response: any): T {
@@ -35,8 +48,38 @@ function slugify(value: string) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function flattenCategoryTree(
+  categories: Category[],
+  depth = 0,
+): CategorySelectOption[] {
+  const result: CategorySelectOption[] = [];
+
+  for (const category of categories) {
+    const children = category.children ?? [];
+    const hasChildren = children.length > 0;
+
+    const prefix = depth === 0 ? '' : `${'— '.repeat(depth)}`;
+
+    result.push({
+      id: category.id,
+      name: category.name,
+      label: `${prefix}${category.name}${depth === 0 ? ' (Danh mục cha)' : ''}`,
+      depth,
+      hasChildren,
+    });
+
+    if (hasChildren) {
+      result.push(...flattenCategoryTree(children, depth + 1));
+    }
+  }
+
+  return result;
 }
 
 export default function ProductEditPage() {
@@ -52,6 +95,10 @@ export default function ProductEditPage() {
   const [categoryId, setCategoryId] = useState('');
   const [status, setStatus] = useState('ACTIVE');
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +106,10 @@ export default function ProductEditPage() {
   const productId = Number(id);
   const isLocked = status === 'LOCKED';
   const isDeleted = Boolean(product?.deletedAt);
+
+  const categoryOptions = useMemo(() => {
+    return flattenCategoryTree(categories);
+  }, [categories]);
 
   async function loadProduct() {
     if (!productId) {
@@ -77,7 +128,7 @@ export default function ProductEditPage() {
       setProduct(data);
       setTitle(data.title ?? '');
       setSlug(data.slug ?? '');
-    setDescription(data.description ?? '');
+      setDescription(data.description ?? '');
       setPrice(String(data.price ?? ''));
       setCategoryId(data.categoryId ? String(data.categoryId) : '');
       setStatus(data.status ?? 'ACTIVE');
@@ -85,6 +136,26 @@ export default function ProductEditPage() {
       setError(getApiMessage(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadCategories() {
+    try {
+      setCategoryLoading(true);
+      setCategoryError('');
+
+      const response = await getPublicCategoryTree();
+
+      setCategories(response.data ?? []);
+    } catch (err: any) {
+      setCategories([]);
+      setCategoryError(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Không tải được danh mục.',
+      );
+    } finally {
+      setCategoryLoading(false);
     }
   }
 
@@ -137,6 +208,7 @@ export default function ProductEditPage() {
 
   useEffect(() => {
     void loadProduct();
+    void loadCategories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -186,7 +258,9 @@ export default function ProductEditPage() {
             <div className="product-form-head">
               <div>
                 <h1>Sửa sản phẩm</h1>
-                <p>Cập nhật thông tin cơ bản và trạng thái bán hàng của sản phẩm.</p>
+                <p>
+                  Cập nhật thông tin cơ bản và trạng thái bán hàng của sản phẩm.
+                </p>
               </div>
 
               <Link
@@ -201,7 +275,8 @@ export default function ProductEditPage() {
 
             {isLocked ? (
               <div className="product-form-warning">
-                Sản phẩm này đã bị admin khóa. Shop chỉ có thể xem, không thể chỉnh sửa.
+                Sản phẩm này đã bị admin khóa. Shop chỉ có thể xem, không thể
+                chỉnh sửa.
               </div>
             ) : null}
 
@@ -250,14 +325,36 @@ export default function ProductEditPage() {
                   </div>
 
                   <div className="mochi-form-group">
-                    <label className="mochi-label">ID danh mục</label>
-                    <input
-                      className="mochi-input"
+                    <label className="mochi-label">Danh mục</label>
+
+                    <select
+                      className="mochi-select"
                       value={categoryId}
-                      disabled={isLocked || isDeleted}
+                      disabled={isLocked || isDeleted || categoryLoading}
                       onChange={(event) => setCategoryId(event.target.value)}
-                      inputMode="numeric"
-                    />
+                    >
+                      <option value="">
+                        {categoryLoading
+                          ? 'Đang tải danh mục...'
+                          : 'Chọn danh mục cho sản phẩm'}
+                      </option>
+
+                      {categoryOptions.map((category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                          disabled={category.hasChildren}
+                        >
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {categoryError ? (
+                      <small className="product-category-message error">
+                        {categoryError}
+                      </small>
+                    ) : null}
                   </div>
                 </div>
 
@@ -293,9 +390,14 @@ export default function ProductEditPage() {
 
                 <div className="product-preview-grid">
                   {product.images.map((image, index) => (
-                    <div className="product-preview-item" key={image.id ?? image.url}>
+                    <div
+                      className="product-preview-item"
+                      key={image.id ?? image.url}
+                    >
                       <img src={image.url} alt={`Ảnh ${index + 1}`} />
-                      {image.isMain || index === 0 ? <span>Ảnh chính</span> : null}
+                      {image.isMain || index === 0 ? (
+                        <span>Ảnh chính</span>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -307,8 +409,8 @@ export default function ProductEditPage() {
             <h2>Lưu thay đổi</h2>
 
             <p>
-              Shop chỉ được đổi trạng thái về <b>Đang bán</b> hoặc <b>Hết hàng</b>.
-              Trạng thái <b>Đã khóa</b> do admin xử lý.
+              Shop chỉ được đổi trạng thái về <b>Đang bán</b> hoặc{' '}
+              <b>Hết hàng</b>. Trạng thái <b>Đã khóa</b> do admin xử lý.
             </p>
 
             <button
@@ -319,7 +421,10 @@ export default function ProductEditPage() {
               {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
 
-            <Link to="/shops/me/products" className="mochi-btn mochi-btn-outline product-submit-btn">
+            <Link
+              to="/shops/me/products"
+              className="mochi-btn mochi-btn-outline product-submit-btn"
+            >
               Quay lại
             </Link>
           </aside>
