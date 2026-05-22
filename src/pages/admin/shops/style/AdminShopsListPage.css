@@ -1,0 +1,337 @@
+.admin-shops-page {
+  padding: 28px;
+}
+
+.admin-shops-header {
+  margin-bottom: 20px;
+  padding: 22px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-shops-eyebrow {
+  margin: 0 0 8px;
+  color: var(--mochi-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-shops-header h1 {
+  margin: 0 0 8px;
+  color: var(--mochi-text);
+  font-size: 28px;
+}
+
+.admin-shops-header p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.admin-shops-refresh-btn,
+.admin-shops-filter button,
+.admin-shop-status-edit button,
+.admin-shops-pagination button {
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 11px 18px;
+  background: var(--mochi-primary);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-shops-refresh-btn:disabled,
+.admin-shop-status-edit button:disabled,
+.admin-shops-pagination button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-shops-filter {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px auto;
+  gap: 12px;
+}
+
+.admin-shops-filter input,
+.admin-shops-filter select,
+.admin-shop-status-edit select {
+  height: 44px;
+  border: 1px solid var(--mochi-border);
+  border-radius: var(--radius-md);
+  padding: 0 13px;
+  background: #fff;
+  color: var(--mochi-text);
+  outline: none;
+}
+
+.admin-shops-filter input:focus,
+.admin-shops-filter select:focus,
+.admin-shop-status-edit select:focus {
+  border-color: var(--mochi-primary);
+  box-shadow: 0 0 0 4px rgba(255, 79, 135, 0.12);
+}
+
+.admin-shops-message,
+.admin-shops-error {
+  margin-bottom: 16px;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+}
+
+.admin-shops-message {
+  background: var(--mochi-success-soft);
+  color: var(--mochi-success);
+}
+
+.admin-shops-error {
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+}
+
+.admin-shops-summary {
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-shops-summary div {
+  padding: 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+
+.admin-shops-summary span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-shops-summary strong {
+  color: var(--mochi-primary);
+  font-size: 26px;
+}
+
+.admin-shops-state {
+  padding: 42px 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  text-align: center;
+  color: var(--mochi-text-soft);
+  font-weight: 800;
+}
+
+.admin-shops-table-wrap {
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.admin-shops-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-shops-table th,
+.admin-shops-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--mochi-border-soft);
+  text-align: left;
+  vertical-align: middle;
+  color: var(--mochi-text);
+  font-size: 14px;
+}
+
+.admin-shops-table th {
+  background: var(--mochi-primary-extra-soft);
+  color: var(--mochi-text);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-shop-info {
+  min-width: 260px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.admin-shop-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--mochi-primary-soft);
+  display: grid;
+  place-items: center;
+  color: var(--mochi-primary);
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.admin-shop-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-shop-info strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--mochi-text);
+}
+
+.admin-shop-info small {
+  color: var(--mochi-muted);
+  font-weight: 700;
+}
+
+.admin-shop-info p {
+  max-width: 280px;
+  margin: 6px 0 0;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.admin-shop-contact,
+.admin-shop-stats {
+  display: grid;
+  gap: 6px;
+  color: var(--mochi-text-soft);
+}
+
+.admin-shop-contact span,
+.admin-shop-stats span {
+  display: block;
+  white-space: nowrap;
+}
+
+.admin-shop-contact small {
+  max-width: 220px;
+  color: var(--mochi-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-shop-status {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-shop-status-pending {
+  background: var(--mochi-warning-soft);
+  color: var(--mochi-warning);
+}
+
+.admin-shop-status-active {
+  background: var(--mochi-success-soft);
+  color: var(--mochi-success);
+}
+
+.admin-shop-status-suspended {
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+}
+
+.admin-shop-status-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-shop-status-edit select {
+  width: 150px;
+}
+
+.admin-shop-status-edit button {
+  height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.admin-shop-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-shop-actions a {
+  color: var(--mochi-primary);
+  font-weight: 900;
+}
+
+.admin-shops-pagination {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  color: var(--mochi-text-soft);
+  font-weight: 800;
+}
+
+.admin-shops-pagination button {
+  background: #fff;
+  color: var(--mochi-primary);
+  border: 1px solid var(--mochi-border);
+}
+
+@media (max-width: 1200px) {
+  .admin-shops-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-shops-table-wrap {
+    overflow-x: auto;
+  }
+
+  .admin-shops-table {
+    min-width: 1100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-shops-page {
+    padding: 18px;
+  }
+
+  .admin-shops-header {
+    flex-direction: column;
+  }
+
+  .admin-shops-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-shops-summary {
+    grid-template-columns: 1fr;
+  }
+}

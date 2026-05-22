@@ -1,0 +1,148 @@
+.account-sidebar {
+  width: 260px;
+  min-height: 520px;
+  padding: 24px 18px 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(255, 79, 135, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.account-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--mochi-text);
+}
+
+.account-sidebar-title-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 17px;
+}
+
+.account-sidebar-menu {
+  display: grid;
+  gap: 8px;
+}
+
+.account-sidebar-link {
+  position: relative;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mochi-text-soft);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.account-sidebar-link:hover {
+  color: var(--mochi-primary);
+  background: var(--mochi-primary-extra-soft);
+  transform: translateX(2px);
+}
+
+.account-sidebar-link.active {
+  color: var(--mochi-primary);
+  background: var(--mochi-primary-soft);
+}
+
+.account-sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  width: 4px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--mochi-primary);
+  transform: translateY(-50%);
+}
+
+.account-sidebar-icon {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  color: currentColor;
+}
+
+.account-sidebar-text {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.account-sidebar-logout {
+  margin-top: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+
+.account-sidebar-bottom {
+  margin-top: 28px;
+  display: flex;
+  justify-content: center;
+}
+
+.account-sidebar-bottom img {
+  width: 150px;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .account-sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .account-sidebar-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-sidebar-link.active::before {
+    display: none;
+  }
+
+  .account-sidebar-bottom {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .account-sidebar {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+
+  .account-sidebar-menu {
+    grid-template-columns: 1fr;
+  }
+
+  .account-sidebar-link {
+    min-height: 44px;
+  }
+}

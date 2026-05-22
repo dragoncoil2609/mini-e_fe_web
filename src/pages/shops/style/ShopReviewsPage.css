@@ -1,0 +1,130 @@
+.shop-reviews-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.14), transparent 34%),
+    transparent;
+}
+
+.shop-reviews-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shop-reviews-main {
+  min-width: 0;
+}
+
+.shop-reviews-head {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shop-reviews-head h1 {
+  margin: 0 0 6px;
+  color: var(--mochi-text);
+  font-size: 26px;
+}
+
+.shop-reviews-head p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-reviews-state,
+.shop-reviews-error {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.shop-reviews-error {
+  color: var(--mochi-danger);
+}
+
+.shop-reviews-summary {
+  margin-top: 18px;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.shop-reviews-score {
+  width: 130px;
+  height: 130px;
+  border-radius: 36px;
+  display: grid;
+  place-items: center;
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+}
+
+.shop-reviews-score strong {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.shop-reviews-score span {
+  margin-top: -30px;
+  font-weight: 900;
+}
+
+.shop-reviews-summary h2 {
+  margin: 0 0 8px;
+  color: var(--mochi-text);
+}
+
+.shop-reviews-summary p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-reviews-stars {
+  margin-top: 12px;
+  display: flex;
+  gap: 4px;
+}
+
+.shop-reviews-stars span {
+  color: var(--mochi-warning);
+  font-size: 24px;
+}
+
+.shop-reviews-empty {
+  margin-top: 18px;
+  padding: 28px;
+}
+
+.shop-reviews-empty h2 {
+  margin: 0 0 10px;
+  color: var(--mochi-text);
+}
+
+.shop-reviews-empty p {
+  color: var(--mochi-text-soft);
+}
+
+.shop-reviews-empty code {
+  display: block;
+  width: fit-content;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--mochi-primary-extra-soft);
+  color: var(--mochi-primary);
+  font-weight: 900;
+}
+
+@media (max-width: 1024px) {
+  .shop-reviews-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-reviews-head,
+  .shop-reviews-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -117,3 +117,37 @@ export async function getShopDetail(id: number): Promise<ApiResponse<Shop>> {
   const res = await http.get<ApiResponse<Shop>>(`/shops/${id}`);
   return res.data;
 }
+
+// 10) SELLER - Lấy đơn hàng của shop tôi
+export async function getMyShopOrders(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<PaginatedResult<any>>> {
+  const res = await http.get<ApiResponse<PaginatedResult<any>>>(
+    '/shops/me/orders',
+    { params },
+  );
+
+  return res.data;
+}
+
+// 11) SELLER - Lấy chi tiết đơn hàng của shop tôi
+export async function getMyShopOrderDetail(
+  id: string,
+): Promise<ApiResponse<any>> {
+  const res = await http.get<ApiResponse<any>>(`/shops/me/orders/${id}`);
+  return res.data;
+}
+
+// 12) SELLER - Cập nhật trạng thái giao hàng
+export async function updateMyShopOrderShippingStatus(
+  id: string,
+  shippingStatus: string,
+): Promise<ApiResponse<any>> {
+  const res = await http.patch<ApiResponse<any>>(
+    `/shops/me/orders/${id}/shipping-status`,
+    { shippingStatus },
+  );
+
+  return res.data;
+}

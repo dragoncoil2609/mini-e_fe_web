@@ -1,0 +1,260 @@
+.shop-register-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.16), transparent 34%),
+    transparent;
+}
+
+.shop-register-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.shop-register-card {
+  padding: 34px;
+}
+
+.shop-register-heading {
+  margin-bottom: 24px;
+}
+
+.shop-register-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shop-register-heading h1 {
+  margin: 14px 0 10px;
+  font-size: 30px;
+  color: var(--mochi-text);
+}
+
+.shop-register-heading p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-register-error {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+  font-weight: 700;
+}
+
+.shop-register-required {
+  color: var(--mochi-primary);
+}
+
+.shop-name-check-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.shop-register-field-danger {
+  color: var(--mochi-danger);
+  font-weight: 700;
+}
+
+.shop-register-field-success {
+  color: var(--mochi-success);
+  font-weight: 700;
+}
+
+.shop-register-address-block {
+  padding: 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl);
+  background: var(--mochi-primary-extra-soft);
+  display: grid;
+  gap: 14px;
+}
+
+.shop-register-address-head p {
+  margin: 6px 0 0;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+}
+
+.shop-register-coordinate-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.shop-register-map-box {
+  overflow: hidden;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+
+.shop-register-map-box > div {
+  padding: 12px;
+}
+
+.shop-register-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shop-register-art {
+  position: sticky;
+  top: 18px;
+  padding: 28px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.shop-register-art img {
+  width: 220px;
+  margin: 0 auto 18px;
+  filter: drop-shadow(0 18px 28px rgba(255, 79, 135, 0.18));
+}
+
+.shop-register-art h2 {
+  margin: 0 0 10px;
+  color: var(--mochi-primary);
+}
+
+.shop-register-art p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+/* =========================================================
+   VietnamAddressSelector dùng trong đăng ký shop
+   Component đang dùng class addresses-form-input / vn-address-selector
+   nên style lại ở đây để không cần import CSS của address page.
+   ========================================================= */
+
+.vn-address-selector {
+  display: grid;
+  gap: 12px;
+}
+
+.vn-address-selector__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.addresses-form-input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--mochi-border);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  background: #fff;
+  color: var(--mochi-text);
+  outline: none;
+  font-family: inherit;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.addresses-form-input:focus {
+  border-color: var(--mochi-primary);
+  box-shadow: 0 0 0 4px rgba(255, 79, 135, 0.12);
+}
+
+.addresses-form-input:disabled {
+  background: #f8f8f8;
+  color: var(--mochi-muted);
+}
+
+.vn-address-selector__suggest-wrapper {
+  position: relative;
+}
+
+.vn-address-selector__suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  max-height: 220px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--mochi-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-md);
+  overflow-y: auto;
+}
+
+.vn-address-selector__suggestion-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: var(--mochi-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.vn-address-selector__suggestion-item:hover {
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+}
+
+.vn-address-selector__hint {
+  color: var(--mochi-text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.vn-address-selector__error {
+  margin: 0;
+  color: var(--mochi-danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Leaflet map */
+.leaflet-container {
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 1024px) {
+  .shop-register-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-register-art {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .vn-address-selector__grid,
+  .shop-register-coordinate-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .shop-register-card {
+    padding: 24px;
+  }
+
+  .shop-name-check-row {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-register-actions {
+    flex-direction: column-reverse;
+  }
+}

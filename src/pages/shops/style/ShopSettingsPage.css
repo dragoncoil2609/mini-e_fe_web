@@ -1,0 +1,129 @@
+.shop-settings-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.14), transparent 34%),
+    transparent;
+}
+
+.shop-settings-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shop-settings-main {
+  min-width: 0;
+}
+
+.shop-settings-head {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shop-settings-head h1 {
+  margin: 0 0 6px;
+  color: var(--mochi-text);
+  font-size: 26px;
+}
+
+.shop-settings-head p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-settings-state {
+  text-align: center;
+}
+
+.shop-settings-error,
+.shop-settings-message {
+  margin-top: 18px;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+}
+
+.shop-settings-error {
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+}
+
+.shop-settings-message {
+  background: var(--mochi-success-soft);
+  color: var(--mochi-success);
+}
+
+.shop-settings-media {
+  margin-top: 18px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.shop-settings-media h2,
+.shop-settings-form-card h2 {
+  margin: 0 0 16px;
+  color: var(--mochi-text);
+}
+
+.shop-settings-logo-box,
+.shop-settings-cover-box {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-settings-logo-box img {
+  width: 150px;
+  height: 150px;
+  border-radius: 36px;
+  object-fit: cover;
+  border: 1px solid var(--mochi-border);
+  background: var(--mochi-primary-soft);
+}
+
+.shop-settings-cover-preview {
+  height: 150px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--mochi-border);
+  background: var(--mochi-primary-extra-soft);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: var(--mochi-text-soft);
+  font-weight: 800;
+}
+
+.shop-settings-cover-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-settings-media input[type='file'] {
+  color: var(--mochi-text-soft);
+}
+
+.shop-settings-form-card {
+  margin-top: 18px;
+  padding: 24px;
+}
+
+.shop-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1024px) {
+  .shop-settings-layout,
+  .shop-settings-media {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-settings-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

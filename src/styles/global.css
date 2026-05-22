@@ -1,3 +1,7 @@
+/* =========================================================
+   RESET CƠ BẢN
+   ========================================================= */
+
 * {
   box-sizing: border-box;
 }
@@ -9,9 +13,12 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--color-bg);
-  color: var(--color-text);
+  min-height: 100vh;
+  font-family: var(--font-main);
+  background:
+    radial-gradient(circle at top left, rgba(255, 143, 179, 0.16), transparent 32%),
+    linear-gradient(180deg, var(--mochi-bg) 0%, #ffffff 100%);
+  color: var(--mochi-text);
 }
 
 button,
@@ -27,6 +34,7 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.65;
 }
 
 a {
@@ -39,7 +47,160 @@ img {
   display: block;
 }
 
-.app-container {
-  width: min(100% - 32px, var(--container-width));
+ul,
+ol {
+  padding-left: 20px;
+}
+
+p {
+  line-height: 1.6;
+}
+
+/* =========================================================
+   CONTAINER CHUNG
+   Giữ .app-container để không phá code cũ.
+   Thêm .mochi-container để dùng cho giao diện mới.
+   ========================================================= */
+
+.app-container,
+.mochi-container {
+  width: min(100% - 80px, var(--container-width));
   margin: 0 auto;
+}
+
+/* =========================================================
+   TEXT UTILS
+   ========================================================= */
+
+.text-primary {
+  color: var(--mochi-primary);
+}
+
+.text-muted {
+  color: var(--mochi-text-soft);
+}
+
+.text-danger {
+  color: var(--mochi-danger);
+}
+
+.text-success {
+  color: var(--mochi-success);
+}
+
+.text-warning {
+  color: var(--mochi-warning);
+}
+
+/* =========================================================
+   BACKGROUND UTILS
+   ========================================================= */
+
+.bg-soft {
+  background: var(--mochi-primary-soft);
+}
+
+.bg-white {
+  background: #ffffff;
+}
+
+/* =========================================================
+   SCROLLBAR NHẸ CHO WEB
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fff5f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ffc1d6;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mochi-primary-light);
+}
+
+/* =========================================================
+   UI COMPONENTS
+   ========================================================= */
+
+.mochi-btn-full {
+  width: 100%;
+}
+
+.mochi-badge {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.mochi-badge-primary {
+  color: var(--mochi-primary);
+  background: var(--mochi-primary-soft);
+}
+
+.mochi-badge-success {
+  color: var(--mochi-success);
+  background: var(--mochi-success-soft);
+}
+
+.mochi-badge-warning {
+  color: var(--mochi-warning);
+  background: var(--mochi-warning-soft);
+}
+
+.mochi-badge-danger {
+  color: var(--mochi-danger);
+  background: var(--mochi-danger-soft);
+}
+
+.mochi-badge-info {
+  color: var(--mochi-info);
+  background: var(--mochi-info-soft);
+}
+
+.mochi-badge-muted {
+  color: var(--mochi-muted);
+  background: #f6f3f4;
+}
+
+.mochi-loading {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  color: var(--mochi-text-soft);
+  text-align: center;
+  font-weight: 800;
+}
+
+.mochi-loading p {
+  margin: 0;
+}
+
+.mochi-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 4px solid var(--mochi-primary-soft);
+  border-top-color: var(--mochi-primary);
+  animation: mochiSpin 0.75s linear infinite;
+}
+
+@keyframes mochiSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }

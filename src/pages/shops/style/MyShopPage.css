@@ -1,0 +1,406 @@
+.my-shop-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.15), transparent 34%),
+    transparent;
+}
+
+.my-shop-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.my-shop-state {
+  text-align: center;
+  color: var(--mochi-text-soft);
+}
+
+.my-shop-error {
+  text-align: left;
+  color: var(--mochi-danger);
+}
+
+.my-shop-error h3 {
+  margin: 0 0 8px;
+  color: var(--mochi-text);
+}
+
+.my-shop-empty {
+  min-height: 420px;
+  padding: 46px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: center;
+  gap: 36px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, #fff, #fff7fa),
+    radial-gradient(circle at 85% 30%, rgba(255, 79, 135, 0.14), transparent 32%);
+}
+
+.my-shop-empty h1 {
+  margin: 14px 0 12px;
+  font-size: 38px;
+  color: var(--mochi-text);
+}
+
+.my-shop-empty p {
+  max-width: 620px;
+  margin: 0 0 22px;
+  color: var(--mochi-text-soft);
+}
+
+.my-shop-empty img {
+  width: 260px;
+  justify-self: center;
+  filter: drop-shadow(0 18px 28px rgba(255, 79, 135, 0.18));
+}
+
+.my-shop-empty-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.my-shop-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.my-shop-sidebar {
+  position: sticky;
+  top: 18px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.my-shop-sidebar-title {
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--mochi-text);
+}
+
+.my-shop-menu {
+  display: grid;
+  gap: 7px;
+}
+
+.my-shop-menu a {
+  height: 42px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  color: var(--mochi-text-soft);
+  font-size: 14px;
+  font-weight: 800;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.my-shop-menu a:hover,
+.my-shop-menu a.active {
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+}
+
+.my-shop-view-link {
+  margin-top: 22px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--mochi-border);
+  display: grid;
+  place-items: center;
+  color: var(--mochi-primary);
+  font-weight: 900;
+}
+
+.my-shop-sidebar-art {
+  width: 150px;
+  margin: 24px auto 0;
+}
+
+.my-shop-main {
+  min-width: 0;
+}
+
+.my-shop-hero {
+  position: relative;
+  min-height: 220px;
+  padding: 30px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  align-items: center;
+  gap: 24px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, #fff, #fff7fa),
+    radial-gradient(circle at 90% 28%, rgba(255, 79, 135, 0.16), transparent 32%);
+}
+
+.my-shop-profile {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.my-shop-avatar {
+  width: 116px;
+  height: 116px;
+  padding: 5px;
+  border-radius: 34px;
+  background: #fff;
+  border: 1px solid var(--mochi-border);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.my-shop-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  object-fit: cover;
+  background: var(--mochi-primary-soft);
+}
+
+.my-shop-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.my-shop-title-row h1 {
+  margin: 0;
+  font-size: 26px;
+  color: var(--mochi-text);
+}
+
+.my-shop-profile-info p {
+  margin: 8px 0;
+  color: var(--mochi-text-soft);
+}
+
+.my-shop-profile-info small {
+  color: var(--mochi-muted);
+  font-weight: 700;
+}
+
+.my-shop-status {
+  padding: 7px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.my-shop-status-active {
+  color: var(--mochi-success);
+  background: var(--mochi-success-soft);
+}
+
+.my-shop-status-pending {
+  color: var(--mochi-warning);
+  background: var(--mochi-warning-soft);
+}
+
+.my-shop-status-suspended {
+  color: var(--mochi-danger);
+  background: var(--mochi-danger-soft);
+}
+
+.my-shop-status-box {
+  position: relative;
+  z-index: 2;
+  padding: 18px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--mochi-primary-extra-soft);
+}
+
+.my-shop-status-box strong {
+  color: var(--mochi-primary);
+}
+
+.my-shop-status-box p {
+  margin: 8px 0 14px;
+  color: var(--mochi-text-soft);
+  font-size: 14px;
+}
+
+.my-shop-hero-art {
+  position: absolute;
+  right: 16px;
+  bottom: 0;
+  width: 130px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.my-shop-section {
+  margin-top: 28px;
+}
+
+.my-shop-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.my-shop-stat {
+  padding: 22px;
+}
+
+.my-shop-stat span {
+  display: block;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.my-shop-stat strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--mochi-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.my-shop-stat small {
+  display: block;
+  margin-top: 12px;
+  color: var(--mochi-success);
+  font-weight: 800;
+}
+
+.my-shop-info-panel {
+  margin-top: 24px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+}
+
+.my-shop-info-panel h2,
+.my-shop-info-panel h3 {
+  margin: 0 0 14px;
+  color: var(--mochi-text);
+}
+
+.my-shop-info-list {
+  display: grid;
+  gap: 10px;
+}
+
+.my-shop-info-list p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.my-shop-info-list b {
+  color: var(--mochi-text);
+}
+
+.my-shop-danger {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+}
+
+.my-shop-danger p {
+  margin: 0 0 14px;
+}
+
+.my-shop-delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(59, 36, 41, 0.28);
+  backdrop-filter: blur(4px);
+}
+
+.my-shop-delete-modal {
+  width: min(100%, 430px);
+  padding: 26px;
+  text-align: center;
+}
+
+.my-shop-delete-modal h3 {
+  margin: 0 0 10px;
+  color: var(--mochi-danger);
+  font-size: 24px;
+}
+
+.my-shop-delete-modal p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.my-shop-delete-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .my-shop-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .my-shop-info-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .my-shop-layout,
+  .my-shop-empty,
+  .my-shop-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .my-shop-sidebar {
+    position: static;
+  }
+
+  .my-shop-empty img {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 640px) {
+  .my-shop-empty,
+  .my-shop-hero {
+    padding: 24px;
+  }
+
+  .my-shop-empty h1 {
+    font-size: 28px;
+  }
+
+  .my-shop-profile {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .my-shop-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .my-shop-delete-actions {
+    flex-direction: column-reverse;
+  }
+}

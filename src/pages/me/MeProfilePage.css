@@ -1,550 +1,347 @@
-.mochi-me-page {
-  width: 100%;
-  min-height: 100%;
+.me-page {
   background:
-    radial-gradient(circle at 15% 10%, rgba(255, 230, 238, 0.75), transparent 26%),
-    radial-gradient(circle at 82% 28%, rgba(255, 243, 247, 0.9), transparent 30%),
-    #ffffff;
-  color: #3d3036;
+    radial-gradient(circle at 15% 10%, rgba(255, 230, 238, 0.7), transparent 26%),
+    radial-gradient(circle at 82% 28%, rgba(255, 243, 247, 0.9), transparent 30%);
 }
 
-.mochi-me-container {
-  width: min(1280px, calc(100% - 40px));
-  margin: 0 auto;
-  padding: 22px 0 42px;
+/* Nới riêng container của trang tài khoản.
+   Không sửa global .mochi-container để tránh ảnh hưởng trang khác. */
+.me-page .mochi-container {
+  width: min(100% - 72px, 1440px);
 }
 
-.mochi-me-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-  margin: 4px 0 18px;
-  color: #9c8d94;
-  font-size: 14px;
-}
-
-.mochi-me-breadcrumb a {
-  color: #ff7ca0;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.mochi-me-breadcrumb strong {
-  color: #ff5f91;
-  font-weight: 700;
-}
-
-.mochi-me-layout {
+.me-layout {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 24px;
-  align-items: stretch;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
 }
 
-/* SIDEBAR */
-.mochi-account-sidebar {
+.me-sidebar {
   min-width: 0;
 }
 
-.mochi-sidebar-card {
-  position: sticky;
-  top: 18px;
-  min-height: 360px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #ffdce7;
-  border-radius: 18px;
-  box-shadow: 0 12px 30px rgba(255, 126, 164, 0.08);
-  padding: 20px 14px 0;
-  overflow: hidden;
-}
-
-.mochi-sidebar-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 8px 14px;
-  color: #2e252a;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.mochi-sidebar-title-icon {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  color: #ff5f91;
-  background: #fff0f5;
-  border-radius: 10px;
-}
-
-.mochi-sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mochi-sidebar-link {
-  position: relative;
-  width: 100%;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: #3e3439;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.mochi-sidebar-link:hover:not(:disabled) {
-  background: #fff3f7;
-  color: #ff5f91;
-  transform: translateX(2px);
-}
-
-.mochi-sidebar-link.active {
-  background: linear-gradient(90deg, #ffe5ee 0%, #fff2f6 100%);
-  color: #ff5f91;
-  font-weight: 800;
-}
-
-.mochi-sidebar-link.active::before {
-  content: '';
-  position: absolute;
-  left: -14px;
-  top: 8px;
-  bottom: 8px;
-  width: 4px;
-  background: #ff477e;
-  border-radius: 999px;
-}
-
-.mochi-sidebar-link.disabled {
-  opacity: 0.85;
-  cursor: not-allowed;
-}
-
-.mochi-sidebar-link.logout {
-  margin-top: 2px;
-}
-
-.mochi-sidebar-icon {
-  width: 20px;
-  text-align: center;
-  color: inherit;
-}
-
-.mochi-sidebar-mascot {
-  display: flex;
-  justify-content: center;
-  margin-top: 8px;
-  pointer-events: none;
-}
-
-.mochi-sidebar-mascot img {
-  width: 138px;
-  max-width: 100%;
-  object-fit: contain;
-  transform: translateY(8px);
-}
-
-/* MAIN CARD */
-.mochi-profile-main {
+.me-main {
   min-width: 0;
 }
 
-.mochi-profile-card {
-  min-height: 360px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #ffdce7;
-  border-radius: 20px;
-  box-shadow: 0 14px 34px rgba(255, 126, 164, 0.08);
-  padding: 34px 36px;
+/* Card rộng hơn, chia cột lại cho phần thông tin có nhiều đất hơn */
+.me-profile-card {
+  min-height: 470px;
+  padding: 42px 48px;
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr) 260px;
-  gap: 34px;
+  grid-template-columns: 190px minmax(520px, 1fr) 190px;
+  gap: 42px;
   align-items: center;
 }
 
-/* AVATAR */
-.mochi-profile-avatar-panel {
+/* Avatar */
+.me-avatar-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  align-self: center;
 }
 
-.mochi-avatar-frame {
+.me-avatar-frame {
   position: relative;
-  width: 158px;
-  height: 158px;
-  border-radius: 999px;
+  width: 166px;
+  height: 166px;
+  border-radius: var(--radius-pill);
   background:
     linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(135deg, #ffc7d9, #ff7ca0) border-box;
+    linear-gradient(135deg, var(--mochi-border-strong), var(--mochi-primary-light)) border-box;
   border: 5px solid transparent;
   box-shadow:
-    inset 0 0 0 8px #fff2f6,
-    0 14px 26px rgba(255, 126, 164, 0.18);
+    inset 0 0 0 8px var(--mochi-primary-soft),
+    var(--shadow-md);
   display: grid;
   place-items: center;
 }
 
-.mochi-avatar-frame img {
-  width: 132px;
-  height: 132px;
+.me-avatar-frame img {
+  width: 138px;
+  height: 138px;
   object-fit: cover;
-  border-radius: 999px;
-  background: #fff6f9;
+  border-radius: var(--radius-pill);
+  background: var(--mochi-surface-soft);
 }
 
-.mochi-avatar-camera {
+.me-avatar-camera {
   position: absolute;
   right: 8px;
   bottom: 12px;
   width: 34px;
   height: 34px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 3px solid #fff;
-  background: #ff5f91;
-  color: white;
+  background: var(--mochi-primary);
+  color: #fff;
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 8px 16px rgba(255, 95, 145, 0.28);
+  box-shadow: var(--shadow-sm);
   font-size: 15px;
 }
 
-.mochi-change-avatar-btn {
-  width: 150px;
-  height: 38px;
+.me-avatar-btn {
   margin-top: 18px;
-  border-radius: 10px;
-  border: 1px solid #ffb8ce;
-  background: #fff;
-  color: #ff5f91;
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
 }
 
-.mochi-change-avatar-btn:hover {
-  background: #fff2f6;
-  transform: translateY(-1px);
-}
-
-.mochi-profile-avatar-panel p {
+.me-avatar-panel p {
   margin: 9px 0 0;
-  color: #9a8a91;
+  color: var(--mochi-text-soft);
   font-size: 12px;
 }
 
-/* CONTENT */
-.mochi-profile-content {
-  align-self: center;
+/* Content */
+.me-profile-content {
   min-width: 0;
 }
 
-.mochi-profile-content h1 {
-  margin: 0 0 22px;
-  color: #2f252a;
-  font-size: 22px;
+.me-profile-title {
+  margin: 0 0 26px;
+  color: var(--mochi-text);
+  font-size: 26px;
   line-height: 1.25;
   font-weight: 900;
   text-align: center;
 }
 
-.mochi-alert {
+.me-alert {
   margin: 0 0 14px;
   padding: 11px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.mochi-alert.success {
-  color: #247146;
-  background: #effff5;
-  border: 1px solid #bceacb;
+.me-alert.success {
+  color: var(--mochi-success);
+  background: var(--mochi-success-soft);
+  border: 1px solid rgba(53, 200, 120, 0.24);
 }
 
-.mochi-alert.error {
-  color: #b83f55;
-  background: #fff4f6;
-  border: 1px solid #ffc9d5;
+.me-alert.error {
+  color: var(--mochi-danger);
+  background: var(--mochi-danger-soft);
+  border: 1px solid rgba(255, 91, 110, 0.22);
 }
 
-.mochi-info-list {
+/* Info rows */
+.me-info-list {
   display: flex;
   flex-direction: column;
 }
 
-.mochi-info-row {
+.me-info-row {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) 104px;
-  gap: 18px;
+  grid-template-columns: 170px minmax(0, 1fr) 112px;
+  gap: 22px;
   align-items: center;
-  min-height: 48px;
-  border-bottom: 1px solid #f7e5eb;
+  min-height: 54px;
+  border-bottom: 1px solid var(--mochi-border-soft);
 }
 
-.mochi-info-row:last-child {
+.me-info-row:last-child {
   border-bottom: 0;
 }
 
-.mochi-info-label {
+.me-info-label {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #817077;
+  color: var(--mochi-text-soft);
   min-width: 0;
 }
 
-.mochi-info-label span {
+.me-info-label span {
   width: 18px;
-  color: #3e353a;
+  color: var(--mochi-text);
   text-align: center;
   font-size: 14px;
 }
 
-.mochi-info-label p {
+.me-info-label p {
   margin: 0;
   font-size: 13px;
   white-space: nowrap;
 }
 
-.mochi-info-value {
+.me-info-value {
   min-width: 0;
-  color: #2f252a;
+  color: var(--mochi-text);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
   word-break: break-word;
 }
 
-.mochi-info-row button {
+.me-info-row button {
   justify-self: end;
-  width: 92px;
-  height: 32px;
-  border-radius: 10px;
-  border: 1px solid #ffbed2;
+  width: 96px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--mochi-border-strong);
   background: #fff;
-  color: #ff5f91;
+  color: var(--mochi-primary);
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    transform 0.2s ease;
+    background var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.mochi-info-row button:hover {
-  background: #fff2f6;
+.me-info-row button:hover {
+  background: var(--mochi-primary-soft);
   transform: translateY(-1px);
 }
 
-/* EDIT FORM */
-.mochi-edit-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 15px 22px;
+/* Edit form */
+.me-edit-form {
+  gap: 16px;
 }
 
-.mochi-form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  min-width: 0;
+.me-required {
+  color: var(--mochi-danger);
 }
 
-.mochi-form-field label {
-  color: #6f5f66;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.mochi-form-field label span {
-  color: #ff477e;
-}
-
-.mochi-form-field input,
-.mochi-form-field select {
-  width: 100%;
-  height: 42px;
-  border: 1px solid #ffd0dd;
-  border-radius: 10px;
-  background: #fff;
-  padding: 0 13px;
-  color: #352a30;
-  font-size: 13px;
-  outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.mochi-form-field input:focus,
-.mochi-form-field select:focus {
-  border-color: #ff7ca0;
-  box-shadow: 0 0 0 4px rgba(255, 124, 160, 0.13);
-}
-
-.mochi-edit-actions {
+.me-edit-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-top: 24px;
+  gap: 18px;
+  margin-top: 26px;
 }
 
-.mochi-cancel-btn,
-.mochi-save-btn {
-  height: 42px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
+.me-edit-actions .mochi-btn {
+  width: 100%;
 }
 
-.mochi-cancel-btn {
-  border: 1px solid #ffbed2;
-  background: #fff;
-  color: #ff5f91;
-}
-
-.mochi-cancel-btn:hover:not(:disabled) {
-  background: #fff2f6;
-}
-
-.mochi-save-btn {
-  border: 0;
-  background: linear-gradient(90deg, #ff7da1 0%, #ff477e 100%);
-  color: white;
-  box-shadow: 0 10px 22px rgba(255, 71, 126, 0.22);
-}
-
-.mochi-save-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 26px rgba(255, 71, 126, 0.26);
-}
-
-.mochi-cancel-btn:disabled,
-.mochi-save-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* RIGHT DECOR */
-.mochi-profile-hero {
+/* Right decoration */
+.me-profile-hero {
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.mochi-profile-hero img {
-  width: 220px;
-  max-width: 100%;
+.me-profile-hero img {
+  width: 185px;
   object-fit: contain;
   filter: drop-shadow(0 16px 24px rgba(255, 126, 164, 0.14));
 }
 
-/* STATE */
-.mochi-profile-state {
+/* State */
+.me-state {
   grid-column: 1 / -1;
-  min-height: 250px;
-  border-radius: 18px;
-  border: 1px dashed #ffc8d8;
-  background: #fff8fb;
-  color: #8a7780;
+  min-height: 280px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--mochi-border-strong);
+  background: var(--mochi-surface-soft);
+  color: var(--mochi-text-soft);
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-.mochi-profile-state.error {
-  color: #b83f55;
-  background: #fff4f6;
-}
-
-.mochi-loading-bubble {
+.me-state span {
   padding: 12px 18px;
-  border-radius: 999px;
-  background: #ffffff;
-  border: 1px solid #ffd8e4;
-  color: #ff5f91;
-  box-shadow: 0 12px 24px rgba(255, 126, 164, 0.12);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  border: 1px solid var(--mochi-border);
+  color: var(--mochi-primary);
+  box-shadow: var(--shadow-sm);
 }
 
-/* RESPONSIVE */
+.me-state.error {
+  color: var(--mochi-danger);
+  background: var(--mochi-danger-soft);
+}
+
+/* Màn hình rất rộng */
+@media (min-width: 1500px) {
+  .me-page .mochi-container {
+    width: min(100% - 96px, 1500px);
+  }
+
+  .me-profile-card {
+    grid-template-columns: 210px minmax(620px, 1fr) 220px;
+    padding: 46px 56px;
+  }
+
+  .me-profile-hero img {
+    width: 210px;
+  }
+}
+
+/* Laptop vừa */
+@media (max-width: 1280px) {
+  .me-page .mochi-container {
+    width: min(100% - 48px, 1240px);
+  }
+
+  .me-profile-card {
+    grid-template-columns: 180px minmax(0, 1fr) 180px;
+    gap: 30px;
+    padding: 34px 36px;
+  }
+
+  .me-info-row {
+    grid-template-columns: 150px minmax(0, 1fr) 104px;
+    gap: 18px;
+  }
+
+  .me-profile-hero img {
+    width: 180px;
+  }
+}
+
+/* Tablet ngang */
 @media (max-width: 1180px) {
-  .mochi-profile-card {
+  .me-profile-card {
     grid-template-columns: 170px minmax(0, 1fr);
   }
 
-  .mochi-profile-hero {
+  .me-profile-hero {
     display: none;
   }
 }
 
-@media (max-width: 920px) {
-  .mochi-me-layout {
+/* Tablet dọc */
+@media (max-width: 1024px) {
+  .me-page .mochi-container {
+    width: min(100% - 32px, var(--container-width));
+  }
+
+  .me-layout {
     grid-template-columns: 1fr;
   }
 
-  .mochi-sidebar-card {
-    position: static;
-  }
-
-  .mochi-sidebar-mascot {
-    display: none;
-  }
-
-  .mochi-profile-card {
+  .me-profile-card {
     grid-template-columns: 1fr;
     padding: 26px 22px;
   }
 
-  .mochi-profile-content h1 {
+  .me-profile-title {
     text-align: left;
   }
 }
 
+/* Mobile */
 @media (max-width: 680px) {
-  .mochi-me-container {
-    width: min(100% - 24px, 1280px);
+  .me-page .mochi-container {
+    width: min(100% - 20px, var(--container-width));
   }
 
-  .mochi-info-row {
+  .me-info-row {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 13px 0;
   }
 
-  .mochi-info-row button {
+  .me-info-row button {
     justify-self: start;
   }
 
-  .mochi-edit-form {
-    grid-template-columns: 1fr;
-  }
-
-  .mochi-edit-actions {
+  .me-edit-actions {
     grid-template-columns: 1fr;
     gap: 12px;
   }

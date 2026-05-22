@@ -1,0 +1,142 @@
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.mochi-form {
+  display: grid;
+  gap: 18px;
+}
+
+.mochi-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mochi-form-group {
+  display: grid;
+  gap: 8px;
+}
+
+.mochi-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mochi-text);
+}
+
+.mochi-input,
+.mochi-select,
+.mochi-textarea {
+  width: 100%;
+  border: 1px solid var(--mochi-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--mochi-text);
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.mochi-input,
+.mochi-select {
+  height: 44px;
+  padding: 0 14px;
+}
+
+.mochi-textarea {
+  min-height: 110px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.mochi-input::placeholder,
+.mochi-textarea::placeholder {
+  color: var(--mochi-placeholder);
+}
+
+.mochi-input:focus,
+.mochi-select:focus,
+.mochi-textarea:focus {
+  border-color: var(--mochi-primary);
+  box-shadow: 0 0 0 4px rgba(255, 79, 135, 0.12);
+}
+
+.mochi-input:disabled,
+.mochi-select:disabled,
+.mochi-textarea:disabled {
+  background: #f8f8f8;
+  color: var(--mochi-muted);
+}
+
+/* =========================================================
+   BUTTON
+   ========================================================= */
+
+.mochi-btn {
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.mochi-btn:hover {
+  transform: translateY(-1px);
+}
+
+.mochi-btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--mochi-primary), var(--mochi-primary-dark));
+  box-shadow: 0 10px 22px rgba(255, 79, 135, 0.28);
+}
+
+.mochi-btn-primary:hover {
+  box-shadow: 0 14px 30px rgba(255, 79, 135, 0.35);
+}
+
+.mochi-btn-outline {
+  color: var(--mochi-primary);
+  background: #fff;
+  border: 1px solid var(--mochi-border);
+}
+
+.mochi-btn-outline:hover {
+  background: var(--mochi-primary-soft);
+}
+
+.mochi-btn-soft {
+  color: var(--mochi-primary);
+  background: var(--mochi-primary-soft);
+}
+
+.mochi-btn-soft:hover {
+  background: #ffe4ee;
+}
+
+.mochi-btn-danger {
+  color: #fff;
+  background: var(--mochi-danger);
+}
+
+.mochi-btn-sm {
+  padding: 9px 16px;
+  font-size: 13px;
+}
+
+.mochi-btn-lg {
+  padding: 14px 28px;
+  font-size: 15px;
+}

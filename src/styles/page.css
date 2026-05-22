@@ -1,0 +1,203 @@
+/* =========================================================
+   PAGE LAYOUT CHUNG
+   ========================================================= */
+
+.mochi-page {
+  padding: 28px 0 56px;
+}
+
+.mochi-page-title {
+  margin: 0 0 20px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--mochi-text);
+}
+
+.mochi-page-desc {
+  margin: -10px 0 24px;
+  color: var(--mochi-text-soft);
+  font-size: 15px;
+}
+
+/* =========================================================
+   SECTION
+   ========================================================= */
+
+.mochi-section {
+  margin-top: 32px;
+}
+
+.mochi-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.mochi-section-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--mochi-text);
+}
+
+.mochi-section-link {
+  color: var(--mochi-primary);
+  font-weight: 700;
+  font-size: 14px;
+  transition: color var(--transition-fast);
+}
+
+.mochi-section-link:hover {
+  color: var(--mochi-primary-dark);
+}
+
+/* =========================================================
+   CARD
+   ========================================================= */
+
+.mochi-card {
+  background: var(--mochi-surface);
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+
+.mochi-card-padding {
+  padding: 24px;
+}
+
+.mochi-card-hover {
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.mochi-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--mochi-border);
+}
+
+/* =========================================================
+   GRID
+   ========================================================= */
+
+.mochi-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.mochi-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mochi-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mochi-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mochi-grid-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.mochi-grid-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/* =========================================================
+   BREADCRUMB
+   ========================================================= */
+
+.mochi-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--mochi-text-soft);
+}
+
+.mochi-breadcrumb a {
+  color: var(--mochi-primary);
+  font-weight: 700;
+}
+
+.mochi-breadcrumb span {
+  color: var(--mochi-muted);
+}
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.mochi-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--mochi-text-soft);
+}
+
+.mochi-empty-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--mochi-text);
+}
+
+.mochi-empty-desc {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+/* =========================================================
+   SERVICE STRIP
+   Dùng cho hàng: Miễn phí vận chuyển / Đổi trả / Thanh toán / Hỗ trợ
+   ========================================================= */
+
+.mochi-service-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, #fff3f7, #ffffff);
+  border: 1px solid var(--mochi-border-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.mochi-service-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mochi-service-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.mochi-service-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--mochi-text);
+}
+
+.mochi-service-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--mochi-text-soft);
+}

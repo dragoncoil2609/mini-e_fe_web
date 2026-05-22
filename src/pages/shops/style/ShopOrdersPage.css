@@ -1,0 +1,133 @@
+.shop-orders-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.14), transparent 34%),
+    transparent;
+}
+
+.shop-orders-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shop-orders-main {
+  min-width: 0;
+}
+
+.shop-orders-head {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shop-orders-head h1 {
+  margin: 0 0 6px;
+  color: var(--mochi-text);
+  font-size: 26px;
+}
+
+.shop-orders-head p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-orders-state,
+.shop-orders-error {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.shop-orders-error {
+  color: var(--mochi-danger);
+}
+
+.shop-orders-table {
+  margin-top: 18px;
+  overflow: hidden;
+}
+
+.shop-orders-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shop-orders-table th,
+.shop-orders-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--mochi-border-soft);
+  text-align: left;
+  color: var(--mochi-text);
+  font-size: 14px;
+}
+
+.shop-orders-table th {
+  background: var(--mochi-primary-extra-soft);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shop-order-pill {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.shop-order-shipping {
+  background: var(--mochi-warning-soft);
+  color: var(--mochi-warning);
+}
+
+.shop-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shop-order-actions button {
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 7px 10px;
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-weight: 900;
+}
+
+.shop-order-actions span {
+  color: var(--mochi-muted);
+  font-size: 13px;
+}
+
+.shop-orders-pagination {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  color: var(--mochi-text-soft);
+  font-weight: 800;
+}
+
+@media (max-width: 1024px) {
+  .shop-orders-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-orders-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shop-orders-table {
+    overflow-x: auto;
+  }
+
+  .shop-orders-table table {
+    min-width: 880px;
+  }
+}

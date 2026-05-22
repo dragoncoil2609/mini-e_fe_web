@@ -1,0 +1,312 @@
+.product-detail-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.14), transparent 34%),
+    transparent;
+}
+
+.product-detail-state {
+  text-align: center;
+}
+
+.product-detail-back {
+  margin-top: 18px;
+}
+
+.product-detail-shell {
+  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(340px, 0.92fr) minmax(0, 1.08fr);
+  gap: 34px;
+  align-items: start;
+}
+
+.product-detail-gallery {
+  min-width: 0;
+}
+
+.product-detail-main-image {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-2xl);
+  background:
+    radial-gradient(circle at center, #ffffff 0%, transparent 58%),
+    linear-gradient(135deg, #fff4f8, #fffafc);
+  border: 1px solid var(--mochi-border-soft);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.product-detail-main-image img {
+  width: 100%;
+  height: 100%;
+  padding: 26px;
+  object-fit: contain;
+}
+
+.product-detail-discount,
+.product-detail-stock-tag {
+  position: absolute;
+  top: 16px;
+  z-index: 2;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: var(--shadow-sm);
+}
+
+.product-detail-discount {
+  left: 16px;
+  color: #fff;
+  background: var(--mochi-primary);
+}
+
+.product-detail-stock-tag {
+  right: 16px;
+  color: var(--mochi-warning);
+  background: var(--mochi-warning-soft);
+}
+
+.product-detail-thumbs {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.product-detail-thumbs button {
+  width: 74px;
+  height: 74px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--mochi-primary-extra-soft);
+  overflow: hidden;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.product-detail-thumbs button.active {
+  border-color: var(--mochi-primary);
+}
+
+.product-detail-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-detail-info {
+  min-width: 0;
+}
+
+.product-detail-shop-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--mochi-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.product-detail-shop-line small {
+  color: var(--mochi-muted);
+}
+
+.product-detail-info h1 {
+  margin: 12px 0 0;
+  color: var(--mochi-text);
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.2;
+}
+
+.product-detail-meta {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.product-detail-meta span {
+  padding: 7px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.product-detail-price-box {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  background: var(--mochi-primary-extra-soft);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.product-detail-price-box strong {
+  color: var(--mochi-primary);
+  font-size: 32px;
+  font-weight: 950;
+}
+
+.product-detail-price-box span {
+  color: var(--mochi-muted);
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: line-through;
+}
+
+.product-detail-section {
+  margin-top: 24px;
+}
+
+.product-detail-section h2 {
+  margin: 0 0 12px;
+  color: var(--mochi-text);
+  font-size: 17px;
+}
+
+.product-detail-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.product-detail-variants button {
+  min-width: 150px;
+  min-height: 54px;
+  padding: 8px 12px;
+  border: 1px solid var(--mochi-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 8px;
+  text-align: left;
+}
+
+.product-detail-variants button.active {
+  border-color: var(--mochi-primary);
+  background: var(--mochi-primary-extra-soft);
+  box-shadow: 0 0 0 4px rgba(255, 79, 135, 0.1);
+}
+
+.product-detail-variants button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.product-detail-variants img {
+  grid-row: 1 / span 2;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.product-detail-variants span {
+  color: var(--mochi-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.product-detail-variants small {
+  color: var(--mochi-text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.product-detail-quantity {
+  display: inline-flex;
+  height: 42px;
+  overflow: hidden;
+  border: 1px solid var(--mochi-border);
+  border-radius: var(--radius-pill);
+  background: #fff;
+}
+
+.product-detail-quantity button {
+  width: 44px;
+  border: none;
+  background: var(--mochi-primary-soft);
+  color: var(--mochi-primary);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.product-detail-quantity input {
+  width: 58px;
+  border: none;
+  outline: none;
+  text-align: center;
+  color: var(--mochi-text);
+  font-weight: 900;
+}
+
+.product-detail-actions {
+  margin-top: 28px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.product-detail-service-note {
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: #fff;
+  border: 1px solid var(--mochi-border-soft);
+  display: grid;
+  gap: 8px;
+}
+
+.product-detail-service-note span {
+  color: var(--mochi-text-soft);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.product-detail-description {
+  margin-top: 24px;
+  padding: 26px;
+}
+
+.product-detail-description h2 {
+  margin: 0 0 12px;
+  color: var(--mochi-text);
+  font-size: 22px;
+}
+
+.product-detail-description p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+  white-space: pre-line;
+}
+
+@media (max-width: 900px) {
+  .product-detail-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .product-detail-shell {
+    padding: 18px;
+  }
+
+  .product-detail-actions .mochi-btn {
+    width: 100%;
+  }
+
+  .product-detail-price-box strong {
+    font-size: 26px;
+  }
+}

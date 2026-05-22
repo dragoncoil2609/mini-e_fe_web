@@ -1,0 +1,86 @@
+@media (max-width: 1200px) {
+  .mochi-grid-6 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mochi-grid-5 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .app-container,
+  .mochi-container {
+    width: min(100% - 32px, var(--container-width));
+  }
+
+  .mochi-grid-4,
+  .mochi-grid-5,
+  .mochi-grid-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mochi-service-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mochi-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .mochi-page {
+    padding: 20px 0 40px;
+  }
+
+  .mochi-page-title {
+    font-size: 24px;
+  }
+
+  .mochi-section-title {
+    font-size: 20px;
+  }
+
+  .mochi-section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mochi-grid-3,
+  .mochi-grid-4,
+  .mochi-grid-5,
+  .mochi-grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mochi-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .mochi-service-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-container,
+  .mochi-container {
+    width: min(100% - 20px, var(--container-width));
+  }
+
+  .mochi-card-padding {
+    padding: 18px;
+  }
+
+  .mochi-grid-3,
+  .mochi-grid-4,
+  .mochi-grid-5,
+  .mochi-grid-6 {
+    grid-template-columns: 1fr;
+  }
+
+  .mochi-btn {
+    width: 100%;
+  }
+}

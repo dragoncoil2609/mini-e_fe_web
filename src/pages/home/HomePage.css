@@ -1,0 +1,237 @@
+.home-page {
+  padding: 28px 0 60px;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.home-hero {
+  position: relative;
+  min-height: 360px;
+  padding: 56px 72px;
+  border: 1px solid var(--mochi-border-soft);
+  border-radius: var(--radius-2xl);
+  background:
+    radial-gradient(circle at 78% 38%, rgba(255, 143, 179, 0.2), transparent 30%),
+    linear-gradient(135deg, #fff4f8 0%, #fffafc 52%, #fff1f6 100%);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+  gap: 32px;
+  align-items: center;
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.home-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-bottom: 14px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  color: var(--mochi-primary);
+  font-size: 13px;
+  font-weight: 900;
+  border: 1px solid var(--mochi-border-soft);
+  box-shadow: var(--shadow-xs);
+}
+
+.home-hero h1 {
+  margin: 0;
+  font-size: clamp(36px, 4vw, 58px);
+  line-height: 1.08;
+  letter-spacing: -1.6px;
+  color: var(--mochi-text);
+}
+
+.home-hero h1::first-line {
+  color: var(--mochi-primary);
+}
+
+.home-hero p {
+  max-width: 540px;
+  margin: 20px 0 0;
+  color: var(--mochi-text-soft);
+  font-size: 16px;
+}
+
+.home-hero-actions {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.home-hero-visual {
+  position: relative;
+  height: 280px;
+  z-index: 1;
+}
+
+.home-hero-blob {
+  position: absolute;
+  inset: 20px 12px 8px 28px;
+  border-radius: 55% 45% 50% 50%;
+  background:
+    radial-gradient(circle at 35% 36%, #ffffff 0%, rgba(255, 255, 255, 0.92) 34%, transparent 35%),
+    linear-gradient(135deg, rgba(255, 190, 210, 0.45), rgba(255, 245, 249, 0.88));
+  filter: blur(0.2px);
+}
+
+.home-hero-bunny {
+  position: absolute;
+  left: 80px;
+  bottom: 8px;
+  width: 220px;
+  max-height: 250px;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 24px rgba(255, 79, 135, 0.16));
+}
+
+.home-hero-basket {
+  position: absolute;
+  right: 72px;
+  bottom: 20px;
+  width: 150px;
+  max-height: 160px;
+  object-fit: contain;
+  transform: rotate(3deg);
+  filter: drop-shadow(0 18px 24px rgba(123, 83, 120, 0.14));
+}
+
+.home-deco {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.home-deco.heart {
+  left: 24px;
+  top: 68px;
+  width: 44px;
+  height: 44px;
+}
+
+.home-deco.star {
+  right: 46px;
+  top: 30px;
+  width: 42px;
+  height: 42px;
+}
+
+.home-deco.spark {
+  left: 48%;
+  top: 8px;
+  width: 38px;
+  height: 38px;
+}
+
+/* =========================================================
+   SERVICE
+   ========================================================= */
+
+.home-service-strip {
+  margin-top: 24px;
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.home-error {
+  margin-top: 24px;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+  font-weight: 800;
+  border: 1px solid rgba(255, 91, 110, 0.18);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .home-hero {
+    grid-template-columns: 1fr 0.9fr;
+    padding: 48px;
+  }
+
+  .home-hero-bunny {
+    left: 40px;
+  }
+
+  .home-hero-basket {
+    right: 30px;
+  }
+}
+
+@media (max-width: 900px) {
+  .home-hero {
+    grid-template-columns: 1fr;
+    padding: 40px 28px;
+  }
+
+  .home-hero-visual {
+    height: 240px;
+  }
+
+  .home-hero-bunny {
+    left: 22%;
+  }
+
+  .home-hero-basket {
+    right: 20%;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-page {
+    padding: 18px 0 44px;
+  }
+
+  .home-hero {
+    min-height: auto;
+    padding: 30px 20px;
+    border-radius: var(--radius-xl);
+  }
+
+  .home-hero h1 {
+    font-size: 34px;
+  }
+
+  .home-hero p {
+    font-size: 14px;
+  }
+
+  .home-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-hero-visual {
+    height: 210px;
+  }
+
+  .home-hero-bunny {
+    width: 170px;
+    left: 8%;
+  }
+
+  .home-hero-basket {
+    width: 120px;
+    right: 8%;
+  }
+}

@@ -1,25 +1,122 @@
 :root {
-  --color-primary: #05a83f;
-  --color-primary-dark: #027a31;
-  --color-primary-soft: #e9f9ef;
+  /* =========================================================
+     MOCHI THEME - MÀU CHỦ ĐẠO
+     ========================================================= */
 
-  --color-bg: #f7fbf8;
-  --color-surface: #ffffff;
-  --color-border: #e5e7eb;
+  --mochi-primary: #ff4f87;
+  --mochi-primary-dark: #e93673;
+  --mochi-primary-light: #ff8fb3;
+  --mochi-primary-soft: #fff1f6;
+  --mochi-primary-extra-soft: #fff7fa;
 
-  --color-text: #14201a;
-  --color-muted: #667085;
-  --color-danger: #dc2626;
-  --color-warning: #f59e0b;
-  --color-success: #16a34a;
+  --mochi-secondary: #ffb8cc;
+  --mochi-accent: #ffd166;
 
+  /* =========================================================
+     BACKGROUND / SURFACE
+     ========================================================= */
+
+  --mochi-bg: #fffafc;
+  --mochi-bg-soft: #fff4f8;
+  --mochi-surface: #ffffff;
+  --mochi-surface-soft: #fff8fb;
+
+  /* =========================================================
+     TEXT
+     ========================================================= */
+
+  --mochi-text: #3b2429;
+  --mochi-text-soft: #7a666b;
+  --mochi-muted: #a99ca0;
+  --mochi-placeholder: #b7a9ad;
+
+  /* =========================================================
+     BORDER
+     ========================================================= */
+
+  --mochi-border: #ffd9e6;
+  --mochi-border-soft: #ffeaf1;
+  --mochi-border-strong: #ffc1d6;
+
+  /* =========================================================
+     STATUS COLORS
+     ========================================================= */
+
+  --mochi-success: #35c878;
+  --mochi-success-soft: #e9fff2;
+
+  --mochi-warning: #ffad33;
+  --mochi-warning-soft: #fff6e5;
+
+  --mochi-danger: #ff5b6e;
+  --mochi-danger-soft: #fff0f2;
+
+  --mochi-info: #4da3ff;
+  --mochi-info-soft: #edf6ff;
+
+  /* =========================================================
+     LAYOUT
+     ========================================================= */
+  --mochi-container: 1440px;
+  --container-width: var(--mochi-container);
+  --mochi-header-height: 96px;
+
+  /* =========================================================
+     RADIUS
+     ========================================================= */
+
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 999px;
 
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
+  /* =========================================================
+     SHADOW
+     ========================================================= */
 
-  --container-width: 1440px;
+  --shadow-xs: 0 2px 6px rgba(255, 79, 135, 0.06);
+  --shadow-sm: 0 4px 14px rgba(255, 79, 135, 0.08);
+  --shadow-md: 0 10px 30px rgba(255, 79, 135, 0.12);
+  --shadow-lg: 0 18px 46px rgba(255, 79, 135, 0.16);
+  --shadow-card: 0 12px 32px rgba(255, 79, 135, 0.12);
+  --shadow-hover: 0 16px 40px rgba(255, 79, 135, 0.18);
+
+  /* =========================================================
+     TRANSITION
+     ========================================================= */
+
+  --transition-fast: 0.18s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.35s ease;
+
+  /* =========================================================
+     FONT
+     ========================================================= */
+
+  --font-main: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* =========================================================
+     BIẾN CŨ CỦA DỰ ÁN
+     Giữ lại để các file cũ đang dùng --color-* không bị hỏng.
+     ========================================================= */
+
+  --color-primary: var(--mochi-primary);
+  --color-primary-dark: var(--mochi-primary-dark);
+  --color-primary-soft: var(--mochi-primary-soft);
+
+  --color-bg: var(--mochi-bg);
+  --color-surface: var(--mochi-surface);
+  --color-border: var(--mochi-border-soft);
+
+  --color-text: var(--mochi-text);
+  --color-muted: var(--mochi-text-soft);
+
+  --color-danger: var(--mochi-danger);
+  --color-warning: var(--mochi-warning);
+  --color-success: var(--mochi-success);
+
+  --container-width: var(--mochi-container);
 }

@@ -1,0 +1,143 @@
+.shop-revenue-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.14), transparent 34%),
+    transparent;
+}
+
+.shop-revenue-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shop-revenue-main {
+  min-width: 0;
+}
+
+.shop-revenue-head {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 16px;
+  align-items: start;
+}
+
+.shop-revenue-head h1 {
+  margin: 0 0 6px;
+  color: var(--mochi-text);
+  font-size: 26px;
+}
+
+.shop-revenue-head p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-revenue-state,
+.shop-revenue-error {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.shop-revenue-error {
+  color: var(--mochi-danger);
+}
+
+.shop-revenue-stats {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.shop-revenue-stat {
+  padding: 22px;
+}
+
+.shop-revenue-stat span {
+  display: block;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shop-revenue-stat strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--mochi-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.shop-revenue-stat small {
+  display: block;
+  margin-top: 12px;
+  color: var(--mochi-success);
+  font-weight: 800;
+}
+
+.shop-revenue-table {
+  margin-top: 18px;
+  padding: 22px;
+  overflow: hidden;
+}
+
+.shop-revenue-table-head {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shop-revenue-table-head h2 {
+  margin: 0;
+  color: var(--mochi-text);
+}
+
+.shop-revenue-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shop-revenue-table th,
+.shop-revenue-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--mochi-border-soft);
+  text-align: left;
+  color: var(--mochi-text);
+  font-size: 14px;
+}
+
+.shop-revenue-table th {
+  background: var(--mochi-primary-extra-soft);
+  font-weight: 900;
+}
+
+.shop-revenue-empty {
+  padding: 34px;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  background: var(--mochi-primary-extra-soft);
+  color: var(--mochi-text-soft);
+  font-weight: 800;
+}
+
+@media (max-width: 1024px) {
+  .shop-revenue-layout,
+  .shop-revenue-head {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-revenue-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-revenue-table {
+    overflow-x: auto;
+  }
+
+  .shop-revenue-table table {
+    min-width: 720px;
+  }
+}

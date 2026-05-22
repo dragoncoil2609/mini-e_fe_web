@@ -1,0 +1,219 @@
+.shop-products-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 179, 0.14), transparent 34%),
+    transparent;
+}
+
+.shop-products-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shop-products-main {
+  min-width: 0;
+}
+
+.shop-products-head {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shop-products-head h1 {
+  margin: 0 0 6px;
+  color: var(--mochi-text);
+  font-size: 26px;
+}
+
+.shop-products-head p {
+  margin: 0;
+  color: var(--mochi-text-soft);
+}
+
+.shop-products-filter {
+  margin-top: 18px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px auto;
+  gap: 12px;
+}
+
+.shop-products-state,
+.shop-products-error {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.shop-products-error {
+  color: var(--mochi-danger);
+}
+
+.shop-products-table {
+  margin-top: 18px;
+  overflow: hidden;
+}
+
+.shop-products-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shop-products-table th,
+.shop-products-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--mochi-border-soft);
+  text-align: left;
+  color: var(--mochi-text);
+  font-size: 14px;
+}
+
+.shop-products-table th {
+  background: var(--mochi-primary-extra-soft);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shop-product-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shop-product-cell img {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--mochi-primary-soft);
+}
+
+.shop-product-cell strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.shop-product-cell small {
+  color: var(--mochi-muted);
+}
+
+.shop-product-status {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--mochi-success-soft);
+  color: var(--mochi-success);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.shop-products-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shop-products-actions a {
+  color: var(--mochi-primary);
+  font-weight: 900;
+}
+
+.shop-products-pagination {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  color: var(--mochi-text-soft);
+  font-weight: 800;
+}
+
+@media (max-width: 1024px) {
+  .shop-products-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-products-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-products-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shop-products-table {
+    overflow-x: auto;
+  }
+
+  .shop-products-table table {
+    min-width: 760px;
+  }
+}
+
+.shop-products-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shop-products-actions a,
+.shop-products-delete-btn,
+.shop-action-disabled {
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.shop-products-actions a {
+  color: var(--mochi-primary);
+  background: var(--mochi-primary-soft);
+}
+
+.shop-products-actions a:hover {
+  color: #fff;
+  background: var(--mochi-primary);
+}
+
+.shop-products-delete-btn {
+  border: none;
+  color: var(--mochi-danger);
+  background: var(--mochi-danger-soft);
+}
+
+.shop-products-delete-btn:hover:not(:disabled) {
+  color: #fff;
+  background: var(--mochi-danger);
+}
+
+.shop-products-delete-btn:disabled,
+.shop-action-disabled {
+  cursor: not-allowed;
+  color: var(--mochi-muted);
+  background: #f6f3f4;
+}
+
+.shop-product-status.is-active {
+  background: var(--mochi-success-soft);
+  color: var(--mochi-success);
+}
+
+.shop-product-status.is-out {
+  background: var(--mochi-warning-soft);
+  color: var(--mochi-warning);
+}
+
+.shop-product-status.is-locked {
+  background: var(--mochi-danger-soft);
+  color: var(--mochi-danger);
+}

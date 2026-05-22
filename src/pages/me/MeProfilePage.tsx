@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import './MeProfilePage.css';
 
-import { clearAccessToken } from '../../api/authToken';
+import AccountSidebar from '../../components/account/AccountSidebar';
 import { getMe, updateMe } from '../../api/users.api';
 import type { User } from '../../api/types';
 
-import basketChick from '../../assets/brand/basket_chick.png';
 import bunnyBear from '../../assets/brand/bunny_bear_original.png';
 import loginBunnyBear from '../../assets/brand/login_bunny_bear.png';
 
@@ -21,48 +20,12 @@ interface ProfileForm {
   avatarUrl: string;
 }
 
-const sidebarItems = [
-  {
-    label: 'Tổng quan',
-    icon: '▦',
-    to: '/me',
-    disabled: true,
-  },
-  {
-    label: 'Thông tin cá nhân',
-    icon: '👤',
-    to: '/me',
-    active: true,
-  },
-  {
-    label: 'Địa chỉ của tôi',
-    icon: '⌖',
-    to: '/addresses',
-  },
-  {
-    label: 'Đơn hàng của tôi',
-    icon: '▣',
-    to: '/orders',
-  },
-  {
-    label: 'Sản phẩm yêu thích',
-    icon: '♡',
-    to: '#',
-    disabled: true,
-  },
-  {
-    label: 'Voucher của tôi',
-    icon: '✿',
-    to: '#',
-    disabled: true,
-  },
-  {
-    label: 'Đổi mật khẩu',
-    icon: '🔒',
-    to: '#',
-    disabled: true,
-  },
-];
+interface InfoRowProps {
+  icon: string;
+  label: string;
+  value: string;
+  onEdit: () => void;
+}
 
 function formatBirthday(value?: string | null) {
   if (!value) return 'Chưa cập nhật';
@@ -99,17 +62,29 @@ function mapUserToForm(user: User): ProfileForm {
 }
 
 function getApiMessage(error: any, fallback: string) {
+  return error?.response?.data?.message || error?.message || fallback;
+}
+
+function InfoRow({ icon, label, value, onEdit }: InfoRowProps) {
   return (
-    error?.response?.data?.message ||
-    error?.message ||
-    fallback
+    <div className="me-info-row">
+      <div className="me-info-label">
+        <span>{icon}</span>
+        <p>{label}</p>
+      </div>
+
+      <div className="me-info-value">{value}</div>
+
+      <button type="button" onClick={onEdit}>
+        Chỉnh sửa
+      </button>
+    </div>
   );
 }
 
 export default function MeProfilePage() {
-  const navigate = useNavigate();
-
   const [user, setUser] = useState<User | null>(null);
+
   const [form, setForm] = useState<ProfileForm>({
     name: '',
     email: '',
@@ -236,110 +211,56 @@ export default function MeProfilePage() {
     updateField('avatarUrl', next.trim());
   }
 
-  function handleLogout() {
-    clearAccessToken();
-    navigate('/login');
-  }
-
   return (
-    <div className="mochi-me-page">
-      <div className="mochi-me-container">
-        <div className="mochi-me-breadcrumb">
-          <Link to="/">← Trang chủ</Link>
+    <div className="mochi-page me-page">
+      <div className="mochi-container">
+        <div className="mochi-breadcrumb">
+          <Link to="/">Trang chủ</Link>
           <span>›</span>
           <span>Tài khoản của tôi</span>
           <span>›</span>
-          <span>Thông tin cá nhân</span>
+          <strong>Thông tin cá nhân</strong>
+
           {isEditing && (
             <>
               <span>›</span>
-              <strong>Chỉnh sửa ❤</strong>
+              <strong>Chỉnh sửa</strong>
             </>
           )}
         </div>
 
-        <div className="mochi-me-layout">
-          <aside className="mochi-account-sidebar">
-            <div className="mochi-sidebar-card">
-              <div className="mochi-sidebar-title">
-                <span className="mochi-sidebar-title-icon">👤</span>
-                <span>Tài khoản của tôi</span>
-              </div>
-
-              <nav className="mochi-sidebar-nav">
-                {sidebarItems.map((item) => {
-                  const className = [
-                    'mochi-sidebar-link',
-                    item.active ? 'active' : '',
-                    item.disabled ? 'disabled' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ');
-
-                  if (item.disabled) {
-                    return (
-                      <button
-                        key={item.label}
-                        type="button"
-                        className={className}
-                        disabled
-                      >
-                        <span className="mochi-sidebar-icon">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <NavLink key={item.label} to={item.to} className={className}>
-                      <span className="mochi-sidebar-icon">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </NavLink>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  className="mochi-sidebar-link logout"
-                  onClick={handleLogout}
-                >
-                  <span className="mochi-sidebar-icon">↪</span>
-                  <span>Đăng xuất</span>
-                </button>
-              </nav>
-
-              <div className="mochi-sidebar-mascot">
-                <img src={basketChick} alt="Mochi cute mascot" />
-              </div>
-            </div>
+        <div className="me-layout">
+          <aside className="me-sidebar">
+            <AccountSidebar />
           </aside>
 
-          <main className="mochi-profile-main">
-            <section className="mochi-profile-card">
+          <main className="me-main">
+            <section className="mochi-card me-profile-card">
               {isLoading ? (
-                <div className="mochi-profile-state">
-                  <div className="mochi-loading-bubble">Đang tải thông tin...</div>
+                <div className="me-state">
+                  <span>Đang tải thông tin...</span>
                 </div>
               ) : errorMessage && !user ? (
-                <div className="mochi-profile-state error">
-                  {errorMessage}
-                </div>
+                <div className="me-state error">{errorMessage}</div>
               ) : !user ? (
-                <div className="mochi-profile-state error">
+                <div className="me-state error">
                   Không tìm thấy thông tin người dùng.
                 </div>
               ) : (
                 <>
-                  <div className="mochi-profile-avatar-panel">
-                    <div className="mochi-avatar-frame">
+                  <div className="me-avatar-panel">
+                    <div className="me-avatar-frame">
                       <img src={avatarSrc} alt="Avatar" />
 
                       <button
                         type="button"
-                        className="mochi-avatar-camera"
+                        className="me-avatar-camera"
                         onClick={() => {
-                          if (!isEditing) openEditMode();
-                          else handleChangeAvatar();
+                          if (!isEditing) {
+                            openEditMode();
+                          } else {
+                            handleChangeAvatar();
+                          }
                         }}
                         title="Đổi ảnh đại diện"
                       >
@@ -349,210 +270,218 @@ export default function MeProfilePage() {
 
                     <button
                       type="button"
-                      className="mochi-change-avatar-btn"
+                      className="mochi-btn mochi-btn-outline mochi-btn-sm me-avatar-btn"
                       onClick={() => {
-                        if (!isEditing) openEditMode();
-                        else handleChangeAvatar();
+                        if (!isEditing) {
+                          openEditMode();
+                        } else {
+                          handleChangeAvatar();
+                        }
                       }}
                     >
                       Đổi ảnh đại diện
                     </button>
 
-                    <p>JPG, PNG tối đa 2MB</p>
+                    <p>Nhập URL ảnh đại diện</p>
                   </div>
 
-                  <div className="mochi-profile-content">
+                  <div className="me-profile-content">
                     {!isEditing ? (
                       <>
-                        <h1>Thông tin cá nhân</h1>
+                        <h1 className="me-profile-title">Thông tin cá nhân</h1>
 
                         {successMessage && (
-                          <div className="mochi-alert success">
+                          <div className="me-alert success">
                             {successMessage}
                           </div>
                         )}
 
                         {errorMessage && (
-                          <div className="mochi-alert error">
-                            {errorMessage}
-                          </div>
+                          <div className="me-alert error">{errorMessage}</div>
                         )}
 
-                        <div className="mochi-info-list">
-                          <div className="mochi-info-row">
-                            <div className="mochi-info-label">
-                              <span>♙</span>
-                              <p>Họ và tên</p>
-                            </div>
-                            <div className="mochi-info-value">
-                              {user.name || 'Chưa cập nhật'}
-                            </div>
-                            <button type="button" onClick={openEditMode}>
-                              Chỉnh sửa
-                            </button>
-                          </div>
+                        <div className="me-info-list">
+                          <InfoRow
+                            icon="♙"
+                            label="Họ và tên"
+                            value={user.name || 'Chưa cập nhật'}
+                            onEdit={openEditMode}
+                          />
 
-                          <div className="mochi-info-row">
-                            <div className="mochi-info-label">
-                              <span>✉</span>
-                              <p>Email</p>
-                            </div>
-                            <div className="mochi-info-value">
-                              {user.email || 'Chưa cập nhật'}
-                            </div>
-                            <button type="button" onClick={openEditMode}>
-                              Chỉnh sửa
-                            </button>
-                          </div>
+                          <InfoRow
+                            icon="✉"
+                            label="Email"
+                            value={user.email || 'Chưa cập nhật'}
+                            onEdit={openEditMode}
+                          />
 
-                          <div className="mochi-info-row">
-                            <div className="mochi-info-label">
-                              <span>☎</span>
-                              <p>Số điện thoại</p>
-                            </div>
-                            <div className="mochi-info-value">
-                              {user.phone || 'Chưa cập nhật'}
-                            </div>
-                            <button type="button" onClick={openEditMode}>
-                              Chỉnh sửa
-                            </button>
-                          </div>
+                          <InfoRow
+                            icon="☎"
+                            label="Số điện thoại"
+                            value={user.phone || 'Chưa cập nhật'}
+                            onEdit={openEditMode}
+                          />
 
-                          <div className="mochi-info-row">
-                            <div className="mochi-info-label">
-                              <span>⚲</span>
-                              <p>Giới tính</p>
-                            </div>
-                            <div className="mochi-info-value">
-                              {genderLabel(user.gender)}
-                            </div>
-                            <button type="button" onClick={openEditMode}>
-                              Chỉnh sửa
-                            </button>
-                          </div>
+                          <InfoRow
+                            icon="⚲"
+                            label="Giới tính"
+                            value={genderLabel(user.gender)}
+                            onEdit={openEditMode}
+                          />
 
-                          <div className="mochi-info-row">
-                            <div className="mochi-info-label">
-                              <span>▣</span>
-                              <p>Ngày sinh</p>
-                            </div>
-                            <div className="mochi-info-value">
-                              {formatBirthday(user.birthday)}
-                            </div>
-                            <button type="button" onClick={openEditMode}>
-                              Chỉnh sửa
-                            </button>
-                          </div>
+                          <InfoRow
+                            icon="▣"
+                            label="Ngày sinh"
+                            value={formatBirthday(user.birthday)}
+                            onEdit={openEditMode}
+                          />
                         </div>
                       </>
                     ) : (
                       <>
-                        <h1>Chỉnh sửa thông tin cá nhân</h1>
+                        <h1 className="me-profile-title">
+                          Chỉnh sửa thông tin cá nhân
+                        </h1>
 
                         {errorMessage && (
-                          <div className="mochi-alert error">
-                            {errorMessage}
-                          </div>
+                          <div className="me-alert error">{errorMessage}</div>
                         )}
 
-                        <div className="mochi-edit-form">
-                          <div className="mochi-form-field">
-                            <label htmlFor="profile-name">
-                              Họ và tên <span>*</span>
-                            </label>
-                            <input
-                              id="profile-name"
-                              value={form.name}
-                              onChange={(event) =>
-                                updateField('name', event.target.value)
-                              }
-                              placeholder="Nhập họ và tên"
-                            />
+                        <div className="mochi-form me-edit-form">
+                          <div className="mochi-form-row">
+                            <div className="mochi-form-group">
+                              <label
+                                className="mochi-label"
+                                htmlFor="profile-name"
+                              >
+                                Họ và tên{' '}
+                                <span className="me-required">*</span>
+                              </label>
+
+                              <input
+                                id="profile-name"
+                                className="mochi-input"
+                                value={form.name}
+                                onChange={(event) =>
+                                  updateField('name', event.target.value)
+                                }
+                                placeholder="Nhập họ và tên"
+                              />
+                            </div>
+
+                            <div className="mochi-form-group">
+                              <label
+                                className="mochi-label"
+                                htmlFor="profile-email"
+                              >
+                                Email
+                              </label>
+
+                              <input
+                                id="profile-email"
+                                className="mochi-input"
+                                type="email"
+                                value={form.email}
+                                onChange={(event) =>
+                                  updateField('email', event.target.value)
+                                }
+                                placeholder="Nhập email"
+                              />
+                            </div>
                           </div>
 
-                          <div className="mochi-form-field">
-                            <label htmlFor="profile-email">
-                              Email <span>*</span>
-                            </label>
-                            <input
-                              id="profile-email"
-                              type="email"
-                              value={form.email}
-                              onChange={(event) =>
-                                updateField('email', event.target.value)
-                              }
-                              placeholder="Nhập email"
-                            />
+                          <div className="mochi-form-row">
+                            <div className="mochi-form-group">
+                              <label
+                                className="mochi-label"
+                                htmlFor="profile-phone"
+                              >
+                                Số điện thoại
+                              </label>
+
+                              <input
+                                id="profile-phone"
+                                className="mochi-input"
+                                value={form.phone}
+                                onChange={(event) =>
+                                  updateField('phone', event.target.value)
+                                }
+                                placeholder="Nhập số điện thoại"
+                              />
+                            </div>
+
+                            <div className="mochi-form-group">
+                              <label
+                                className="mochi-label"
+                                htmlFor="profile-gender"
+                              >
+                                Giới tính
+                              </label>
+
+                              <select
+                                id="profile-gender"
+                                className="mochi-select"
+                                value={form.gender}
+                                onChange={(event) =>
+                                  updateField(
+                                    'gender',
+                                    event.target.value as GenderValue,
+                                  )
+                                }
+                              >
+                                <option value="">Chọn giới tính</option>
+                                <option value="FEMALE">Nữ</option>
+                                <option value="MALE">Nam</option>
+                                <option value="OTHER">Khác</option>
+                              </select>
+                            </div>
                           </div>
 
-                          <div className="mochi-form-field">
-                            <label htmlFor="profile-phone">
-                              Số điện thoại <span>*</span>
-                            </label>
-                            <input
-                              id="profile-phone"
-                              value={form.phone}
-                              onChange={(event) =>
-                                updateField('phone', event.target.value)
-                              }
-                              placeholder="Nhập số điện thoại"
-                            />
-                          </div>
+                          <div className="mochi-form-row">
+                            <div className="mochi-form-group">
+                              <label
+                                className="mochi-label"
+                                htmlFor="profile-birthday"
+                              >
+                                Ngày sinh
+                              </label>
 
-                          <div className="mochi-form-field">
-                            <label htmlFor="profile-gender">
-                              Giới tính <span>*</span>
-                            </label>
-                            <select
-                              id="profile-gender"
-                              value={form.gender}
-                              onChange={(event) =>
-                                updateField(
-                                  'gender',
-                                  event.target.value as GenderValue,
-                                )
-                              }
-                            >
-                              <option value="">Chọn giới tính</option>
-                              <option value="FEMALE">Nữ</option>
-                              <option value="MALE">Nam</option>
-                              <option value="OTHER">Khác</option>
-                            </select>
-                          </div>
+                              <input
+                                id="profile-birthday"
+                                className="mochi-input"
+                                type="date"
+                                value={form.birthday}
+                                onChange={(event) =>
+                                  updateField('birthday', event.target.value)
+                                }
+                              />
+                            </div>
 
-                          <div className="mochi-form-field">
-                            <label htmlFor="profile-birthday">
-                              Ngày sinh <span>*</span>
-                            </label>
-                            <input
-                              id="profile-birthday"
-                              type="date"
-                              value={form.birthday}
-                              onChange={(event) =>
-                                updateField('birthday', event.target.value)
-                              }
-                            />
-                          </div>
+                            <div className="mochi-form-group">
+                              <label
+                                className="mochi-label"
+                                htmlFor="profile-avatar"
+                              >
+                                URL ảnh đại diện
+                              </label>
 
-                          <div className="mochi-form-field">
-                            <label htmlFor="profile-avatar">
-                              URL ảnh đại diện
-                            </label>
-                            <input
-                              id="profile-avatar"
-                              value={form.avatarUrl}
-                              onChange={(event) =>
-                                updateField('avatarUrl', event.target.value)
-                              }
-                              placeholder="https://..."
-                            />
+                              <input
+                                id="profile-avatar"
+                                className="mochi-input"
+                                value={form.avatarUrl}
+                                onChange={(event) =>
+                                  updateField('avatarUrl', event.target.value)
+                                }
+                                placeholder="https://..."
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="mochi-edit-actions">
+                        <div className="me-edit-actions">
                           <button
                             type="button"
-                            className="mochi-cancel-btn"
+                            className="mochi-btn mochi-btn-outline"
                             onClick={closeEditMode}
                             disabled={isSaving}
                           >
@@ -561,7 +490,7 @@ export default function MeProfilePage() {
 
                           <button
                             type="button"
-                            className="mochi-save-btn"
+                            className="mochi-btn mochi-btn-primary"
                             onClick={handleSave}
                             disabled={isSaving}
                           >
@@ -572,7 +501,7 @@ export default function MeProfilePage() {
                     )}
                   </div>
 
-                  <div className="mochi-profile-hero">
+                  <div className="me-profile-hero">
                     <img src={bunnyBear} alt="Bunny decoration" />
                   </div>
                 </>
