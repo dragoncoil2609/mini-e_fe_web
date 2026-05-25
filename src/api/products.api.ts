@@ -9,6 +9,7 @@ import type {
   CreateProductJsonDto,
   UpdateProductDto,
   UpdateVariantDto,
+  ProductSort,
 } from './types';
 
 function isNotFoundError(error: any) {
@@ -19,7 +20,7 @@ function isNotFoundError(error: any) {
  * 1) PUBLIC – LIST & DETAIL
  */
 
-// GET /products?page=&limit=&q=&shopId=&categoryId=
+// GET /products?page=&limit=&q=&shopId=&categoryId=&status=&sort=
 export async function getPublicProducts(params?: {
   page?: number;
   limit?: number;
@@ -27,6 +28,7 @@ export async function getPublicProducts(params?: {
   shopId?: number;
   categoryId?: number;
   status?: string;
+  sort?: ProductSort;
 }): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
   const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
     '/products',
@@ -164,6 +166,7 @@ export async function getMyProducts(params?: {
   q?: string;
   status?: string;
   categoryId?: number;
+  sort?: ProductSort;
 }): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
   try {
     const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
@@ -195,6 +198,7 @@ export async function getAdminProducts(params?: {
   status?: string;
   categoryId?: number;
   shopId?: number;
+  sort?: ProductSort;
 }): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
   try {
     const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
@@ -220,6 +224,7 @@ export async function getAdminProducts(params?: {
             categoryId: params?.categoryId,
             shopId: params?.shopId,
             status: params?.status,
+            sort: params?.sort,
           });
         }
 
@@ -285,6 +290,7 @@ export async function getProductsByShop(
     q?: string;
     status?: string;
     categoryId?: number;
+    sort?: ProductSort;
   },
 ): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
   const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(

@@ -251,7 +251,9 @@ export interface DeleteCategoryResponse {
 
 // ================== PRODUCT ==================
 
-export type ProductStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED' | 'PUBLISHED' | string;
+export type ProductStatus = 'ACTIVE' | 'OUT_OF_STOCK' | 'LOCKED' | string;
+
+export type ProductSort = 'latest' | 'best_selling';
 
 export interface ProductImage {
   id: number;
