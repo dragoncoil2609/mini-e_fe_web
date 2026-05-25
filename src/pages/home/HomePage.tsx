@@ -31,17 +31,21 @@ type HomeProduct = ProductListItem &
     status?: string;
   };
 
+type RecommendationSource = 'personalized' | 'fallback' | 'public';
+
 function toNumber(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 }
 
 function getPublicItems(response: any): HomeProduct[] {
+  const data = response?.data ?? response;
+
   const items =
-    response?.data?.items ??
-    response?.data?.data?.items ??
-    response?.data?.data ??
-    response?.data ??
+    data?.items ??
+    data?.data?.items ??
+    data?.data ??
+    data ??
     [];
 
   return Array.isArray(items) ? (items as HomeProduct[]) : [];
@@ -50,60 +54,99 @@ function getPublicItems(response: any): HomeProduct[] {
 function filterVisibleProducts<T extends { status?: string }>(items: T[]): T[] {
   return items.filter((item) => {
     if (!item.status) return true;
+
     return item.status === 'ACTIVE' || item.status === 'OUT_OF_STOCK';
   });
 }
 
+function normalizeRecommendationSource(source: unknown): RecommendationSource {
+  if (source === 'fallback' || source === 'public') {
+    return source;
+  }
+
+  return 'personalized';
+}
+
 export default function HomePage() {
-  const [products, setProducts] = useState<HomeProduct[]>([]);
+  const [latestProducts, setLatestProducts] = useState<HomeProduct[]>([]);
+  const [bestSellingProducts, setBestSellingProducts] = useState<HomeProduct[]>(
+    [],
+  );
+
   const [favoriteProducts, setFavoriteProducts] = useState<RecommendedProduct[]>(
     [],
   );
+
   const [recommendedProducts, setRecommendedProducts] = useState<
     RecommendedProduct[]
   >([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loadingBestSelling, setLoadingBestSelling] = useState(true);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
   const [errorMessage, setErrorMessage] = useState('');
-  const [recommendationSource, setRecommendationSource] = useState<
-    'personalized' | 'fallback' | 'public'
-  >('public');
+  const [recommendationSource, setRecommendationSource] =
+    useState<RecommendationSource>('public');
 
   useEffect(() => {
     let mounted = true;
 
     async function loadHomeProducts() {
-      setLoading(true);
+      setLoadingBestSelling(true);
       setLoadingFavorites(true);
       setLoadingRecommendations(true);
       setErrorMessage('');
 
-      let publicItems: HomeProduct[] = [];
+      let publicFallbackItems: HomeProduct[] = [];
 
       try {
-        const res = await getPublicProducts({
+        const latestRes = await getPublicProducts({
           page: 1,
-          limit: 60,
-        });
+          limit: 18,
+          sort: 'latest',
+        } as any);
 
-        publicItems = filterVisibleProducts(getPublicItems(res));
+        publicFallbackItems = filterVisibleProducts(getPublicItems(latestRes));
 
         if (mounted) {
-          setProducts(publicItems);
+          setLatestProducts(publicFallbackItems);
         }
       } catch (error: any) {
         if (mounted) {
+          setLatestProducts([]);
           setErrorMessage(
             error?.response?.data?.message ||
               'Không thể tải sản phẩm trang chủ. Vui lòng thử lại sau.',
           );
         }
+      }
+
+      try {
+        const bestSellingRes = await getPublicProducts({
+          page: 1,
+          limit: 6,
+          sort: 'best_selling',
+        } as any);
+
+        const bestSellingItems = filterVisibleProducts(
+          getPublicItems(bestSellingRes),
+        );
+
+        if (mounted) {
+          setBestSellingProducts(bestSellingItems);
+        }
+      } catch {
+        const fallbackBestSelling = [...publicFallbackItems]
+          .sort((a, b) => toNumber(b.sold) - toNumber(a.sold))
+          .slice(0, 6);
+
+        if (mounted) {
+          setBestSellingProducts(fallbackBestSelling);
+        }
       } finally {
         if (mounted) {
-          setLoading(false);
+          setLoadingBestSelling(false);
         }
       }
 
@@ -139,11 +182,13 @@ export default function HomePage() {
 
         if (mounted) {
           setRecommendedProducts(recommendations.items ?? []);
-          setRecommendationSource(recommendations.source ?? 'personalized');
+          setRecommendationSource(
+            normalizeRecommendationSource(recommendations.source),
+          );
         }
       } catch {
         if (mounted) {
-          setRecommendedProducts(publicItems.slice(0, 18));
+          setRecommendedProducts(publicFallbackItems.slice(0, 18));
           setRecommendationSource('public');
         }
       } finally {
@@ -160,19 +205,13 @@ export default function HomePage() {
     };
   }, []);
 
-  const bestSellingProducts = useMemo(() => {
-    return [...products]
-      .sort((a, b) => toNumber(b.sold) - toNumber(a.sold))
-      .slice(0, 6);
-  }, [products]);
-
   const safeRecommendedProducts = useMemo(() => {
     if (recommendedProducts.length > 0) {
       return recommendedProducts;
     }
 
-    return products.slice(0, 18);
-  }, [products, recommendedProducts]);
+    return latestProducts.slice(0, 18);
+  }, [latestProducts, recommendedProducts]);
 
   return (
     <div className="home-page">
@@ -264,14 +303,14 @@ export default function HomePage() {
               </p>
             </div>
 
-            <Link to="/products" className="mochi-section-link">
+            <Link to="/products?sort=best_selling" className="mochi-section-link">
               Xem tất cả →
             </Link>
           </div>
 
           <ProductGrid
-            products={bestSellingProducts}
-            loading={loading}
+            products={bestSellingProducts as ProductCardItem[]}
+            loading={loadingBestSelling}
             columns={6}
             emptyTitle="Chưa có sản phẩm bán chạy"
             emptyDescription="Khi có sản phẩm được bán, hệ thống sẽ hiển thị tại đây."
@@ -289,7 +328,7 @@ export default function HomePage() {
           </div>
 
           <ProductGrid
-            products={favoriteProducts}
+            products={favoriteProducts as ProductCardItem[]}
             loading={loadingFavorites}
             columns={6}
             emptyTitle="Chưa có sản phẩm yêu thích"
@@ -314,7 +353,7 @@ export default function HomePage() {
           </div>
 
           <ProductGrid
-            products={safeRecommendedProducts}
+            products={safeRecommendedProducts as ProductCardItem[]}
             loading={loadingRecommendations}
             columns={6}
             emptyTitle="Chưa có sản phẩm gợi ý"
