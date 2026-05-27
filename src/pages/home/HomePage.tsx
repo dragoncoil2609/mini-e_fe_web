@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 
 import { getPublicProducts } from '../../api/products.api';
 import {
-  getFavoriteProducts,
   getRecommendedProducts,
   type RecommendedProduct,
 } from '../../api/recommendations.api';
@@ -38,51 +37,21 @@ function toNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function getPublicItems(response: any): HomeProduct[] {
-  const data = response?.data ?? response;
-
-  const items =
-    data?.items ??
-    data?.data?.items ??
-    data?.data ??
-    data ??
-    [];
-
-  return Array.isArray(items) ? (items as HomeProduct[]) : [];
-}
-
-function filterVisibleProducts<T extends { status?: string }>(items: T[]): T[] {
-  return items.filter((item) => {
-    if (!item.status) return true;
-
-    return item.status === 'ACTIVE' || item.status === 'OUT_OF_STOCK';
-  });
-}
-
 function normalizeRecommendationSource(source: unknown): RecommendationSource {
-  if (source === 'fallback' || source === 'public') {
+  if (source === 'personalized' || source === 'fallback') {
     return source;
   }
 
-  return 'personalized';
+  return 'public';
 }
 
 export default function HomePage() {
-  const [latestProducts, setLatestProducts] = useState<HomeProduct[]>([]);
-  const [bestSellingProducts, setBestSellingProducts] = useState<HomeProduct[]>(
-    [],
-  );
-
-  const [favoriteProducts, setFavoriteProducts] = useState<RecommendedProduct[]>(
-    [],
-  );
-
+  const [products, setProducts] = useState<HomeProduct[]>([]);
   const [recommendedProducts, setRecommendedProducts] = useState<
     RecommendedProduct[]
   >([]);
 
-  const [loadingBestSelling, setLoadingBestSelling] = useState(true);
-  const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
   const [errorMessage, setErrorMessage] = useState('');
@@ -93,104 +62,63 @@ export default function HomePage() {
     let mounted = true;
 
     async function loadHomeProducts() {
-      setLoadingBestSelling(true);
-      setLoadingFavorites(true);
-      setLoadingRecommendations(true);
-      setErrorMessage('');
-
-      let publicFallbackItems: HomeProduct[] = [];
-
       try {
-        const latestRes = await getPublicProducts({
+        setLoading(true);
+        setErrorMessage('');
+
+        const res = await getPublicProducts({
           page: 1,
-          limit: 18,
-          sort: 'latest',
-        } as any);
-
-        publicFallbackItems = filterVisibleProducts(getPublicItems(latestRes));
-
-        if (mounted) {
-          setLatestProducts(publicFallbackItems);
-        }
-      } catch (error: any) {
-        if (mounted) {
-          setLatestProducts([]);
-          setErrorMessage(
-            error?.response?.data?.message ||
-              'Không thể tải sản phẩm trang chủ. Vui lòng thử lại sau.',
-          );
-        }
-      }
-
-      try {
-        const bestSellingRes = await getPublicProducts({
-          page: 1,
-          limit: 6,
-          sort: 'best_selling',
-        } as any);
-
-        const bestSellingItems = filterVisibleProducts(
-          getPublicItems(bestSellingRes),
-        );
-
-        if (mounted) {
-          setBestSellingProducts(bestSellingItems);
-        }
-      } catch {
-        const fallbackBestSelling = [...publicFallbackItems]
-          .sort((a, b) => toNumber(b.sold) - toNumber(a.sold))
-          .slice(0, 6);
-
-        if (mounted) {
-          setBestSellingProducts(fallbackBestSelling);
-        }
-      } finally {
-        if (mounted) {
-          setLoadingBestSelling(false);
-        }
-      }
-
-      try {
-        const favorites = await getFavoriteProducts({
-          page: 1,
-          limit: 12,
+          limit: 60,
         });
 
-        if (mounted) {
-          setFavoriteProducts(
-            (favorites.items ?? []).map((item) => ({
-              ...item,
-              isFavorite: true,
-            })),
-          );
-        }
-      } catch {
-        if (mounted) {
-          setFavoriteProducts([]);
-        }
+        const items = (res.data?.items ?? []) as HomeProduct[];
+
+        if (!mounted) return;
+
+        const visibleItems = items.filter((item) => {
+          if (!item.status) return true;
+          return item.status === 'ACTIVE' || item.status === 'OUT_OF_STOCK';
+        });
+
+        setProducts(visibleItems);
+      } catch (error: any) {
+        if (!mounted) return;
+
+        setErrorMessage(
+          error?.response?.data?.message ||
+            'Không thể tải sản phẩm trang chủ. Vui lòng thử lại sau.',
+        );
       } finally {
         if (mounted) {
-          setLoadingFavorites(false);
+          setLoading(false);
         }
       }
+    }
 
+    async function loadRecommendedProducts() {
       try {
+        setLoadingRecommendations(true);
+
         const recommendations = await getRecommendedProducts({
           page: 1,
           limit: 18,
         });
 
-        if (mounted) {
-          setRecommendedProducts(recommendations.items ?? []);
-          setRecommendationSource(
-            normalizeRecommendationSource(recommendations.source),
-          );
-        }
+        if (!mounted) return;
+
+        setRecommendedProducts(recommendations.items ?? []);
+        setRecommendationSource(
+          normalizeRecommendationSource(recommendations.source),
+        );
       } catch {
-        if (mounted) {
-          setRecommendedProducts(publicFallbackItems.slice(0, 18));
-          setRecommendationSource('public');
-        }
+        if (!mounted) return;
+
+        /**
+         * Không fallback sang getPublicProducts nữa.
+         * Nếu lỗi hoặc chưa đăng nhập thì phần gợi ý để trống.
+         */
+        setRecommendedProducts([]);
+        setRecommendationSource('public');
       } finally {
         if (mounted) {
           setLoadingRecommendations(false);
@@ -199,19 +127,18 @@ export default function HomePage() {
     }
 
     void loadHomeProducts();
+    void loadRecommendedProducts();
 
     return () => {
       mounted = false;
     };
   }, []);
 
-  const safeRecommendedProducts = useMemo(() => {
-    if (recommendedProducts.length > 0) {
-      return recommendedProducts;
-    }
-
-    return latestProducts.slice(0, 18);
-  }, [latestProducts, recommendedProducts]);
+  const bestSellingProducts = useMemo(() => {
+    return [...products]
+      .sort((a, b) => toNumber(b.sold) - toNumber(a.sold))
+      .slice(0, 6);
+  }, [products]);
 
   return (
     <div className="home-page">
@@ -245,7 +172,11 @@ export default function HomePage() {
           <div className="home-hero-visual">
             <div className="home-hero-blob" />
 
-            <img className="home-hero-bunny" src={heroBunny} alt="Mochi bunny" />
+            <img
+              className="home-hero-bunny"
+              src={heroBunny}
+              alt="Mochi bunny"
+            />
             <img
               className="home-hero-basket"
               src={basketChick}
@@ -296,21 +227,15 @@ export default function HomePage() {
 
         <section className="mochi-section">
           <div className="mochi-section-header">
-            <div>
-              <h2 className="mochi-section-title">Sản phẩm bán chạy 🌟</h2>
-              <p className="home-section-subtitle">
-                Các sản phẩm được mua nhiều nhất.
-              </p>
-            </div>
-
-            <Link to="/products?sort=best_selling" className="mochi-section-link">
+            <h2 className="mochi-section-title">Sản phẩm bán chạy 🌟</h2>
+            <Link to="/products" className="mochi-section-link">
               Xem tất cả →
             </Link>
           </div>
 
           <ProductGrid
-            products={bestSellingProducts as ProductCardItem[]}
-            loading={loadingBestSelling}
+            products={bestSellingProducts}
+            loading={loading}
             columns={6}
             emptyTitle="Chưa có sản phẩm bán chạy"
             emptyDescription="Khi có sản phẩm được bán, hệ thống sẽ hiển thị tại đây."
@@ -320,30 +245,14 @@ export default function HomePage() {
         <section className="mochi-section">
           <div className="mochi-section-header">
             <div>
-              <h2 className="mochi-section-title">Sản phẩm yêu thích 💗</h2>
-              <p className="home-section-subtitle">
-                Những sản phẩm bạn đã bấm yêu thích.
-              </p>
-            </div>
-          </div>
-
-          <ProductGrid
-            products={favoriteProducts as ProductCardItem[]}
-            loading={loadingFavorites}
-            columns={6}
-            emptyTitle="Chưa có sản phẩm yêu thích"
-            emptyDescription="Hãy bấm trái tim ở sản phẩm bạn thích để lưu lại tại đây."
-          />
-        </section>
-
-        <section className="mochi-section">
-          <div className="mochi-section-header">
-            <div>
               <h2 className="mochi-section-title">Sản phẩm gợi ý 💕</h2>
+
               <p className="home-section-subtitle">
                 {recommendationSource === 'personalized'
                   ? 'Dựa trên sản phẩm bạn đã xem, click, thêm giỏ hoặc yêu thích.'
-                  : 'Gợi ý từ các sản phẩm phổ biến hiện có.'}
+                  : recommendationSource === 'fallback'
+                    ? 'Gợi ý phổ biến từ hệ thống recommendation.'
+                    : 'Đăng nhập và tương tác với sản phẩm để nhận gợi ý phù hợp hơn.'}
               </p>
             </div>
 
@@ -353,11 +262,11 @@ export default function HomePage() {
           </div>
 
           <ProductGrid
-            products={safeRecommendedProducts as ProductCardItem[]}
+            products={recommendedProducts as ProductCardItem[]}
             loading={loadingRecommendations}
             columns={6}
             emptyTitle="Chưa có sản phẩm gợi ý"
-            emptyDescription="Hãy xem thêm sản phẩm để hệ thống gợi ý chính xác hơn."
+            emptyDescription="Hãy đăng nhập và xem thêm sản phẩm để hệ thống gợi ý chính xác hơn."
           />
         </section>
       </div>
