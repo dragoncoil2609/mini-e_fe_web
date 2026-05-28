@@ -21,14 +21,14 @@ import AddressesPage from '../pages/addresses/AddressesPage';
 
 // ==================== CART / CHECKOUT ====================
 import CartPage from '../pages/cart/CartPage';
-// import CheckoutPage from '../pages/checkout/CheckoutPage';
+import CheckoutPage from '../pages/checkout/CheckoutPage';
 
-// // ==================== ORDERS ====================
-// import OrdersPage from '../pages/orders/OrdersPage';
-// import OrderDetailPage from '../pages/orders/OrderDetailPage';
+// ==================== ORDERS ====================
+import OrdersPage from '../pages/orders/OrdersPage';
+import OrderDetailPage from '../pages/orders/OrderDetailPage';
 
-// // ==================== PAYMENT ====================
-// import PaymentResultPage from '../pages/payments/PaymentResultPage';
+// ==================== PAYMENT ====================
+import PaymentResultPage from '../pages/payments/PaymentResultPage';
 
 // ==================== PRODUCTS ====================
 import ProductsListPage from '../pages/products/ProductsListPage';
@@ -113,15 +113,15 @@ export default function AppRoutes() {
 
         {/* ---------- CART / CHECKOUT ---------- */}
         <Route path="/cart" element={<CartPage />} />
-        {/* <Route path="/checkout" element={<CheckoutPage />} /> */}
+        <Route path="/checkout" element={<CheckoutPage />} />
 
         {/* ---------- ORDERS ---------- */}
-        {/* <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/orders/:id" element={<OrderDetailPage />} /> */}
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/:id" element={<OrderDetailPage />} />
 
         {/* ---------- PAYMENT ---------- */}
-        {/* <Route path="/payments/result" element={<PaymentResultPage />} />
-        <Route path="/payment-result" element={<PaymentResultPage />} /> */}
+        <Route path="/payments/result" element={<PaymentResultPage />} />
+        <Route path="/payment-result" element={<PaymentResultPage />} />
 
         {/* ---------- SHOP OWNER ---------- */}
         <Route path="/shops" element={<Navigate to="/shops/me" replace />} />

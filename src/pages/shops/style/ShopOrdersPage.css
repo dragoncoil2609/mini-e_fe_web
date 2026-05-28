@@ -41,6 +41,7 @@
 
 .shop-orders-error {
   color: var(--mochi-danger);
+  font-weight: 800;
 }
 
 .shop-orders-table {
@@ -58,6 +59,7 @@
   padding: 14px 16px;
   border-bottom: 1px solid var(--mochi-border-soft);
   text-align: left;
+  vertical-align: middle;
   color: var(--mochi-text);
   font-size: 14px;
 }
@@ -66,16 +68,41 @@
   background: var(--mochi-primary-extra-soft);
   font-size: 13px;
   font-weight: 900;
+  white-space: nowrap;
+}
+
+.shop-order-code {
+  white-space: nowrap;
 }
 
 .shop-order-pill {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
   padding: 6px 10px;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   background: var(--mochi-primary-soft);
   color: var(--mochi-primary);
   font-size: 12px;
   font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.shop-order-payment-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--mochi-success-soft);
+  color: var(--mochi-success);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .shop-order-shipping {
@@ -85,6 +112,7 @@
 
 .shop-order-actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -95,12 +123,27 @@
   padding: 7px 10px;
   background: var(--mochi-primary-soft);
   color: var(--mochi-primary);
+  font-size: 12px;
   font-weight: 900;
+  cursor: pointer;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.shop-order-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.shop-order-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .shop-order-actions span {
   color: var(--mochi-muted);
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .shop-orders-pagination {
@@ -128,6 +171,16 @@
   }
 
   .shop-orders-table table {
-    min-width: 880px;
+    min-width: 980px;
+  }
+}
+
+@media (max-width: 640px) {
+  .shop-orders-head {
+    padding: 20px;
+  }
+
+  .shop-orders-head h1 {
+    font-size: 22px;
   }
 }

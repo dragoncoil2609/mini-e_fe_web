@@ -70,9 +70,94 @@ function orderDate(order: OrderView) {
   return order.createdAt || order.created_at || '';
 }
 
+function getOrderStatusLabel(status?: string) {
+  switch (status) {
+    case 'PENDING':
+      return 'Chờ Xử Lý';
+    case 'PAID':
+      return 'Đã Thanh Toán';
+    case 'PROCESSING':
+      return 'Đang Xử Lý';
+    case 'SHIPPED':
+      return 'Đang Giao';
+    case 'COMPLETED':
+      return 'Hoàn Thành';
+    case 'CANCELLED':
+    case 'CANCELED':
+      return 'Đã Hủy';
+    default:
+      return status || 'Chưa Xác Định';
+  }
+}
+
+function getPaymentStatusLabel(status?: string) {
+  switch (status) {
+    case 'UNPAID':
+      return 'Chưa Thanh Toán';
+    case 'PAID':
+      return 'Đã Thanh Toán';
+    case 'REFUNDED':
+      return 'Đã Hoàn Tiền';
+    default:
+      return status || 'Chưa Xác Định';
+  }
+}
+
+function getPaymentMethodLabel(method?: string) {
+  switch (method) {
+    case 'COD':
+      return 'COD';
+    case 'VNPAY':
+      return 'VNP';
+    default:
+      return method || 'N/A';
+  }
+}
+
+function getPaymentText(order: OrderView) {
+  return `${getPaymentMethodLabel(order.paymentMethod)}(${getPaymentStatusLabel(
+    order.paymentStatus,
+  )})`;
+}
+
+function getShippingStatusLabel(status?: string) {
+  switch (status) {
+    case 'PENDING':
+      return 'Chờ Lấy Hàng';
+    case 'PICKED':
+      return 'Đang Đóng Gói Hàng';
+    case 'IN_TRANSIT':
+      return 'Đang Vận Chuyển';
+    case 'DELIVERED':
+      return 'Đã Giao Hàng';
+    case 'RETURNED':
+      return 'Đã Hoàn Trả';
+    case 'CANCELED':
+    case 'CANCELLED':
+      return 'Đã Hủy Giao';
+    default:
+      return status || 'Chưa Xác Định';
+  }
+}
+
+function getShippingActionLabel(status: string) {
+  switch (status) {
+    case 'PICKED':
+      return 'Nhận Đơn Hàng';
+    case 'IN_TRANSIT':
+      return 'Đã Chuyển Cho Đơn Vị Vận Chuyển';
+    case 'CANCELED':
+      return 'Hủy Giao Hàng';
+    default:
+      return status;
+  }
+}
+
 function nextShippingOptions(current?: string) {
   if (current === 'PENDING') return ['PICKED', 'CANCELED'];
-  if (current === 'PICKED') return ['IN_TRANSIT', 'CANCELED'];
+
+  if (current === 'PICKED') return ['IN_TRANSIT'];
+
   return [];
 }
 
@@ -94,7 +179,8 @@ export default function ShopOrdersPage() {
 
     try {
       const shopResponse = await getMyShop();
-      setShop(unwrapApiData<ShopView>(shopResponse));
+      const shopData = unwrapApiData<ShopView>(shopResponse);
+      setShop(shopData);
 
       const orderResponse = await getMyShopOrders({
         page: nextPage,
@@ -160,6 +246,7 @@ export default function ShopOrdersPage() {
                 type="button"
                 className="mochi-btn mochi-btn-outline"
                 onClick={() => void loadOrders(page)}
+                disabled={loading}
               >
                 Làm mới
               </button>
@@ -189,6 +276,7 @@ export default function ShopOrdersPage() {
                         <th>Mã đơn</th>
                         <th>Ngày tạo</th>
                         <th>Sản phẩm</th>
+                        <th>Trạng thái đơn</th>
                         <th>Thanh toán</th>
                         <th>Giao hàng</th>
                         <th>Tổng tiền</th>
@@ -205,7 +293,9 @@ export default function ShopOrdersPage() {
                         return (
                           <tr key={order.id}>
                             <td>
-                              <strong>{order.code || order.id}</strong>
+                              <strong className="shop-order-code">
+                                {order.code || order.id}
+                              </strong>
                             </td>
 
                             <td>{formatDate(orderDate(order))}</td>
@@ -214,13 +304,19 @@ export default function ShopOrdersPage() {
 
                             <td>
                               <span className="shop-order-pill">
-                                {order.paymentStatus || 'UNPAID'}
+                                {getOrderStatusLabel(order.status)}
+                              </span>
+                            </td>
+
+                            <td>
+                              <span className="shop-order-payment-inline">
+                                {getPaymentText(order)}
                               </span>
                             </td>
 
                             <td>
                               <span className="shop-order-pill shop-order-shipping">
-                                {order.shippingStatus || 'PENDING'}
+                                {getShippingStatusLabel(order.shippingStatus)}
                               </span>
                             </td>
 
@@ -241,7 +337,9 @@ export default function ShopOrdersPage() {
                                         )
                                       }
                                     >
-                                      {nextStatus}
+                                      {updatingId === order.id
+                                        ? 'Đang lưu...'
+                                        : getShippingActionLabel(nextStatus)}
                                     </button>
                                   ))
                                 ) : (

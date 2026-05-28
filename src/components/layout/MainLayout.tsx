@@ -14,6 +14,7 @@ import defaultAvatarImg from '../../assets/brand/login_bunny_bear.png';
 import { getAccessToken } from '../../api/authToken';
 import { getMe } from '../../api/users.api';
 import { CartApi } from '../../api/cart.api';
+import { OrdersApi } from '../../api/orders.api';
 import {
   getPublicCategoryTree,
   type Category,
@@ -64,6 +65,11 @@ function getSafeCartQuantity(cart: any): number {
   return 0;
 }
 
+function getSafeOrdersTotal(result: any): number {
+  const total = Number(result?.total ?? 0);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+}
+
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,6 +78,7 @@ export default function MainLayout() {
   const [accountName, setAccountName] = useState('');
   const [accountAvatar, setAccountAvatar] = useState('');
   const [cartQuantity, setCartQuantity] = useState(0);
+  const [ordersTotal, setOrdersTotal] = useState(0);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -157,25 +164,6 @@ export default function MainLayout() {
       }
 
       try {
-        /**
-         * cart.api.ts hiện có:
-         * CartApi.getCart()
-         *
-         * API BE:
-         * GET /cart
-         *
-         * Response thường là:
-         * {
-         *   success: true,
-         *   data: {
-         *     id,
-         *     itemsCount,
-         *     itemsQuantity,
-         *     subtotal,
-         *     items: []
-         *   }
-         * }
-         */
         const response = await CartApi.getCart();
         const cart = unwrapApiData<any>(response);
 
@@ -191,21 +179,53 @@ export default function MainLayout() {
 
     void loadCartQuantity();
 
-    /**
-     * Khi ProductDetailPage / CartPage thêm, sửa, xóa sản phẩm
-     * thì dispatch event này để MainLayout gọi lại GET /cart.
-     */
     window.addEventListener('mochi-cart-updated', loadCartQuantity);
-
-    /**
-     * Dùng khi login/logout hoặc token thay đổi ở tab khác.
-     */
     window.addEventListener('storage', loadCartQuantity);
 
     return () => {
       mounted = false;
       window.removeEventListener('mochi-cart-updated', loadCartQuantity);
       window.removeEventListener('storage', loadCartQuantity);
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadOrdersTotal() {
+      const currentToken = getFallbackToken();
+
+      if (!currentToken) {
+        if (mounted) {
+          setOrdersTotal(0);
+        }
+
+        return;
+      }
+
+      try {
+        const response = await OrdersApi.getMyOrders({ page: 1, limit: 1 });
+        const result = unwrapApiData<any>(response);
+
+        if (!mounted) return;
+
+        setOrdersTotal(getSafeOrdersTotal(result));
+      } catch {
+        if (!mounted) return;
+
+        setOrdersTotal(0);
+      }
+    }
+
+    void loadOrdersTotal();
+
+    window.addEventListener('mochi-orders-updated', loadOrdersTotal);
+    window.addEventListener('storage', loadOrdersTotal);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('mochi-orders-updated', loadOrdersTotal);
+      window.removeEventListener('storage', loadOrdersTotal);
     };
   }, [location.pathname]);
 
@@ -342,7 +362,14 @@ export default function MainLayout() {
 
           <NavLink to="/shops/me">🏪 Cửa hàng</NavLink>
 
-          <NavLink to="/orders">📦 Đơn hàng</NavLink>
+          <NavLink to="/orders">
+            📦 Đơn hàng
+            {ordersTotal > 0 ? (
+              <small style={{ marginLeft: 6 }}>
+                ({ordersTotal > 99 ? '99+' : ordersTotal})
+              </small>
+            ) : null}
+          </NavLink>
 
           <NavLink to="/me">💗 Tài khoản</NavLink>
 
@@ -363,7 +390,7 @@ export default function MainLayout() {
             <div className="mochi-category-scroll">
               {parentCategories.map((category) => {
                 const isActive = activeCategorySlug === category.slug;
-                const categoryImage = category.imageUrl ||'';
+                const categoryImage = category.imageUrl || '';
 
                 return (
                   <Link
