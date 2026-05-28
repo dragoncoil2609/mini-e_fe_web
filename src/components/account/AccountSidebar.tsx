@@ -1,13 +1,26 @@
+import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import {
+  FiGrid,
+  FiUser,
+  FiMapPin,
+  FiPackage,
+  FiHeart,
+  FiGift,
+  FiLock,
+  FiLogOut,
+} from 'react-icons/fi';
+
 import './AccountSidebar.css';
 
+import { AuthApi } from '../../api/auth.api';
 import { clearAccessToken } from '../../api/authToken';
 import basketChick from '../../assets/brand/basket_chick.png';
 
 type AccountMenuItem = {
   label: string;
   path: string;
-  icon: string;
+  icon: ReactNode;
   end?: boolean;
 };
 
@@ -15,57 +28,73 @@ const accountMenus: AccountMenuItem[] = [
   {
     label: 'Tổng quan',
     path: '/me',
-    icon: '▦',
+    icon: <FiGrid />,
     end: true,
   },
   {
     label: 'Thông tin cá nhân',
     path: '/me/profile',
-    icon: '👤',
+    icon: <FiUser />,
   },
   {
     label: 'Địa chỉ của tôi',
     path: '/addresses',
-    icon: '✦',
+    icon: <FiMapPin />,
   },
   {
     label: 'Đơn hàng của tôi',
     path: '/orders',
-    icon: '▣',
+    icon: <FiPackage />,
   },
   {
     label: 'Sản phẩm yêu thích',
     path: '/favorites',
-    icon: '♡',
+    icon: <FiHeart />,
   },
   {
     label: 'Voucher của tôi',
     path: '/vouchers',
-    icon: '✿',
+    icon: <FiGift />,
   },
   {
     label: 'Đổi mật khẩu',
     path: '/change-password',
-    icon: '🔒',
+    icon: <FiLock />,
   },
 ];
 
 export default function AccountSidebar() {
   const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    clearAccessToken();
+  const handleLogout = async () => {
+    if (loggingOut) return;
 
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('user');
+    setLoggingOut(true);
 
-    navigate('/login', { replace: true });
+    try {
+      // Gọi BE để clear refreshToken cookie
+      await AuthApi.logout();
+    } catch (error) {
+      // Nếu API lỗi vẫn cho FE logout để tránh kẹt tài khoản ở client
+      clearAccessToken();
+    } finally {
+      clearAccessToken();
+
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
+
+      setLoggingOut(false);
+      navigate('/login', { replace: true });
+    }
   };
 
   return (
     <aside className="account-sidebar">
       <div className="account-sidebar-title">
-        <span className="account-sidebar-title-icon">👤</span>
+        <span className="account-sidebar-title-icon">
+          <FiUser />
+        </span>
         <span>Tài khoản của tôi</span>
       </div>
 
@@ -90,9 +119,14 @@ export default function AccountSidebar() {
           type="button"
           className="account-sidebar-link account-sidebar-logout"
           onClick={handleLogout}
+          disabled={loggingOut}
         >
-          <span className="account-sidebar-icon">↪</span>
-          <span className="account-sidebar-text">Đăng xuất</span>
+          <span className="account-sidebar-icon">
+            <FiLogOut />
+          </span>
+          <span className="account-sidebar-text">
+            {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
+          </span>
         </button>
       </nav>
 
