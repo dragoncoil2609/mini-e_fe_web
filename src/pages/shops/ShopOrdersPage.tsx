@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import {
   getMyShop,
+  getMyShopOrderDetail,
   getMyShopOrders,
   updateMyShopOrderShippingStatus,
 } from '../../api/shop.api';
@@ -16,17 +17,63 @@ type ShopView = {
   name: string;
 };
 
+type OrderItemView = {
+  id?: string;
+  productId?: number;
+  product_id?: number;
+  productVariantId?: number | null;
+  product_variant_id?: number | null;
+
+  nameSnapshot?: string;
+  name_snapshot?: string;
+
+  imageSnapshot?: string | null;
+  image_snapshot?: string | null;
+
+  price?: number | string;
+  quantity?: number | string;
+
+  totalLine?: number | string;
+  total_line?: number | string;
+
+  value1?: string | null;
+  value2?: string | null;
+  value3?: string | null;
+  value4?: string | null;
+  value5?: string | null;
+};
+
 type OrderView = {
   id: string;
   code?: string;
+
   status?: string;
+
   shippingStatus?: string;
+  shipping_status?: string;
+
   paymentStatus?: string;
+  payment_status?: string;
+
   paymentMethod?: string;
+  payment_method?: string;
+
+  subtotal?: number | string;
+  discount?: number | string;
+
+  shippingFee?: number | string;
+  shipping_fee?: number | string;
+
   total?: number | string;
+  note?: string | null;
+
+  addressSnapshot?: any;
+  address_snapshot?: any;
+
   createdAt?: string;
   created_at?: string;
-  items?: any[];
+
+  items?: OrderItemView[];
 };
 
 function unwrapApiData<T>(response: any): T {
@@ -52,6 +99,12 @@ function getApiMessage(error: any) {
   );
 }
 
+function normalizeEnum(value?: string) {
+  return String(value || '')
+    .trim()
+    .toUpperCase();
+}
+
 function formatMoney(value?: number | string) {
   return new Intl.NumberFormat('vi-VN').format(Number(value ?? 0)) + 'đ';
 }
@@ -70,8 +123,28 @@ function orderDate(order: OrderView) {
   return order.createdAt || order.created_at || '';
 }
 
+function orderShippingStatus(order: OrderView) {
+  return order.shippingStatus || order.shipping_status;
+}
+
+function orderPaymentStatus(order: OrderView) {
+  return order.paymentStatus || order.payment_status;
+}
+
+function orderPaymentMethod(order: OrderView) {
+  return order.paymentMethod || order.payment_method;
+}
+
+function orderShippingFee(order: OrderView) {
+  return order.shippingFee ?? order.shipping_fee ?? 0;
+}
+
+function orderAddress(order: OrderView) {
+  return order.addressSnapshot ?? order.address_snapshot ?? null;
+}
+
 function getOrderStatusLabel(status?: string) {
-  switch (status) {
+  switch (normalizeEnum(status)) {
     case 'PENDING':
       return 'Chờ Xử Lý';
     case 'PAID':
@@ -91,7 +164,7 @@ function getOrderStatusLabel(status?: string) {
 }
 
 function getPaymentStatusLabel(status?: string) {
-  switch (status) {
+  switch (normalizeEnum(status)) {
     case 'UNPAID':
       return 'Chưa Thanh Toán';
     case 'PAID':
@@ -104,7 +177,7 @@ function getPaymentStatusLabel(status?: string) {
 }
 
 function getPaymentMethodLabel(method?: string) {
-  switch (method) {
+  switch (normalizeEnum(method)) {
     case 'COD':
       return 'COD';
     case 'VNPAY':
@@ -115,17 +188,17 @@ function getPaymentMethodLabel(method?: string) {
 }
 
 function getPaymentText(order: OrderView) {
-  return `${getPaymentMethodLabel(order.paymentMethod)}(${getPaymentStatusLabel(
-    order.paymentStatus,
+  return `${getPaymentMethodLabel(orderPaymentMethod(order))}(${getPaymentStatusLabel(
+    orderPaymentStatus(order),
   )})`;
 }
 
 function getShippingStatusLabel(status?: string) {
-  switch (status) {
+  switch (normalizeEnum(status)) {
     case 'PENDING':
       return 'Chờ Lấy Hàng';
     case 'PICKED':
-      return 'Đang Đóng Gói Hàng';
+      return 'Đã Lấy Hàng';
     case 'IN_TRANSIT':
       return 'Đang Vận Chuyển';
     case 'DELIVERED':
@@ -141,12 +214,13 @@ function getShippingStatusLabel(status?: string) {
 }
 
 function getShippingActionLabel(status: string) {
-  switch (status) {
+  switch (normalizeEnum(status)) {
     case 'PICKED':
       return 'Nhận Đơn Hàng';
     case 'IN_TRANSIT':
       return 'Đã Chuyển Cho Đơn Vị Vận Chuyển';
     case 'CANCELED':
+    case 'CANCELLED':
       return 'Hủy Giao Hàng';
     default:
       return status;
@@ -154,11 +228,83 @@ function getShippingActionLabel(status: string) {
 }
 
 function nextShippingOptions(current?: string) {
-  if (current === 'PENDING') return ['PICKED', 'CANCELED'];
+  const value = normalizeEnum(current);
 
-  if (current === 'PICKED') return ['IN_TRANSIT'];
+  if (value === 'PENDING') return ['PICKED', 'CANCELED'];
+
+  if (value === 'PICKED') return ['IN_TRANSIT'];
 
   return [];
+}
+
+function itemName(item: OrderItemView) {
+  return item.nameSnapshot || item.name_snapshot || 'Sản phẩm';
+}
+
+function itemImage(item: OrderItemView) {
+  return item.imageSnapshot || item.image_snapshot || '';
+}
+
+function itemQuantity(item: OrderItemView) {
+  return Number(item.quantity ?? 0);
+}
+
+function itemPrice(item: OrderItemView) {
+  return item.price ?? 0;
+}
+
+function itemTotalLine(item: OrderItemView) {
+  return item.totalLine ?? item.total_line ?? 0;
+}
+
+function itemVariantText(item: OrderItemView) {
+  return [item.value1, item.value2, item.value3, item.value4, item.value5]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join(' / ');
+}
+
+function totalQuantity(items?: OrderItemView[]) {
+  return (items ?? []).reduce((sum, item) => sum + itemQuantity(item), 0);
+}
+
+function totalProductLines(items?: OrderItemView[]) {
+  return items?.length ?? 0;
+}
+
+function addressText(address: any) {
+  if (!address) return 'Chưa có địa chỉ';
+
+  if (typeof address === 'string') return address;
+
+  return (
+    address.fullAddress ||
+    address.address ||
+    address.detail ||
+    address.street ||
+    [
+      address.receiverName || address.name,
+      address.phone,
+      address.wardName || address.ward,
+      address.districtName || address.district,
+      address.provinceName || address.province,
+    ]
+      .filter(Boolean)
+      .join(', ') ||
+    'Chưa có địa chỉ'
+  );
+}
+
+function receiverText(address: any) {
+  if (!address || typeof address === 'string') return 'Chưa có';
+
+  return (
+    address.receiverName ||
+    address.fullName ||
+    address.name ||
+    address.phone ||
+    'Chưa có'
+  );
 }
 
 export default function ShopOrdersPage() {
@@ -172,6 +318,11 @@ export default function ShopOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState('');
   const [error, setError] = useState('');
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<OrderView | null>(null);
 
   async function loadOrders(nextPage = page) {
     setLoading(true);
@@ -219,6 +370,30 @@ export default function ShopOrdersPage() {
     }
   };
 
+  const handleOpenDetail = async (order: OrderView) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError('');
+    setSelectedOrder(order);
+
+    try {
+      const response = await getMyShopOrderDetail(order.id);
+      const detail = unwrapApiData<OrderView>(response);
+      setSelectedOrder(detail);
+    } catch (err: any) {
+      setDetailError(getApiMessage(err));
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setDetailLoading(false);
+    setDetailError('');
+    setSelectedOrder(null);
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
@@ -239,7 +414,9 @@ export default function ShopOrdersPage() {
             <section className="shop-orders-head mochi-card">
               <div>
                 <h1>Đơn hàng của shop</h1>
-                <p>Theo dõi và cập nhật trạng thái giao hàng.</p>
+                <p>
+                  Theo dõi đơn hàng, xem chi tiết sản phẩm và cập nhật giao hàng.
+                </p>
               </div>
 
               <button
@@ -280,6 +457,7 @@ export default function ShopOrdersPage() {
                         <th>Thanh toán</th>
                         <th>Giao hàng</th>
                         <th>Tổng tiền</th>
+                        <th>Chi tiết</th>
                         <th>Thao tác</th>
                       </tr>
                     </thead>
@@ -287,7 +465,7 @@ export default function ShopOrdersPage() {
                     <tbody>
                       {orders.map((order) => {
                         const shippingOptions = nextShippingOptions(
-                          order.shippingStatus,
+                          orderShippingStatus(order),
                         );
 
                         return (
@@ -300,7 +478,16 @@ export default function ShopOrdersPage() {
 
                             <td>{formatDate(orderDate(order))}</td>
 
-                            <td>{order.items?.length ?? 0} sản phẩm</td>
+                            <td>
+                              <div className="shop-order-product-count">
+                                <strong>
+                                  {totalQuantity(order.items)} sản phẩm
+                                </strong>
+                                <small>
+                                  {totalProductLines(order.items)} dòng sản phẩm
+                                </small>
+                              </div>
+                            </td>
 
                             <td>
                               <span className="shop-order-pill">
@@ -316,11 +503,23 @@ export default function ShopOrdersPage() {
 
                             <td>
                               <span className="shop-order-pill shop-order-shipping">
-                                {getShippingStatusLabel(order.shippingStatus)}
+                                {getShippingStatusLabel(
+                                  orderShippingStatus(order),
+                                )}
                               </span>
                             </td>
 
                             <td>{formatMoney(order.total)}</td>
+
+                            <td>
+                              <button
+                                type="button"
+                                className="shop-order-detail-btn"
+                                onClick={() => void handleOpenDetail(order)}
+                              >
+                                Chi tiết
+                              </button>
+                            </td>
 
                             <td>
                               <div className="shop-order-actions">
@@ -382,6 +581,168 @@ export default function ShopOrdersPage() {
           </main>
         </div>
       </div>
+
+      {detailOpen ? (
+        <div className="shop-order-detail-overlay" onClick={handleCloseDetail}>
+          <section
+            className="shop-order-detail-modal mochi-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="shop-order-detail-head">
+              <div>
+                <p>Chi tiết đơn hàng</p>
+                <h2>{selectedOrder?.code || selectedOrder?.id || 'Đơn hàng'}</h2>
+              </div>
+
+              <button type="button" onClick={handleCloseDetail}>
+                ×
+              </button>
+            </div>
+
+            {detailLoading ? (
+              <div className="shop-order-detail-state">
+                Đang tải chi tiết đơn...
+              </div>
+            ) : detailError ? (
+              <div className="shop-order-detail-error">{detailError}</div>
+            ) : selectedOrder ? (
+              <>
+                <div className="shop-order-detail-info-grid">
+                  <div>
+                    <span>Trạng thái đơn</span>
+                    <strong>{getOrderStatusLabel(selectedOrder.status)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Thanh toán</span>
+                    <strong>{getPaymentText(selectedOrder)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Giao hàng</span>
+                    <strong>
+                      {getShippingStatusLabel(
+                        orderShippingStatus(selectedOrder),
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Ngày tạo</span>
+                    <strong>{formatDate(orderDate(selectedOrder))}</strong>
+                  </div>
+                </div>
+
+                <div className="shop-order-detail-address">
+                  <h3>Thông tin nhận hàng</h3>
+
+                  <p>
+                    <b>Người nhận:</b> {receiverText(orderAddress(selectedOrder))}
+                  </p>
+
+                  <p>
+                    <b>Địa chỉ:</b> {addressText(orderAddress(selectedOrder))}
+                  </p>
+
+                  {selectedOrder.note ? (
+                    <p>
+                      <b>Ghi chú:</b> {selectedOrder.note}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="shop-order-detail-products">
+                  <div className="shop-order-detail-section-title">
+                    <h3>Sản phẩm trong đơn</h3>
+
+                    <span>
+                      Tổng {totalQuantity(selectedOrder.items)} sản phẩm /{' '}
+                      {totalProductLines(selectedOrder.items)} dòng
+                    </span>
+                  </div>
+
+                  {(selectedOrder.items ?? []).length === 0 ? (
+                    <div className="shop-order-detail-empty">
+                      Đơn hàng chưa có sản phẩm.
+                    </div>
+                  ) : (
+                    <div className="shop-order-detail-items">
+                      {(selectedOrder.items ?? []).map((item, index) => {
+                        const variantText = itemVariantText(item);
+
+                        return (
+                          <div
+                            className="shop-order-detail-item"
+                            key={item.id || index}
+                          >
+                            <div className="shop-order-detail-product">
+                              <div className="shop-order-detail-product-image">
+                                {itemImage(item) ? (
+                                  <img src={itemImage(item)} alt={itemName(item)} />
+                                ) : (
+                                  <span>Ảnh</span>
+                                )}
+                              </div>
+
+                              <div>
+                                <strong>{itemName(item)}</strong>
+
+                                {variantText ? <small>{variantText}</small> : null}
+
+                                <p>
+                                  Mã SP:{' '}
+                                  {item.productId ?? item.product_id ?? 'Không có'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="shop-order-detail-item-meta">
+                              <span>Đơn giá</span>
+                              <strong>{formatMoney(itemPrice(item))}</strong>
+                            </div>
+
+                            <div className="shop-order-detail-item-meta">
+                              <span>Số lượng</span>
+                              <strong>x{itemQuantity(item)}</strong>
+                            </div>
+
+                            <div className="shop-order-detail-item-meta">
+                              <span>Thành tiền</span>
+                              <strong>{formatMoney(itemTotalLine(item))}</strong>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="shop-order-detail-total">
+                  <div>
+                    <span>Tạm tính</span>
+                    <strong>{formatMoney(selectedOrder.subtotal)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Phí vận chuyển</span>
+                    <strong>{formatMoney(orderShippingFee(selectedOrder))}</strong>
+                  </div>
+
+                  <div>
+                    <span>Giảm giá</span>
+                    <strong>-{formatMoney(selectedOrder.discount)}</strong>
+                  </div>
+
+                  <div className="shop-order-detail-total-final">
+                    <span>Tổng tiền</span>
+                    <strong>{formatMoney(selectedOrder.total)}</strong>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

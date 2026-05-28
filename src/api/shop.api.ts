@@ -34,10 +34,11 @@ export async function checkShopName(
       params: { name },
     },
   );
+
   return res.data;
 }
 
-// 3) Tìm kiếm / liệt kê shop (search + phân trang)
+// 3) Tìm kiếm / liệt kê shop
 export interface SearchShopsParams {
   q?: string;
   status?: ShopStatus;
@@ -51,6 +52,7 @@ export async function searchShops(
   const res = await http.get<ApiResponse<PaginatedResult<Shop>>>('/shops', {
     params,
   });
+
   return res.data;
 }
 
@@ -70,7 +72,7 @@ export interface UpdateShopPayload {
   shopLng?: number;
   shopPlaceId?: string;
   shopPhone?: string;
-  status?: ShopStatus; // chỉ ADMIN được đổi, BE tự check quyền
+  status?: ShopStatus;
 }
 
 export async function updateShop(
@@ -81,57 +83,66 @@ export async function updateShop(
   return res.data;
 }
 
-// 6) Xoá shop
+// 6) Xóa shop
 export async function deleteShop(id: number): Promise<ApiResponse<null>> {
   const res = await http.delete<ApiResponse<null>>(`/shops/${id}`);
   return res.data;
 }
 
+// 7) Upload logo shop
 export async function uploadShopLogo(file: File): Promise<ApiResponse<Shop>> {
   const formData = new FormData();
-  formData.append('file', file); // 'file' phải khớp với @UploadedFile() bên NestJS
-  
+  formData.append('file', file);
+
   const res = await http.patch<ApiResponse<Shop>>('/shops/me/logo', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
+
   return res.data;
 }
 
-// 8) Upload Cover Shop
+// 8) Upload cover shop
 export async function uploadShopCover(file: File): Promise<ApiResponse<Shop>> {
   const formData = new FormData();
   formData.append('file', file);
-  
+
   const res = await http.patch<ApiResponse<Shop>>('/shops/me/cover', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
+
   return res.data;
 }
 
-// 9) Lấy chi tiết shop theo id
+// 9) Lấy chi tiết shop public
 export async function getShopDetail(id: number): Promise<ApiResponse<Shop>> {
   const res = await http.get<ApiResponse<Shop>>(`/shops/${id}`);
   return res.data;
 }
 
-// 10) SELLER - Lấy đơn hàng của shop tôi
-export async function getMyShopOrders(params?: {
+// 10) Lấy danh sách đơn hàng của shop
+export interface MyShopOrdersParams {
   page?: number;
   limit?: number;
-}): Promise<ApiResponse<PaginatedResult<any>>> {
+}
+
+export async function getMyShopOrders(
+  params: MyShopOrdersParams = {},
+): Promise<ApiResponse<PaginatedResult<any>>> {
   const res = await http.get<ApiResponse<PaginatedResult<any>>>(
     '/shops/me/orders',
-    { params },
+    {
+      params,
+    },
   );
 
   return res.data;
 }
 
-// 11) SELLER - Lấy chi tiết đơn hàng của shop tôi
+// 11) Lấy chi tiết 1 đơn hàng của shop
 export async function getMyShopOrderDetail(
   id: string,
 ): Promise<ApiResponse<any>> {
@@ -139,14 +150,16 @@ export async function getMyShopOrderDetail(
   return res.data;
 }
 
-// 12) SELLER - Cập nhật trạng thái giao hàng
+// 12) Shop cập nhật trạng thái giao hàng
 export async function updateMyShopOrderShippingStatus(
   id: string,
   shippingStatus: string,
 ): Promise<ApiResponse<any>> {
   const res = await http.patch<ApiResponse<any>>(
     `/shops/me/orders/${id}/shipping-status`,
-    { shippingStatus },
+    {
+      shippingStatus,
+    },
   );
 
   return res.data;
