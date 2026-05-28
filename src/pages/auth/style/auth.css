@@ -64,8 +64,14 @@
   display: grid;
   place-items: center;
   box-shadow: 0 8px 20px rgba(239, 75, 131, 0.16);
-  font-size: 25px;
+  overflow: hidden;
   transition: 0.18s ease;
+}
+
+.auth-logo-face img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
 }
 
 .auth-logo-title {
@@ -203,8 +209,15 @@
   position: absolute;
   left: 16px;
   color: #8a7c80;
-  font-size: 16px;
+  font-size: 18px;
   pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+.auth-input-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .auth-input {
@@ -241,10 +254,17 @@
   background: transparent;
   cursor: pointer;
   color: #5f5358;
-  font-size: 17px;
+  font-size: 18px;
   height: 34px;
   width: 34px;
   border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.auth-password-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
 .auth-password-toggle:hover {
@@ -356,6 +376,15 @@
   color: var(--auth-text);
   font-weight: 800;
   cursor: not-allowed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.auth-social-btn svg {
+  width: 17px;
+  height: 17px;
 }
 
 .auth-footer {

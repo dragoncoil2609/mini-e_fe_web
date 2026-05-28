@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 
+import bunnyLogo from '../../../assets/brand/bunny_bear_original.png';
+
 type AuthCardVariant = 'compact' | 'wide' | 'hero';
 
 type AuthCardProps = {
@@ -17,7 +19,9 @@ export default function AuthCard({
     <main className="auth-page">
       <div className={`auth-shell auth-shell-${variant}`}>
         <Link to="/home" className="auth-logo" aria-label="Quay về trang chủ">
-          <div className="auth-logo-face">🐰</div>
+          <div className="auth-logo-face">
+            <img src={bunnyLogo} alt="Mochi logo" />
+          </div>
 
           <div>
             <span className="auth-logo-title">Mochi</span>

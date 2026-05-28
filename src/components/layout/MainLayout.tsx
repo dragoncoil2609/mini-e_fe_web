@@ -13,7 +13,7 @@ import defaultAvatarImg from '../../assets/brand/login_bunny_bear.png';
 
 import { getAccessToken } from '../../api/authToken';
 import { getMe } from '../../api/users.api';
-import { getCart } from '../../api/cart.api';
+import { CartApi } from '../../api/cart.api';
 import {
   getPublicCategoryTree,
   type Category,
@@ -28,6 +28,10 @@ function getFallbackToken() {
     localStorage.getItem('access_token') ||
     localStorage.getItem('token')
   );
+}
+
+function unwrapApiData<T>(response: any): T {
+  return response?.data?.data ?? response?.data ?? response;
 }
 
 function getShortName(name?: string | null) {
@@ -73,8 +77,7 @@ export default function MainLayout() {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
 
-  const token = getFallbackToken();
-  const isLoggedIn = Boolean(token);
+  const isLoggedIn = Boolean(getFallbackToken());
 
   const parentCategories = useMemo(() => {
     return getParentCategories(categories);
@@ -109,6 +112,8 @@ export default function MainLayout() {
       const currentToken = getFallbackToken();
 
       if (!currentToken) {
+        if (!mounted) return;
+
         setAccountName('');
         setAccountAvatar('');
         return;
@@ -116,7 +121,7 @@ export default function MainLayout() {
 
       try {
         const response = await getMe();
-        const user = (response as any)?.data ?? response;
+        const user = unwrapApiData<any>(response);
 
         if (!mounted) return;
 
@@ -144,13 +149,35 @@ export default function MainLayout() {
       const currentToken = getFallbackToken();
 
       if (!currentToken) {
-        if (mounted) setCartQuantity(0);
+        if (mounted) {
+          setCartQuantity(0);
+        }
+
         return;
       }
 
       try {
-        const response = await getCart();
-        const cart = response?.data;
+        /**
+         * cart.api.ts hiện có:
+         * CartApi.getCart()
+         *
+         * API BE:
+         * GET /cart
+         *
+         * Response thường là:
+         * {
+         *   success: true,
+         *   data: {
+         *     id,
+         *     itemsCount,
+         *     itemsQuantity,
+         *     subtotal,
+         *     items: []
+         *   }
+         * }
+         */
+        const response = await CartApi.getCart();
+        const cart = unwrapApiData<any>(response);
 
         if (!mounted) return;
 
@@ -164,7 +191,15 @@ export default function MainLayout() {
 
     void loadCartQuantity();
 
+    /**
+     * Khi ProductDetailPage / CartPage thêm, sửa, xóa sản phẩm
+     * thì dispatch event này để MainLayout gọi lại GET /cart.
+     */
     window.addEventListener('mochi-cart-updated', loadCartQuantity);
+
+    /**
+     * Dùng khi login/logout hoặc token thay đổi ở tab khác.
+     */
     window.addEventListener('storage', loadCartQuantity);
 
     return () => {
@@ -186,7 +221,8 @@ export default function MainLayout() {
 
         if (!mounted) return;
 
-        setCategories(res.data ?? []);
+        const data = unwrapApiData<Category[]>(res);
+        setCategories(Array.isArray(data) ? data : []);
       } catch {
         if (!mounted) return;
 
@@ -300,29 +336,17 @@ export default function MainLayout() {
 
       <nav className="mochi-nav">
         <div className="mochi-container mochi-nav-inner">
-          <NavLink to="/home">
-            🏠 Trang chủ
-          </NavLink>
+          <NavLink to="/home">🏠 Trang chủ</NavLink>
 
-          <NavLink to="/products">
-            🧸 Sản phẩm
-          </NavLink>
+          <NavLink to="/products">🧸 Sản phẩm</NavLink>
 
-          <NavLink to="/shops/me">
-            🏪 Cửa hàng
-          </NavLink>
+          <NavLink to="/shops/me">🏪 Cửa hàng</NavLink>
 
-          <NavLink to="/orders">
-            📦 Đơn hàng
-          </NavLink>
+          <NavLink to="/orders">📦 Đơn hàng</NavLink>
 
-          <NavLink to="/me">
-            💗 Tài khoản
-          </NavLink>
+          <NavLink to="/me">💗 Tài khoản</NavLink>
 
-          <NavLink to="/cart">
-            🛒 Giỏ hàng
-          </NavLink>
+          <NavLink to="/cart">🛒 Giỏ hàng</NavLink>
         </div>
       </nav>
 
@@ -339,7 +363,7 @@ export default function MainLayout() {
             <div className="mochi-category-scroll">
               {parentCategories.map((category) => {
                 const isActive = activeCategorySlug === category.slug;
-                const categoryImage = category.imageUrl || '';
+                const categoryImage = category.imageUrl ||'';
 
                 return (
                   <Link
@@ -413,10 +437,18 @@ export default function MainLayout() {
             <h3>Kết nối với chúng tôi</h3>
 
             <div className="mochi-socials">
-              <a href="#" aria-label="Facebook">f</a>
-              <a href="#" aria-label="Instagram">◎</a>
-              <a href="#" aria-label="TikTok">♪</a>
-              <a href="#" aria-label="YouTube">▶</a>
+              <a href="#" aria-label="Facebook">
+                f
+              </a>
+              <a href="#" aria-label="Instagram">
+                ◎
+              </a>
+              <a href="#" aria-label="TikTok">
+                ♪
+              </a>
+              <a href="#" aria-label="YouTube">
+                ▶
+              </a>
             </div>
           </div>
         </div>

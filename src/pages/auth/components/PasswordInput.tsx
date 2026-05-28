@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FiEye, FiEyeOff, FiLock } from 'react-icons/fi';
 
 type PasswordInputProps = {
   label: string;
@@ -24,7 +25,9 @@ export default function PasswordInput({
       <span className="auth-label">{label}</span>
 
       <span className="auth-input-wrap">
-        <span className="auth-input-icon">🔒</span>
+        <span className="auth-input-icon">
+          <FiLock />
+        </span>
 
         <input
           className="auth-input auth-input-has-icon auth-input-password"
@@ -42,7 +45,7 @@ export default function PasswordInput({
           onClick={() => setVisible((v) => !v)}
           aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
         >
-          {visible ? '🙈' : '👁'}
+          {visible ? <FiEyeOff /> : <FiEye />}
         </button>
       </span>
     </label>

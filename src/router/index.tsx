@@ -16,6 +16,7 @@ import RecoverConfirmPage from '../pages/auth/RecoverConfirmPage';
 // ==================== USER / MAIN ====================
 import HomePage from '../pages/home/HomePage';
 import MeProfilePage from '../pages/me/MeProfilePage';
+import ChangePasswordPage from '../pages/me/ChangePasswordPage';
 import AddressesPage from '../pages/addresses/AddressesPage';
 
 // ==================== CART / CHECKOUT ====================
@@ -93,6 +94,12 @@ export default function AppRoutes() {
         {/* ---------- USER ACCOUNT ---------- */}
         <Route path="/me" element={<MeProfilePage />} />
         <Route path="/me/profile" element={<MeProfilePage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route
+          path="/me/change-password"
+          element={<Navigate to="/change-password" replace />}
+        />
+
         <Route path="/addresses" element={<AddressesPage />} />
 
         {/* Alias user cũ */}

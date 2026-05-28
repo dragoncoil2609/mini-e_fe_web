@@ -55,24 +55,64 @@ export async function updateMe(payload: UpdateMePayload): Promise<User> {
   return res.data.data;
 }
 
+/* ------------------------------------------------------------------
+ * 1.1) ĐỔI MẬT KHẨU USER ĐANG ĐĂNG NHẬP
+ * ------------------------------------------------------------------ */
+
+export interface RequestChangePasswordOtpResult {
+  sent: boolean;
+  via?: 'email' | string;
+  target?: string;
+  expiresInMinutes?: number;
+  message?: string;
+}
+
+export async function requestChangePasswordOtp(): Promise<RequestChangePasswordOtpResult> {
+  const res = await http.post<ApiResponse<RequestChangePasswordOtpResult>>(
+    '/users/me/change-password/request-otp',
+  );
+
+  return res.data.data;
+}
+
+export interface ChangeMyPasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+  otp: string;
+}
+
+export interface ChangeMyPasswordResult {
+  changed: boolean;
+  message?: string;
+}
+
+export async function changeMyPassword(
+  payload: ChangeMyPasswordPayload,
+): Promise<ChangeMyPasswordResult> {
+  const res = await http.patch<ApiResponse<ChangeMyPasswordResult>>(
+    '/users/me/change-password',
+    payload,
+  );
+
+  return res.data.data;
+}
+
 export interface DeactivateUserResult {
   id: number;
-  deactivated: boolean;
+  deactivated?: boolean;
+  deleted?: boolean;
   message?: string;
 }
 
 /**
- * User tự vô hiệu hóa tài khoản.
- * BE sẽ:
- * - đổi email/phone
- * - set deletedAt
- * - chặn login/call API
+ * User tự vô hiệu hóa/xóa mềm tài khoản.
  */
 export async function deactivateMe(): Promise<DeactivateUserResult> {
   const res = await http.delete<ApiResponse<DeactivateUserResult>>('/users/me');
 
   /**
-   * Sau khi tài khoản bị vô hiệu hóa, token cũ không nên giữ lại ở FE nữa.
+   * Sau khi tài khoản bị vô hiệu hóa/xóa mềm, token cũ không nên giữ lại ở FE nữa.
    */
   clearAccessToken();
 
@@ -81,7 +121,6 @@ export async function deactivateMe(): Promise<DeactivateUserResult> {
 
 /**
  * Alias tạm cho UI cũ.
- * Trước đây gọi là deleteMe, bây giờ bản chất là deactivateMe.
  */
 export async function deleteMe(): Promise<DeactivateUserResult> {
   return deactivateMe();
@@ -148,9 +187,7 @@ export async function updateUser(
 }
 
 /**
- * Admin vô hiệu hóa user.
- * Không xóa mềm, không xóa cứng.
- * BE sẽ đổi email/phone và set deletedAt.
+ * Admin vô hiệu hóa/xóa mềm user.
  */
 export async function deactivateUser(id: number): Promise<DeactivateUserResult> {
   const res = await http.delete<ApiResponse<DeactivateUserResult>>(
@@ -162,8 +199,7 @@ export async function deactivateUser(id: number): Promise<DeactivateUserResult> 
 
 /**
  * Lấy danh sách user đã bị vô hiệu hóa.
- * BE mới dùng route:
- * GET /users/deactivated/all
+ * Nếu BE của bạn đang dùng /users/deleted/all thì đổi lại endpoint bên dưới.
  */
 export async function getDeactivatedUsers(
   query: UserListQuery = {},
@@ -179,15 +215,7 @@ export async function getDeactivatedUsers(
 
 /* ------------------------------------------------------------------
  * 3) ALIAS TẠM CHO GIAO DIỆN CŨ
- * ------------------------------------------------------------------
- * Giữ lại để các page cũ chưa bị lỗi import.
- * Sau này sửa giao diện thì đổi tên lại cho đúng:
- *
- * softDeleteUser -> deactivateUser
- * getDeletedUsers -> getDeactivatedUsers
- *
- * restoreUser và hardDeleteUser không còn dùng nữa.
- */
+ * ------------------------------------------------------------------ */
 
 export const softDeleteUser = deactivateUser;
 export const getDeletedUsers = getDeactivatedUsers;
@@ -203,6 +231,10 @@ export async function hardDeleteUser(): Promise<never> {
 export const UsersApi = {
   getMe,
   updateMe,
+
+  requestChangePasswordOtp,
+  changeMyPassword,
+
   deactivateMe,
   deleteMe,
 
@@ -213,7 +245,6 @@ export const UsersApi = {
   deactivateUser,
   getDeactivatedUsers,
 
-  // Alias tạm cho UI cũ
   softDeleteUser,
   getDeletedUsers,
   restoreUser,

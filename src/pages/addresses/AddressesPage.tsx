@@ -520,7 +520,7 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       updateField('fullName', event.target.value)
                     }
-                    placeholder="Ví dụ: Nguyễn Thảo"
+                    placeholder="Ví dụ: Quốc Hiệp"
                     maxLength={120}
                   />
                 </label>
@@ -533,7 +533,7 @@ export default function AddressesPage() {
                     onChange={(event) =>
                       updateField('phone', event.target.value)
                     }
-                    placeholder="Ví dụ: 0339420356"
+                    placeholder="số điện thoại có 10 chữ số, bắt đầu bằng 0"
                     maxLength={20}
                   />
                 </label>
@@ -565,12 +565,12 @@ export default function AddressesPage() {
                   onChange={(event) =>
                     updateField('formattedAddress', event.target.value)
                   }
-                  placeholder="Ví dụ: 123 Đường Hoa Hồng, Phường 2, Quận Phú Nhuận, TP. Hồ Chí Minh"
+                  placeholder="Chỉ cần nhập địa chỉ đây đủ để shipper có thể giao hàng, không cần ghi thêm tỉnh/quận/phường"
                   maxLength={300}
                 />
               </label>
 
-              <div className="addresses-form-grid">
+              {/* <div className="addresses-form-grid">
                 <label className="addresses-form-group">
                   <span>Latitude</span>
 
@@ -590,7 +590,7 @@ export default function AddressesPage() {
                     placeholder="106.669867"
                   />
                 </label>
-              </div>
+              </div> */}
 
               <div className="addresses-map-wrap">
                 <LocationPicker
