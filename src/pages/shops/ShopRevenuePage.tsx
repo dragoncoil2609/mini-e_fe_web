@@ -22,14 +22,25 @@ type ShopView = {
 type OrderView = {
   id: string;
   code?: string;
+
   status?: string;
+
+  shippingStatus?: string;
+  shipping_status?: string;
+
   paymentStatus?: string;
+  payment_status?: string;
+
+  paymentMethod?: string;
+  payment_method?: string;
+
   total?: number | string;
+
   createdAt?: string;
   created_at?: string;
 };
 
-type RangeKey = '7' | '30' | '90' | 'all';
+type RangeKey = '1' | '7' | '30' | 'all';
 
 function unwrapApiData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
@@ -46,6 +57,12 @@ function getApiMessage(error: any) {
     error?.message ||
     'Không thể tải doanh thu.'
   );
+}
+
+function normalizeEnum(value?: string) {
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function formatMoney(value?: number | string) {
@@ -66,25 +83,162 @@ function orderDate(order: OrderView) {
   return order.createdAt || order.created_at || '';
 }
 
-function isRevenueOrder(order: OrderView) {
+function orderShippingStatus(order: OrderView) {
+  return order.shippingStatus || order.shipping_status;
+}
+
+function orderPaymentStatus(order: OrderView) {
+  return order.paymentStatus || order.payment_status;
+}
+
+function orderPaymentMethod(order: OrderView) {
+  return order.paymentMethod || order.payment_method;
+}
+
+function getOrderStatusLabel(status?: string) {
+  switch (normalizeEnum(status)) {
+    case 'PENDING':
+      return 'Chờ Xử Lý';
+    case 'PAID':
+      return 'Đã Thanh Toán';
+    case 'PROCESSING':
+      return 'Đang Xử Lý';
+    case 'SHIPPED':
+      return 'Đang Giao';
+    case 'COMPLETED':
+      return 'Hoàn Thành';
+    case 'CANCELLED':
+    case 'CANCELED':
+      return 'Đã Hủy';
+    default:
+      return status || 'Chưa Xác Định';
+  }
+}
+
+function getPaymentStatusLabel(status?: string) {
+  switch (normalizeEnum(status)) {
+    case 'UNPAID':
+      return 'Chưa Thanh Toán';
+    case 'PAID':
+      return 'Đã Thanh Toán';
+    case 'REFUNDED':
+      return 'Đã Hoàn Tiền';
+    default:
+      return status || 'Chưa Xác Định';
+  }
+}
+
+function getPaymentMethodLabel(method?: string) {
+  switch (normalizeEnum(method)) {
+    case 'COD':
+      return 'COD';
+    case 'VNPAY':
+      return 'VNP';
+    default:
+      return method || 'N/A';
+  }
+}
+
+function getPaymentText(order: OrderView) {
+  return `${getPaymentMethodLabel(orderPaymentMethod(order))}(${getPaymentStatusLabel(
+    orderPaymentStatus(order),
+  )})`;
+}
+
+function getShippingStatusLabel(status?: string) {
+  switch (normalizeEnum(status)) {
+    case 'PENDING':
+      return 'Chờ Lấy Hàng';
+    case 'PICKED':
+      return 'Đã Lấy Hàng';
+    case 'IN_TRANSIT':
+      return 'Đang Vận Chuyển';
+    case 'DELIVERED':
+      return 'Đã Giao Hàng';
+    case 'RETURNED':
+      return 'Đã Hoàn Trả';
+    case 'CANCELED':
+    case 'CANCELLED':
+      return 'Đã Hủy Giao';
+    default:
+      return status || 'Chưa Xác Định';
+  }
+}
+
+function getStatusClass(status?: string) {
+  const value = normalizeEnum(status);
+
+  if (value === 'COMPLETED' || value === 'PAID') {
+    return 'shop-revenue-pill-success';
+  }
+
+  if (value === 'CANCELLED' || value === 'CANCELED') {
+    return 'shop-revenue-pill-danger';
+  }
+
+  if (value === 'PROCESSING' || value === 'SHIPPED') {
+    return 'shop-revenue-pill-warning';
+  }
+
+  return 'shop-revenue-pill-primary';
+}
+
+function getShippingClass(status?: string) {
+  const value = normalizeEnum(status);
+
+  if (value === 'DELIVERED') {
+    return 'shop-revenue-pill-success';
+  }
+
+  if (value === 'RETURNED' || value === 'CANCELED' || value === 'CANCELLED') {
+    return 'shop-revenue-pill-danger';
+  }
+
+  if (value === 'PICKED' || value === 'IN_TRANSIT') {
+    return 'shop-revenue-pill-warning';
+  }
+
+  return 'shop-revenue-pill-primary';
+}
+
+function getPaymentClass(status?: string) {
+  const value = normalizeEnum(status);
+
+  if (value === 'PAID') {
+    return 'shop-revenue-pill-success';
+  }
+
+  if (value === 'REFUNDED') {
+    return 'shop-revenue-pill-danger';
+  }
+
+  return 'shop-revenue-pill-primary';
+}
+
+function isReturnedOrCanceled(order: OrderView) {
+  const orderStatus = normalizeEnum(order.status);
+  const shippingStatus = normalizeEnum(orderShippingStatus(order));
+
   return (
-    order.status === 'COMPLETED' ||
-    order.status === 'PAID' ||
-    order.paymentStatus === 'PAID'
+    orderStatus === 'CANCELED' ||
+    orderStatus === 'CANCELLED' ||
+    shippingStatus === 'CANCELED' ||
+    shippingStatus === 'CANCELLED' ||
+    shippingStatus === 'RETURNED'
   );
 }
 
-function inRange(order: OrderView, range: RangeKey) {
-  if (range === 'all') return true;
+function isRevenueOrder(order: OrderView) {
+  if (isReturnedOrCanceled(order)) return false;
 
-  const raw = orderDate(order);
-  if (!raw) return false;
+  const orderStatus = normalizeEnum(order.status);
+  const paymentStatus = normalizeEnum(orderPaymentStatus(order));
 
-  const created = new Date(raw).getTime();
-  const now = Date.now();
-  const days = Number(range);
-
-  return now - created <= days * 24 * 60 * 60 * 1000;
+  return (
+    orderStatus === 'COMPLETED' ||
+    orderStatus === 'PAID' ||
+    paymentStatus === 'PAID'
+  );
 }
 
 export default function ShopRevenuePage() {
@@ -95,7 +249,7 @@ export default function ShopRevenuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function loadData() {
+  async function loadData(nextRange: RangeKey = range) {
     setLoading(true);
     setError('');
 
@@ -105,7 +259,8 @@ export default function ShopRevenuePage() {
 
       const orderResponse = await getMyShopOrders({
         page: 1,
-        limit: 100,
+        limit: 1000,
+        range: nextRange,
       });
 
       setOrders(unwrapPaginated<OrderView>(orderResponse));
@@ -118,22 +273,28 @@ export default function ShopRevenuePage() {
   }
 
   useEffect(() => {
-    void loadData();
+    void loadData('7');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => inRange(order, range));
-  }, [orders, range]);
+  const revenueOrders = useMemo(() => {
+    return orders.filter(isRevenueOrder);
+  }, [orders]);
 
-  const paidOrders = useMemo(() => {
-    return filteredOrders.filter(isRevenueOrder);
-  }, [filteredOrders]);
+  const returnedOrCanceledOrders = useMemo(() => {
+    return orders.filter(isReturnedOrCanceled);
+  }, [orders]);
 
   const revenue = useMemo(() => {
-    return paidOrders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
-  }, [paidOrders]);
+    return revenueOrders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
+  }, [revenueOrders]);
 
-  const averageOrder = paidOrders.length ? revenue / paidOrders.length : 0;
+  const averageOrder = revenueOrders.length ? revenue / revenueOrders.length : 0;
+
+  const handleChangeRange = (value: RangeKey) => {
+    setRange(value);
+    void loadData(value);
+  };
 
   return (
     <div className="mochi-page shop-revenue-page">
@@ -154,20 +315,19 @@ export default function ShopRevenuePage() {
               <div>
                 <h1>Doanh thu</h1>
                 <p>
-                  Thống kê doanh thu tạm tính từ đơn hàng của shop. Muốn lọc
-                  thật chuẩn theo database thì sau này nên thêm API doanh thu
-                  riêng ở backend.
+                  Doanh thu được lấy theo query từ backend. Đơn hoàn trả, hủy
+                  giao hoặc đã hủy sẽ không được tính vào doanh thu.
                 </p>
               </div>
 
               <select
                 className="mochi-select"
                 value={range}
-                onChange={(event) => setRange(event.target.value as RangeKey)}
+                onChange={(event) => handleChangeRange(event.target.value as RangeKey)}
               >
+                <option value="1">1 ngày</option>
                 <option value="7">7 ngày</option>
                 <option value="30">30 ngày</option>
-                <option value="90">90 ngày</option>
                 <option value="all">Tất cả</option>
               </select>
             </section>
@@ -186,12 +346,12 @@ export default function ShopRevenuePage() {
                   <div className="shop-revenue-stat mochi-card">
                     <span>Doanh thu trong kỳ</span>
                     <strong>{formatMoney(revenue)}</strong>
-                    <small>{paidOrders.length} đơn đã tính doanh thu</small>
+                    <small>{revenueOrders.length} đơn được tính doanh thu</small>
                   </div>
 
                   <div className="shop-revenue-stat mochi-card">
                     <span>Tổng đơn trong kỳ</span>
-                    <strong>{filteredOrders.length}</strong>
+                    <strong>{orders.length}</strong>
                     <small>Bao gồm mọi trạng thái</small>
                   </div>
 
@@ -200,21 +360,34 @@ export default function ShopRevenuePage() {
                     <strong>{formatMoney(averageOrder)}</strong>
                     <small>Tính trên đơn có doanh thu</small>
                   </div>
+
+                  <div className="shop-revenue-stat mochi-card shop-revenue-stat-danger">
+                    <span>Hoàn trả / hủy</span>
+                    <strong>{returnedOrCanceledOrders.length}</strong>
+                    <small>Không tính vào doanh thu</small>
+                  </div>
                 </div>
 
                 <section className="shop-revenue-table mochi-card">
                   <div className="shop-revenue-table-head">
-                    <h2>Đơn hàng gần đây</h2>
+                    <div>
+                      <h2>Tất cả đơn hàng trong kỳ</h2>
+                      <p>
+                        Xem trạng thái đơn, thanh toán và giao hàng để biết đơn có
+                        bị hoàn trả hay không.
+                      </p>
+                    </div>
+
                     <button
                       type="button"
                       className="mochi-btn mochi-btn-outline mochi-btn-sm"
-                      onClick={() => void loadData()}
+                      onClick={() => void loadData(range)}
                     >
                       Làm mới
                     </button>
                   </div>
 
-                  {filteredOrders.length === 0 ? (
+                  {orders.length === 0 ? (
                     <div className="shop-revenue-empty">
                       Chưa có đơn hàng trong khoảng thời gian này.
                     </div>
@@ -224,22 +397,76 @@ export default function ShopRevenuePage() {
                         <tr>
                           <th>Mã đơn</th>
                           <th>Ngày</th>
-                          <th>Trạng thái</th>
+                          <th>Trạng thái đơn</th>
                           <th>Thanh toán</th>
+                          <th>Giao hàng</th>
+                          <th>Tính doanh thu</th>
                           <th>Tổng tiền</th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        {filteredOrders.map((order) => (
-                          <tr key={order.id}>
-                            <td>{order.code || order.id}</td>
-                            <td>{formatDate(orderDate(order))}</td>
-                            <td>{order.status || 'PENDING'}</td>
-                            <td>{order.paymentStatus || 'UNPAID'}</td>
-                            <td>{formatMoney(order.total)}</td>
-                          </tr>
-                        ))}
+                        {orders.map((order) => {
+                          const canCountRevenue = isRevenueOrder(order);
+                          const shippingStatus = orderShippingStatus(order);
+                          const paymentStatus = orderPaymentStatus(order);
+
+                          return (
+                            <tr key={order.id}>
+                              <td>
+                                <strong className="shop-revenue-order-code">
+                                  {order.code || order.id}
+                                </strong>
+                              </td>
+
+                              <td>{formatDate(orderDate(order))}</td>
+
+                              <td>
+                                <span
+                                  className={`shop-revenue-pill ${getStatusClass(
+                                    order.status,
+                                  )}`}
+                                >
+                                  {getOrderStatusLabel(order.status)}
+                                </span>
+                              </td>
+
+                              <td>
+                                <span
+                                  className={`shop-revenue-pill ${getPaymentClass(
+                                    paymentStatus,
+                                  )}`}
+                                >
+                                  {getPaymentText(order)}
+                                </span>
+                              </td>
+
+                              <td>
+                                <span
+                                  className={`shop-revenue-pill ${getShippingClass(
+                                    shippingStatus,
+                                  )}`}
+                                >
+                                  {getShippingStatusLabel(shippingStatus)}
+                                </span>
+                              </td>
+
+                              <td>
+                                <span
+                                  className={
+                                    canCountRevenue
+                                      ? 'shop-revenue-counted'
+                                      : 'shop-revenue-not-counted'
+                                  }
+                                >
+                                  {canCountRevenue ? 'Có' : 'Không'}
+                                </span>
+                              </td>
+
+                              <td>{formatMoney(order.total)}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}

@@ -130,9 +130,12 @@ export async function getShopDetail(id: number): Promise<ApiResponse<Shop>> {
 }
 
 // 10) Lấy danh sách đơn hàng của shop
+export type ShopOrderRange = '1' | '7' | '30' | 'all';
+
 export interface MyShopOrdersParams {
   page?: number;
   limit?: number;
+  range?: ShopOrderRange;
 }
 
 export async function getMyShopOrders(
