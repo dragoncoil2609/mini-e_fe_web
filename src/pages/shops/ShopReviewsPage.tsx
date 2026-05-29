@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getMyShop } from '../../api/shop.api';
+import {
+  getMyShopReviews,
+  type ShopReviewsSummary,
+} from '../../api/reviews.api';
+import type { ProductReview } from '../../api/types';
 
 import ShopOwnerSidebar from '../../components/shop/ShopOwnerSidebar';
 
@@ -16,8 +21,22 @@ type ShopView = {
   } | null;
 };
 
+type RatingFilter = '' | '1' | '2' | '3' | '4' | '5';
+
 function unwrapApiData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
+}
+
+function unwrapReviewsResponse(response: any) {
+  const data = unwrapApiData<any>(response);
+
+  return {
+    items: (data?.items ?? []) as ProductReview[],
+    total: Number(data?.total ?? data?.meta?.total ?? 0),
+    page: Number(data?.page ?? data?.meta?.page ?? 1),
+    limit: Number(data?.limit ?? data?.meta?.limit ?? 10),
+    summary: data?.summary as ShopReviewsSummary | undefined,
+  };
 }
 
 function getApiMessage(error: any) {
@@ -32,32 +51,121 @@ function ratingText(value?: number | string) {
   return Number(value ?? 0).toFixed(1);
 }
 
+function formatDate(value?: string) {
+  if (!value) return 'Chưa có';
+
+  try {
+    return new Intl.DateTimeFormat('vi-VN').format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function userName(review: ProductReview) {
+  return review.user?.name || review.userNameSnapshot || 'Người dùng Mochi';
+}
+
+function userAvatar(review: ProductReview) {
+  return review.user?.avatarUrl || review.userAvatarSnapshot || '';
+}
+
+function productName(review: ProductReview) {
+  return review.product?.title || `Sản phẩm #${review.productId}`;
+}
+
+function renderStars(rating?: number) {
+  const value = Math.max(0, Math.min(5, Number(rating ?? 0)));
+
+  return '★★★★★'.split('').map((star, index) => (
+    <span
+      key={index}
+      className={index < value ? 'shop-review-star-active' : ''}
+    >
+      {star}
+    </span>
+  ));
+}
+
+function reviewImages(images: ProductReview['images']) {
+  if (!images) return [];
+
+  if (Array.isArray(images)) {
+    return images.filter(Boolean);
+  }
+
+  return [];
+}
+
 export default function ShopReviewsPage() {
   const [shop, setShop] = useState<ShopView | null>(null);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [summary, setSummary] = useState<ShopReviewsSummary | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>('');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function loadShop() {
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(total / limit));
+  }, [total, limit]);
+
+  async function loadReviews(nextPage = page, nextRating = ratingFilter) {
     setLoading(true);
     setError('');
 
     try {
-      const response = await getMyShop();
-      setShop(unwrapApiData<ShopView>(response));
+      const shopResponse = await getMyShop();
+      const shopData = unwrapApiData<ShopView>(shopResponse);
+
+      setShop(shopData);
+
+      const reviewResponse = await getMyShopReviews({
+        page: nextPage,
+        limit,
+        rating: nextRating ? Number(nextRating) : undefined,
+      });
+
+      const reviewData = unwrapReviewsResponse(reviewResponse);
+
+      setReviews(reviewData.items);
+      setTotal(reviewData.total);
+      setPage(reviewData.page);
+      setSummary(reviewData.summary ?? null);
     } catch (err: any) {
+      setReviews([]);
+      setTotal(0);
       setError(getApiMessage(err));
-      setShop(null);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadShop();
+    void loadReviews(1, '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ratingAvg = ratingText(shop?.stats?.ratingAvg);
-  const reviewCount = shop?.stats?.reviewCount ?? 0;
+  const handleChangeRating = (value: RatingFilter) => {
+    setRatingFilter(value);
+    void loadReviews(1, value);
+  };
+
+  const ratingAvg =
+    summary?.ratingAvg ??
+    summary?.avg ??
+    shop?.stats?.ratingAvg ??
+    0;
+
+  const reviewCount =
+    summary?.reviewCount ??
+    summary?.count ??
+    shop?.stats?.reviewCount ??
+    total ??
+    0;
 
   return (
     <div className="mochi-page shop-reviews-page">
@@ -78,19 +186,35 @@ export default function ShopReviewsPage() {
               <div>
                 <h1>Đánh giá shop</h1>
                 <p>
-                  Hiện backend mới có điểm trung bình và số lượt đánh giá trong
-                  thống kê shop. Danh sách review chi tiết theo shop cần thêm API
-                  riêng sau.
+                  Danh sách đánh giá được lấy từ review của các sản phẩm thuộc
+                  shop.
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="mochi-btn mochi-btn-outline"
-                onClick={() => void loadShop()}
-              >
-                Làm mới
-              </button>
+              <div className="shop-reviews-head-actions">
+                <select
+                  value={ratingFilter}
+                  onChange={(event) =>
+                    handleChangeRating(event.target.value as RatingFilter)
+                  }
+                >
+                  <option value="">Tất cả sao</option>
+                  <option value="5">5 sao</option>
+                  <option value="4">4 sao</option>
+                  <option value="3">3 sao</option>
+                  <option value="2">2 sao</option>
+                  <option value="1">1 sao</option>
+                </select>
+
+                <button
+                  type="button"
+                  className="mochi-btn mochi-btn-outline"
+                  onClick={() => void loadReviews(page, ratingFilter)}
+                  disabled={loading}
+                >
+                  Làm mới
+                </button>
+              </div>
             </section>
 
             {loading ? (
@@ -105,7 +229,7 @@ export default function ShopReviewsPage() {
               <>
                 <section className="shop-reviews-summary mochi-card">
                   <div className="shop-reviews-score">
-                    <strong>{ratingAvg}</strong>
+                    <strong>{ratingText(ratingAvg)}</strong>
                     <span>/5</span>
                   </div>
 
@@ -114,29 +238,120 @@ export default function ShopReviewsPage() {
                     <p>{reviewCount} lượt đánh giá</p>
 
                     <div className="shop-reviews-stars">
-                      {'★★★★★'.split('').map((star, index) => (
-                        <span key={index}>{star}</span>
-                      ))}
+                      {renderStars(Math.round(Number(ratingAvg)))}
                     </div>
                   </div>
                 </section>
 
-                <section className="shop-reviews-empty mochi-card">
-                  <h2>Chưa có danh sách review chi tiết</h2>
+                {reviews.length === 0 ? (
+                  <section className="shop-reviews-empty mochi-card">
+                    <h2>Chưa có đánh giá</h2>
 
-                  <p>
-                    Để hiển thị từng bình luận, ảnh review, tên người đánh giá,
-                    cần backend thêm API ví dụ:
-                  </p>
+                    <p>
+                      Khi khách hàng đánh giá sản phẩm trong shop, nội dung sẽ
+                      hiển thị tại đây.
+                    </p>
+                  </section>
+                ) : (
+                  <>
+                    <section className="shop-reviews-list">
+                      {reviews.map((review) => {
+                        const images = reviewImages(review.images);
 
-                  <code>GET /reviews/shop/me</code>
+                        return (
+                          <article
+                            key={review.id}
+                            className="shop-review-item mochi-card"
+                          >
+                            <div className="shop-review-user">
+                              <div className="shop-review-avatar">
+                                {userAvatar(review) ? (
+                                  <img
+                                    src={userAvatar(review)}
+                                    alt={userName(review)}
+                                  />
+                                ) : (
+                                  <span>
+                                    {userName(review).charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
 
-                  <p>
-                    Hoặc API theo shop:
-                  </p>
+                              <div>
+                                <h3>{userName(review)}</h3>
 
-                  <code>GET /reviews/shop/:shopId</code>
-                </section>
+                                <div className="shop-review-item-stars">
+                                  {renderStars(review.rating)}
+                                </div>
+
+                                <p>{formatDate(review.createdAt)}</p>
+                              </div>
+                            </div>
+
+                            <div className="shop-review-content">
+                              <div className="shop-review-product">
+                                Sản phẩm:{' '}
+                                {review.product?.id ? (
+                                  <Link to={`/products/${review.product.id}`}>
+                                    {productName(review)}
+                                  </Link>
+                                ) : (
+                                  <span>{productName(review)}</span>
+                                )}
+                              </div>
+
+                              {review.comment ? (
+                                <p className="shop-review-comment">
+                                  {review.comment}
+                                </p>
+                              ) : (
+                                <p className="shop-review-comment shop-review-comment-muted">
+                                  Khách hàng chưa để lại bình luận.
+                                </p>
+                              )}
+
+                              {images.length > 0 ? (
+                                <div className="shop-review-images">
+                                  {images.map((image, index) => (
+                                    <img
+                                      key={`${review.id}-${index}`}
+                                      src={image}
+                                      alt={`Review ${index + 1}`}
+                                    />
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </section>
+
+                    <div className="shop-reviews-pagination">
+                      <button
+                        type="button"
+                        className="mochi-btn mochi-btn-outline mochi-btn-sm"
+                        disabled={page <= 1}
+                        onClick={() => void loadReviews(page - 1, ratingFilter)}
+                      >
+                        Trước
+                      </button>
+
+                      <span>
+                        Trang {page} / {totalPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="mochi-btn mochi-btn-outline mochi-btn-sm"
+                        disabled={page >= totalPages}
+                        onClick={() => void loadReviews(page + 1, ratingFilter)}
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </main>

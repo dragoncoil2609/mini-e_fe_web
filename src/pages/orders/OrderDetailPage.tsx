@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { OrdersApi } from '../../api/orders.api';
-import type { Order, OrderItem } from '../../api/types';
+import { ReviewsApi } from '../../api/reviews.api';
+import type { Order, OrderItem, ProductReview } from '../../api/types';
 
 import bunnyImg from '../../assets/brand/bunny_bear_original.png';
 
@@ -76,6 +77,11 @@ function getItemVariantText(item: OrderItem): string {
   return values || 'Không có phân loại';
 }
 
+function renderStars(rating: number): string {
+  const safe = Math.max(1, Math.min(5, Math.round(toNumber(rating))));
+  return '★'.repeat(safe) + '☆'.repeat(5 - safe);
+}
+
 function canCancel(order: Order): boolean {
   return (
     order.status !== 'CANCELLED' &&
@@ -92,6 +98,17 @@ function canRequestReturn(order: Order): boolean {
   return order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED';
 }
 
+function canReviewProducts(order: Order): boolean {
+  return order.status === 'COMPLETED' && order.shippingStatus === 'DELIVERED';
+}
+
+function makeReviewMap(reviews: ProductReview[]): Record<number, ProductReview> {
+  return reviews.reduce<Record<number, ProductReview>>((acc, review) => {
+    acc[review.productId] = review;
+    return acc;
+  }, {});
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,9 +116,33 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSubmitLoading, setReviewSubmitLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const [reviewsByProductId, setReviewsByProductId] = useState<
+    Record<number, ProductReview>
+  >({});
+  const [reviewingItem, setReviewingItem] = useState<OrderItem | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
 
   const items = useMemo(() => order?.items ?? [], [order]);
+  const orderCanReview = order ? canReviewProducts(order) : false;
+
+  async function loadOrderReviews(orderId: string) {
+    setReviewLoading(true);
+
+    try {
+      const response = await ReviewsApi.getMyReviewsByOrder(orderId);
+      setReviewsByProductId(makeReviewMap(response.data ?? []));
+    } catch {
+      setReviewsByProductId({});
+    } finally {
+      setReviewLoading(false);
+    }
+  }
 
   async function loadOrder() {
     if (!id) {
@@ -115,7 +156,10 @@ export default function OrderDetailPage() {
 
     try {
       const response = await OrdersApi.getOrderDetail(id);
-      setOrder(response.data);
+      const nextOrder = response.data;
+
+      setOrder(nextOrder);
+      await loadOrderReviews(nextOrder.id);
     } catch (err: any) {
       setOrder(null);
       setError(getApiMessage(err));
@@ -132,6 +176,7 @@ export default function OrderDetailPage() {
 
     setActionLoading(true);
     setError('');
+    setNotice('');
 
     try {
       await OrdersApi.cancelOrder(order.id);
@@ -149,17 +194,19 @@ export default function OrderDetailPage() {
 
     setActionLoading(true);
     setError('');
+    setNotice('');
 
     try {
-        await OrdersApi.confirmReceived(order.id);
-        window.dispatchEvent(new Event('mochi-orders-updated'));
-        await loadOrder();
+      await OrdersApi.confirmReceived(order.id);
+      window.dispatchEvent(new Event('mochi-orders-updated'));
+      await loadOrder();
+      setNotice('Bạn đã xác nhận nhận hàng. Bây giờ bạn có thể đánh giá sản phẩm.');
     } catch (err: any) {
-        setError(getApiMessage(err));
+      setError(getApiMessage(err));
     } finally {
-        setActionLoading(false);
+      setActionLoading(false);
     }
-    }
+  }
 
   async function runRequestReturn() {
     if (!order) return;
@@ -169,6 +216,7 @@ export default function OrderDetailPage() {
 
     setActionLoading(true);
     setError('');
+    setNotice('');
 
     try {
       await OrdersApi.requestReturn(order.id);
@@ -181,8 +229,64 @@ export default function OrderDetailPage() {
     }
   }
 
+  function openReviewModal(item: OrderItem) {
+    setReviewingItem(item);
+    setReviewRating(5);
+    setReviewComment('');
+    setError('');
+    setNotice('');
+  }
+
+  function closeReviewModal() {
+    if (reviewSubmitLoading) return;
+
+    setReviewingItem(null);
+    setReviewRating(5);
+    setReviewComment('');
+  }
+
+  async function submitReview() {
+    if (!order || !reviewingItem) return;
+
+    if (!orderCanReview) {
+      setError('Chỉ có thể đánh giá sau khi đơn hàng đã được nhận.');
+      return;
+    }
+
+    setReviewSubmitLoading(true);
+    setError('');
+    setNotice('');
+
+    try {
+      const response = await ReviewsApi.createProductReview({
+        orderId: order.id,
+        productId: reviewingItem.productId,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+        images: [],
+      });
+
+      setReviewsByProductId((prev) => ({
+        ...prev,
+        [response.data.productId]: response.data,
+      }));
+
+      setNotice('Đã gửi đánh giá sản phẩm thành công.');
+      setReviewingItem(null);
+      setReviewRating(5);
+      setReviewComment('');
+
+      window.dispatchEvent(new Event('mochi-reviews-updated'));
+    } catch (err: any) {
+      setError(getApiMessage(err));
+    } finally {
+      setReviewSubmitLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) {
@@ -238,36 +342,77 @@ export default function OrderDetailPage() {
           </div>
         </section>
 
+        {notice ? <div className="order-detail-notice">{notice}</div> : null}
         {error ? <div className="order-detail-alert">{error}</div> : null}
 
         <div className="order-detail-layout">
           <main className="order-detail-main">
             <section className="order-detail-section mochi-card">
-              <h2>🧸 Sản phẩm đã đặt</h2>
+              <div className="order-detail-section-head">
+                <h2>🧸 Sản phẩm đã đặt</h2>
+                {reviewLoading ? <span>Đang kiểm tra đánh giá...</span> : null}
+              </div>
 
               <div className="order-detail-items">
-                {items.map((item) => (
-                  <article key={item.id} className="order-detail-item">
-                    <img
-                      src={item.imageSnapshot || bunnyImg}
-                      alt={item.nameSnapshot}
-                      onError={(event) => {
-                        event.currentTarget.src = bunnyImg;
-                      }}
-                    />
+                {items.map((item) => {
+                  const existedReview = reviewsByProductId[item.productId];
 
-                    <div>
-                      <h3>{item.nameSnapshot}</h3>
-                      <p>Phân loại: {getItemVariantText(item)}</p>
-                      <p>
-                        {formatMoney(item.price)} × {item.quantity}
-                      </p>
-                    </div>
+                  return (
+                    <article key={item.id} className="order-detail-item">
+                      <img
+                        src={item.imageSnapshot || bunnyImg}
+                        alt={item.nameSnapshot}
+                        onError={(event) => {
+                          event.currentTarget.src = bunnyImg;
+                        }}
+                      />
 
-                    <strong>{formatMoney(item.totalLine)}</strong>
-                  </article>
-                ))}
+                      <div className="order-detail-item-info">
+                        <h3>{item.nameSnapshot}</h3>
+                        <p>Phân loại: {getItemVariantText(item)}</p>
+                        <p>
+                          {formatMoney(item.price)} × {item.quantity}
+                        </p>
+
+                        <Link
+                          to={`/products/${item.productId}`}
+                          className="order-detail-product-link"
+                        >
+                          Xem sản phẩm
+                        </Link>
+                      </div>
+
+                      <div className="order-detail-item-side">
+                        <strong>{formatMoney(item.totalLine)}</strong>
+
+                        {orderCanReview ? (
+                          existedReview ? (
+                            <div className="order-detail-reviewed-box">
+                              <span>{renderStars(existedReview.rating)}</span>
+                              <small>Đã đánh giá</small>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="mochi-btn mochi-btn-primary order-detail-review-btn"
+                              disabled={reviewLoading}
+                              onClick={() => openReviewModal(item)}
+                            >
+                              Đánh giá
+                            </button>
+                          )
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
+
+              {orderCanReview ? (
+                <p className="order-detail-review-hint">
+                  Mỗi sản phẩm trong đơn hàng chỉ được đánh giá một lần.
+                </p>
+              ) : null}
             </section>
 
             <section className="order-detail-section mochi-card">
@@ -360,6 +505,86 @@ export default function OrderDetailPage() {
           </aside>
         </div>
       </div>
+
+      {reviewingItem ? (
+        <div className="order-review-modal-backdrop" onMouseDown={closeReviewModal}>
+          <section
+            className="order-review-modal mochi-card"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="order-review-modal-head">
+              <div>
+                <h2>Đánh giá sản phẩm</h2>
+                <p>{reviewingItem.nameSnapshot}</p>
+              </div>
+
+              <button type="button" onClick={closeReviewModal}>
+                ×
+              </button>
+            </div>
+
+            <div className="order-review-product-line">
+              <img
+                src={reviewingItem.imageSnapshot || bunnyImg}
+                alt={reviewingItem.nameSnapshot}
+                onError={(event) => {
+                  event.currentTarget.src = bunnyImg;
+                }}
+              />
+              <div>
+                <strong>{reviewingItem.nameSnapshot}</strong>
+                <span>{getItemVariantText(reviewingItem)}</span>
+              </div>
+            </div>
+
+            <div className="order-review-rating-picker">
+              <span>Số sao</span>
+              <div>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    type="button"
+                    key={star}
+                    className={star <= reviewRating ? 'is-active' : ''}
+                    onClick={() => setReviewRating(star)}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="order-review-comment">
+              <span>Nội dung đánh giá</span>
+              <textarea
+                rows={5}
+                value={reviewComment}
+                placeholder="Bạn thấy sản phẩm này thế nào?"
+                onChange={(event) => setReviewComment(event.target.value)}
+              />
+            </label>
+
+            <div className="order-review-modal-actions">
+              <button
+                type="button"
+                className="mochi-btn mochi-btn-outline"
+                disabled={reviewSubmitLoading}
+                onClick={closeReviewModal}
+              >
+                Hủy
+              </button>
+
+              <button
+                type="button"
+                className="mochi-btn mochi-btn-primary"
+                disabled={reviewSubmitLoading}
+                onClick={submitReview}
+              >
+                {reviewSubmitLoading ? 'Đang gửi...' : 'Gửi đánh giá'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

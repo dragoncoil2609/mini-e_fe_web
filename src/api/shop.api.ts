@@ -1,5 +1,11 @@
 import { http } from './http';
-import type { ApiResponse, PaginatedResult, Shop, ShopStatus } from './types';
+import type {
+  ApiResponse,
+  PaginatedResult,
+  ProductReview,
+  Shop,
+  ShopStatus,
+} from './types';
 
 // 1) Đăng ký shop
 export interface RegisterShopPayload {
@@ -163,4 +169,59 @@ export async function updateMyShopOrderShippingStatus(
   );
 
   return res.data;
+}
+
+// 13) Lấy danh sách review theo shop
+export interface ShopReviewsParams {
+  page?: number;
+  limit?: number;
+  rating?: number;
+}
+
+export interface ShopReviewsSummary {
+  ratingAvg?: number | string;
+  reviewCount?: number;
+  avg?: number | string;
+  count?: number;
+}
+
+export interface ShopReviewsResult extends PaginatedResult<ProductReview> {
+  summary?: ShopReviewsSummary;
+}
+
+/**
+ * API chính đang dùng:
+ * GET /reviews/shop/:shopId
+ *
+ * Nếu BE của bạn đang là:
+ * GET /reviews/shop/me
+ * thì hàm này có fallback tự thử route /me.
+ */
+export async function getShopReviewsByShopId(
+  shopId: number,
+  params: ShopReviewsParams = {},
+): Promise<ApiResponse<ShopReviewsResult>> {
+  try {
+    const res = await http.get<ApiResponse<ShopReviewsResult>>(
+      `/reviews/shop/${shopId}`,
+      {
+        params,
+      },
+    );
+
+    return res.data;
+  } catch (primaryError: any) {
+    try {
+      const res = await http.get<ApiResponse<ShopReviewsResult>>(
+        '/reviews/shop/me',
+        {
+          params,
+        },
+      );
+
+      return res.data;
+    } catch {
+      throw primaryError;
+    }
+  }
 }

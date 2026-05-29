@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 
 import { getShopDetail } from '../../api/shop.api';
 import { getProductsByShop } from '../../api/products.api';
-import type { ProductListItem } from '../../api/types';
+import { getShopReviews, type ShopReviewsSummary } from '../../api/reviews.api';
+import type { ProductListItem, ProductReview } from '../../api/types';
 
 import bunnyImg from '../../assets/brand/bunny_bear_original.png';
 import basketImg from '../../assets/brand/basket_chick.png';
@@ -43,6 +44,16 @@ function unwrapPaginatedItems<T>(response: any): T[] {
   return data?.items ?? [];
 }
 
+function unwrapReviewsResponse(response: any) {
+  const data = unwrapApiData<any>(response);
+
+  return {
+    items: (data?.items ?? []) as ProductReview[],
+    total: Number(data?.total ?? 0),
+    summary: data?.summary as ShopReviewsSummary | undefined,
+  };
+}
+
 function getApiMessage(error: any) {
   return (
     error?.response?.data?.message ||
@@ -63,6 +74,10 @@ function formatDate(value?: string | null) {
   } catch {
     return value;
   }
+}
+
+function ratingText(value?: number | string) {
+  return Number(value ?? 0).toFixed(1);
 }
 
 function getProductImage(product: ProductListItem) {
@@ -96,6 +111,36 @@ function getProductDiscount(product: ProductListItem) {
 function getProductSold(product: ProductListItem) {
   const item = product as any;
   return item.sold ?? item.totalSold ?? 0;
+}
+
+function userName(review: ProductReview) {
+  return review.user?.name || review.userNameSnapshot || 'Người dùng Mochi';
+}
+
+function userAvatar(review: ProductReview) {
+  return review.user?.avatarUrl || review.userAvatarSnapshot || '';
+}
+
+function productName(review: ProductReview) {
+  return review.product?.title || `Sản phẩm #${review.productId}`;
+}
+
+function reviewImages(images: ProductReview['images']) {
+  if (!images) return [];
+  return Array.isArray(images) ? images.filter(Boolean) : [];
+}
+
+function renderStars(rating?: number) {
+  const value = Math.max(0, Math.min(5, Number(rating ?? 0)));
+
+  return '★★★★★'.split('').map((star, index) => (
+    <span
+      key={index}
+      className={index < value ? 'shop-detail-review-star-active' : ''}
+    >
+      {star}
+    </span>
+  ));
 }
 
 function ShopPreviewProductCard({ product }: { product: ProductListItem }) {
@@ -138,9 +183,13 @@ export default function ShopDetailsPage() {
 
   const [shop, setShop] = useState<ShopView | null>(null);
   const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewSummary, setReviewSummary] =
+    useState<ShopReviewsSummary | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -150,6 +199,8 @@ export default function ShopDetailsPage() {
       setLoading(true);
       setError('');
       setProducts([]);
+      setReviews([]);
+      setReviewSummary(null);
 
       try {
         const shopResponse = await getShopDetail(shopId);
@@ -158,23 +209,47 @@ export default function ShopDetailsPage() {
         if (!mounted) return;
 
         setShop(shopData);
-        setProductsLoading(true);
 
-        try {
-          const productsResponse = await getProductsByShop(shopData.id, {
-            page: 1,
-            limit: 8,
+        setProductsLoading(true);
+        setReviewsLoading(true);
+
+        void getProductsByShop(shopData.id, {
+          page: 1,
+          limit: 8,
+        })
+          .then((productsResponse) => {
+            if (!mounted) return;
+            setProducts(unwrapPaginatedItems<ProductListItem>(productsResponse));
+          })
+          .catch(() => {
+            if (!mounted) return;
+            setProducts([]);
+          })
+          .finally(() => {
+            if (mounted) setProductsLoading(false);
           });
 
-          if (!mounted) return;
+        void getShopReviews(shopData.id, {
+          page: 1,
+          limit: 4,
+        })
+          .then((reviewResponse) => {
+            if (!mounted) return;
 
-          setProducts(unwrapPaginatedItems<ProductListItem>(productsResponse));
-        } catch {
-          if (!mounted) return;
-          setProducts([]);
-        } finally {
-          if (mounted) setProductsLoading(false);
-        }
+            const reviewData = unwrapReviewsResponse(reviewResponse);
+
+            setReviews(reviewData.items);
+            setReviewSummary(reviewData.summary ?? null);
+          })
+          .catch(() => {
+            if (!mounted) return;
+
+            setReviews([]);
+            setReviewSummary(null);
+          })
+          .finally(() => {
+            if (mounted) setReviewsLoading(false);
+          });
       } catch (err: any) {
         if (!mounted) return;
 
@@ -203,8 +278,18 @@ export default function ShopDetailsPage() {
 
   const totalOrders = shop?.totalOrders ?? shop?.stats?.totalOrders ?? 0;
   const totalSold = shop?.totalSold ?? shop?.stats?.totalSold ?? 0;
-  const ratingAvg = shop?.stats?.ratingAvg ?? 0;
-  const reviewCount = shop?.stats?.reviewCount ?? 0;
+
+  const ratingAvg =
+    reviewSummary?.ratingAvg ??
+    reviewSummary?.avg ??
+    shop?.stats?.ratingAvg ??
+    0;
+
+  const reviewCount =
+    reviewSummary?.reviewCount ??
+    reviewSummary?.count ??
+    shop?.stats?.reviewCount ??
+    0;
 
   if (loading) {
     return (
@@ -274,7 +359,7 @@ export default function ShopDetailsPage() {
                 <small>🧸 {productCount} sản phẩm</small>
                 <small>📦 {totalOrders} đơn hàng</small>
                 <small>🛍️ {totalSold} đã bán</small>
-                <small>⭐ {ratingAvg}/5 ({reviewCount})</small>
+                <small>⭐ {ratingText(ratingAvg)}/5 ({reviewCount})</small>
                 <small>✅ {formatDate(shop.verifiedAt)}</small>
               </div>
             </div>
@@ -312,7 +397,8 @@ export default function ShopDetailsPage() {
             </p>
 
             <p>
-              <b>Đánh giá:</b> {ratingAvg}/5 từ {reviewCount} lượt đánh giá
+              <b>Đánh giá:</b> {ratingText(ratingAvg)}/5 từ {reviewCount} lượt
+              đánh giá
             </p>
           </div>
         </section>
@@ -345,6 +431,95 @@ export default function ShopDetailsPage() {
           ) : (
             <div className="shop-detail-products-empty">
               Shop hiện chưa có sản phẩm đang bán.
+            </div>
+          )}
+        </section>
+
+        <section className="shop-detail-reviews mochi-card">
+          <div className="shop-detail-reviews-head">
+            <div>
+              <h2>Đánh giá shop ⭐</h2>
+              <p>Đánh giá được tổng hợp từ các sản phẩm của shop.</p>
+            </div>
+
+            <div className="shop-detail-review-score">
+              <strong>{ratingText(ratingAvg)}</strong>
+              <span>/5</span>
+            </div>
+          </div>
+
+          {reviewsLoading ? (
+            <div className="shop-detail-reviews-empty">
+              Đang tải đánh giá shop...
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="shop-detail-review-list">
+              {reviews.map((review) => {
+                const images = reviewImages(review.images);
+
+                return (
+                  <article key={review.id} className="shop-detail-review-item">
+                    <div className="shop-detail-review-user">
+                      <div className="shop-detail-review-avatar">
+                        {userAvatar(review) ? (
+                          <img src={userAvatar(review)} alt={userName(review)} />
+                        ) : (
+                          <span>{userName(review).charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <h3>{userName(review)}</h3>
+
+                        <div className="shop-detail-review-stars">
+                          {renderStars(review.rating)}
+                        </div>
+
+                        <small>{formatDate(review.createdAt)}</small>
+                      </div>
+                    </div>
+
+                    <div className="shop-detail-review-content">
+                      <p className="shop-detail-review-product">
+                        Sản phẩm:{' '}
+                        {review.product?.id ? (
+                          <Link to={`/products/${review.product.id}`}>
+                            {productName(review)}
+                          </Link>
+                        ) : (
+                          <span>{productName(review)}</span>
+                        )}
+                      </p>
+
+                      {review.comment ? (
+                        <p className="shop-detail-review-comment">
+                          {review.comment}
+                        </p>
+                      ) : (
+                        <p className="shop-detail-review-comment shop-detail-review-muted">
+                          Khách hàng chưa để lại bình luận.
+                        </p>
+                      )}
+
+                      {images.length > 0 ? (
+                        <div className="shop-detail-review-images">
+                          {images.map((image, index) => (
+                            <img
+                              key={`${review.id}-${index}`}
+                              src={image}
+                              alt={`Review ${index + 1}`}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="shop-detail-reviews-empty">
+              Shop hiện chưa có đánh giá.
             </div>
           )}
         </section>

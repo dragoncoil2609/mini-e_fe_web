@@ -620,22 +620,38 @@ export type CreateOrderResponse =
 // ================== REVIEWS ==================
 
 export interface ReviewUserPublic {
-  id: number;
+  id: number | null;
   name: string;
   avatarUrl: string | null;
+  isDeleted?: boolean;
+}
+
+export interface ProductReviewProductPublic {
+  id: number;
+  title: string;
+  slug?: string | null;
 }
 
 export interface ProductReview {
   id: string;
   orderId: string;
-  userId: number;
+
+  userId: number | null;
+  /**
+   * Snapshot dùng khi user bị xóa cứng nhưng vẫn giữ review.
+   */
+  userNameSnapshot?: string | null;
+  userAvatarSnapshot?: string | null;
+
   productId: number;
   rating: number;
   comment: string | null;
   images: string[] | null;
   createdAt: string;
   updatedAt: string;
+
   user: ReviewUserPublic | null;
+  product?: ProductReviewProductPublic | null;
 }
 
 export interface CreateProductReviewDto {

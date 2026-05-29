@@ -6,6 +6,8 @@ import {
   getPublicProductDetail,
 } from '../../api/products.api';
 import { addItem } from '../../api/cart.api';
+import { getProductReviews } from '../../api/reviews.api';
+import type { ProductReview } from '../../api/types';
 import {
   addFavoriteProduct,
   recordProductEvent,
@@ -55,6 +57,13 @@ type VariantRow = {
   }[];
 };
 
+type ReviewSummary = {
+  count: number;
+  avg: number;
+};
+
+const REVIEW_LIMIT = 10;
+
 function unwrapApiData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
 }
@@ -74,6 +83,21 @@ function toNumber(value: unknown) {
 
 function formatMoney(value?: number | string | null) {
   return new Intl.NumberFormat('vi-VN').format(toNumber(value)) + 'đ';
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return 'Không rõ thời gian';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
 }
 
 function getProductName(product?: ProductView | null) {
@@ -123,6 +147,23 @@ function normalizeFavorite(value: ProductView['isFavorite']) {
   return value === true || value === 1 || value === '1';
 }
 
+function renderStars(rating: number) {
+  const safe = Math.max(0, Math.min(5, Math.round(toNumber(rating))));
+  return '★'.repeat(safe) + '☆'.repeat(5 - safe);
+}
+
+function getReviewUserName(review: ProductReview) {
+  return (
+    review.user?.name ||
+    review.userNameSnapshot ||
+    'Người dùng đã xóa'
+  );
+}
+
+function getReviewAvatar(review: ProductReview) {
+  return review.user?.avatarUrl || review.userAvatarSnapshot || bunnyImg;
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -148,6 +189,15 @@ export default function ProductDetailPage() {
     'success',
   );
 
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewSummary, setReviewSummary] = useState<ReviewSummary>({
+    count: 0,
+    avg: 0,
+  });
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState('');
+
   const productImages = useMemo(() => getProductImages(product), [product]);
 
   const selectedVariant =
@@ -172,6 +222,44 @@ export default function ProductDetailPage() {
     Boolean(selectedVariantId) && !isOutOfStock && !addingCart;
 
   const discountPercent = getDiscountPercent(product);
+  const hasMoreReviews = reviews.length < reviewSummary.count;
+
+  async function loadProductReviews(
+    nextPage = 1,
+    mode: 'replace' | 'append' = 'replace',
+  ) {
+    if (!productId) return;
+
+    setReviewsLoading(true);
+    setReviewsError('');
+
+    try {
+      const response = await getProductReviews(productId, {
+        page: nextPage,
+        limit: REVIEW_LIMIT,
+      });
+
+      const data = response.data;
+      const nextItems = Array.isArray(data?.items) ? data.items : [];
+
+      setReviewSummary({
+        count: toNumber(data?.summary?.count),
+        avg: toNumber(data?.summary?.avg),
+      });
+      setReviewPage(toNumber(data?.page) || nextPage);
+      setReviews((prev) =>
+        mode === 'append' ? [...prev, ...nextItems] : nextItems,
+      );
+    } catch (err: any) {
+      setReviewsError(getApiMessage(err));
+      if (mode === 'replace') {
+        setReviews([]);
+        setReviewSummary({ count: 0, avg: 0 });
+      }
+    } finally {
+      setReviewsLoading(false);
+    }
+  }
 
   async function loadProductDetail() {
     if (!productId) {
@@ -321,6 +409,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     void loadProductDetail();
+    void loadProductReviews(1, 'replace');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -427,6 +516,9 @@ export default function ProductDetailPage() {
             <div className="product-detail-meta">
               <span>Đã bán {product.sold ?? 0}</span>
               <span>Còn {displayStock ?? 0} sản phẩm</span>
+              <span>
+                {reviewSummary.avg.toFixed(1)} ★ · {reviewSummary.count} đánh giá
+              </span>
             </div>
 
             <div className="product-detail-price-box">
@@ -570,6 +662,84 @@ export default function ProductDetailPage() {
           ) : (
             <p className="text-muted">Sản phẩm chưa có mô tả chi tiết.</p>
           )}
+        </section>
+
+        <section className="product-detail-reviews mochi-card">
+          <div className="product-detail-reviews-head">
+            <div>
+              <h2>Đánh giá sản phẩm</h2>
+              <p>
+                {reviewSummary.count > 0
+                  ? `${reviewSummary.avg.toFixed(1)} / 5 từ ${reviewSummary.count} đánh giá`
+                  : 'Sản phẩm chưa có đánh giá nào.'}
+              </p>
+            </div>
+
+            <div className="product-detail-review-score">
+              <strong>{reviewSummary.avg.toFixed(1)}</strong>
+              <span>{renderStars(reviewSummary.avg)}</span>
+            </div>
+          </div>
+
+          {reviewsError ? (
+            <div className="product-detail-review-alert">{reviewsError}</div>
+          ) : null}
+
+          {reviewsLoading && reviews.length <= 0 ? (
+            <div className="product-detail-review-loading">
+              Đang tải đánh giá...
+            </div>
+          ) : reviews.length <= 0 ? (
+            <div className="product-detail-review-empty">
+              Chưa có khách hàng nào đánh giá sản phẩm này.
+            </div>
+          ) : (
+            <div className="product-detail-review-list">
+              {reviews.map((review) => (
+                <article key={review.id} className="product-detail-review-item">
+                  <img
+                    src={getReviewAvatar(review)}
+                    alt={getReviewUserName(review)}
+                    onError={(event) => {
+                      event.currentTarget.src = bunnyImg;
+                    }}
+                  />
+
+                  <div>
+                    <div className="product-detail-review-topline">
+                      <strong>{getReviewUserName(review)}</strong>
+                      <span>{formatDate(review.createdAt)}</span>
+                    </div>
+
+                    <div className="product-detail-review-stars">
+                      {renderStars(review.rating)}
+                    </div>
+
+                    {review.comment ? <p>{review.comment}</p> : null}
+
+                    {review.images?.length ? (
+                      <div className="product-detail-review-images">
+                        {review.images.map((imageUrl) => (
+                          <img key={imageUrl} src={imageUrl} alt="Ảnh đánh giá" />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {hasMoreReviews ? (
+            <button
+              type="button"
+              className="mochi-btn mochi-btn-outline product-detail-review-more"
+              disabled={reviewsLoading}
+              onClick={() => loadProductReviews(reviewPage + 1, 'append')}
+            >
+              {reviewsLoading ? 'Đang tải...' : 'Xem thêm đánh giá'}
+            </button>
+          ) : null}
         </section>
       </div>
     </div>

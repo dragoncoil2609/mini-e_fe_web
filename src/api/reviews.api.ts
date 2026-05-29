@@ -7,29 +7,27 @@ import type {
   ProductReviewsList,
 } from './types';
 
-function normalizeReviewList(data: ProductReview | ProductReview[] | null | undefined): ProductReview[] {
+function normalizeReviewList(
+  data: ProductReview | ProductReview[] | null | undefined,
+): ProductReview[] {
   if (!data) return [];
   return Array.isArray(data) ? data : [data];
 }
 
 /**
- * Tạo review theo rule mới:
+ * Tạo review:
  * 1 order + 1 product = 1 review
  *
  * POST /product-reviews
- * Body:
- * {
- *   orderId,
- *   productId,
- *   rating,
- *   comment/content,
- *   images
- * }
  */
 export async function createProductReview(
   dto: CreateProductReviewDto,
 ): Promise<ApiResponse<ProductReview>> {
-  const res = await http.post<ApiResponse<ProductReview>>('/product-reviews', dto);
+  const res = await http.post<ApiResponse<ProductReview>>(
+    '/product-reviews',
+    dto,
+  );
+
   return res.data;
 }
 
@@ -37,9 +35,6 @@ export async function createProductReview(
  * Lấy toàn bộ review của user trong 1 order.
  *
  * GET /product-reviews/by-order/:orderId
- *
- * BE mới nên trả ProductReview[].
- * Hàm này vẫn tự normalize nếu BE cũ trả ProductReview | null.
  */
 export async function getMyReviewsByOrder(
   orderId: string,
@@ -80,8 +75,6 @@ export async function getMyReviewByOrderProduct(
 
 /**
  * API tương thích cũ.
- * Trước đây FE dùng getMyReviewByOrder(orderId) để lấy 1 review.
- * Bây giờ order có nhiều product nên hàm này trả danh sách review.
  */
 export async function getMyReviewByOrder(
   orderId: string,
@@ -95,12 +88,78 @@ export async function getMyReviewByOrder(
  */
 export async function getProductReviews(
   productId: number,
-  params?: { page?: number; limit?: number },
+  params?: {
+    page?: number;
+    limit?: number;
+  },
 ): Promise<ApiResponse<ProductReviewsList>> {
   const res = await http.get<ApiResponse<ProductReviewsList>>(
     `/products/${productId}/reviews`,
-    { params },
+    {
+      params,
+    },
   );
+
+  return res.data;
+}
+
+// ================== SHOP REVIEWS ==================
+
+export interface ShopReviewsParams {
+  page?: number;
+  limit?: number;
+  rating?: number;
+}
+
+export interface ShopReviewsSummary {
+  ratingAvg?: number | string;
+  reviewCount?: number;
+  avg?: number | string;
+  count?: number;
+}
+
+export interface ShopReviewsList {
+  summary: ShopReviewsSummary;
+  items: ProductReview[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+/**
+ * Shop đang đăng nhập xem review của shop mình.
+ *
+ * GET /reviews/shop/me?page=1&limit=10&rating=5
+ */
+export async function getMyShopReviews(
+  params: ShopReviewsParams = {},
+): Promise<ApiResponse<ShopReviewsList>> {
+  const res = await http.get<ApiResponse<ShopReviewsList>>(
+    '/reviews/shop/me',
+    {
+      params,
+    },
+  );
+
+  return res.data;
+}
+
+/**
+ * User/public xem review của shop theo shopId.
+ *
+ * GET /reviews/shop/:shopId?page=1&limit=10&rating=5
+ */
+export async function getShopReviews(
+  shopId: number,
+  params: ShopReviewsParams = {},
+): Promise<ApiResponse<ShopReviewsList>> {
+  const res = await http.get<ApiResponse<ShopReviewsList>>(
+    `/reviews/shop/${shopId}`,
+    {
+      params,
+    },
+  );
+
   return res.data;
 }
 
@@ -110,4 +169,7 @@ export const ReviewsApi = {
   getMyReviewByOrder,
   getMyReviewByOrderProduct,
   getProductReviews,
+
+  getMyShopReviews,
+  getShopReviews,
 };

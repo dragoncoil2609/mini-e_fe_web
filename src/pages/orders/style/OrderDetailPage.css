@@ -227,3 +227,249 @@
     grid-column: 2;
   }
 }
+
+/* =========================================================
+   ORDER PRODUCT REVIEW
+   ========================================================= */
+
+.order-detail-notice {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  color: #067647;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  font-weight: 800;
+}
+
+.order-detail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.order-detail-section-head h2 {
+  margin: 0;
+}
+
+.order-detail-section-head span {
+  color: #7d6572;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.order-detail-item-info {
+  min-width: 0;
+}
+
+.order-detail-product-link {
+  display: inline-flex;
+  margin-top: 8px;
+  color: #e75d90;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.order-detail-item-side {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  text-align: right;
+}
+
+.order-detail-review-btn {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.order-detail-reviewed-box {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #fff0f6;
+}
+
+.order-detail-reviewed-box span {
+  color: #f5a623;
+  font-weight: 950;
+  letter-spacing: 1px;
+}
+
+.order-detail-reviewed-box small {
+  color: #e75d90;
+  font-weight: 900;
+}
+
+.order-detail-review-hint {
+  margin: 14px 0 0;
+  color: #7d6572;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.order-review-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(66, 35, 50, 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.order-review-modal {
+  width: min(560px, 100%);
+  padding: 22px;
+  border-radius: 26px;
+}
+
+.order-review-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.order-review-modal-head h2 {
+  margin: 0 0 6px;
+  color: #3f2a35;
+}
+
+.order-review-modal-head p {
+  margin: 0;
+  color: #7d6572;
+  font-weight: 800;
+}
+
+.order-review-modal-head button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #fff0f6;
+  color: #e75d90;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.order-review-product-line {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff8fb;
+  border: 1px solid #f5d9e6;
+}
+
+.order-review-product-line img {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #fff;
+}
+
+.order-review-product-line strong {
+  display: block;
+  color: #3f2a35;
+}
+
+.order-review-product-line span {
+  display: block;
+  margin-top: 4px;
+  color: #7d6572;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.order-review-rating-picker {
+  margin-top: 16px;
+}
+
+.order-review-rating-picker > span,
+.order-review-comment span {
+  display: block;
+  margin-bottom: 8px;
+  color: #3f2a35;
+  font-weight: 900;
+}
+
+.order-review-rating-picker div {
+  display: flex;
+  gap: 8px;
+}
+
+.order-review-rating-picker button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #f5d9e6;
+  border-radius: 14px;
+  background: #fff;
+  color: #d8c4ce;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.order-review-rating-picker button.is-active {
+  color: #f5a623;
+  background: #fff8e8;
+  border-color: #ffd38a;
+}
+
+.order-review-comment {
+  display: block;
+  margin-top: 16px;
+}
+
+.order-review-comment textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #f5d9e6;
+  border-radius: 18px;
+  padding: 12px 14px;
+  outline: none;
+  color: #3f2a35;
+  font: inherit;
+}
+
+.order-review-comment textarea:focus {
+  border-color: #e75d90;
+  box-shadow: 0 0 0 4px rgba(231, 93, 144, 0.12);
+}
+
+.order-review-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .order-detail-item-side {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .order-detail-reviewed-box {
+    justify-items: start;
+  }
+
+  .order-review-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .order-review-modal-actions .mochi-btn {
+    width: 100%;
+  }
+}
