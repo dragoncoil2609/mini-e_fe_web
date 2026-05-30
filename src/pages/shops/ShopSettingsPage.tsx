@@ -1,4 +1,10 @@
-import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react';
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Link } from 'react-router-dom';
 
 import {
@@ -45,7 +51,16 @@ function getApiMessage(error: any) {
   );
 }
 
+function revokePreviewUrl(url: string | null) {
+  if (url && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export default function ShopSettingsPage() {
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+
   const [shop, setShop] = useState<ShopView | null>(null);
 
   const [form, setForm] = useState<SettingsForm>({
@@ -59,12 +74,18 @@ export default function ShopSettingsPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const logoSrc = logoPreviewUrl || shop?.logoUrl || bunnyImg;
+  const coverSrc = coverPreviewUrl || shop?.coverUrl || '';
 
   async function loadShop() {
     setLoading(true);
@@ -92,6 +113,12 @@ export default function ShopSettingsPage() {
 
   useEffect(() => {
     void loadShop();
+
+    return () => {
+      revokePreviewUrl(logoPreviewUrl);
+      revokePreviewUrl(coverPreviewUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange =
@@ -102,6 +129,48 @@ export default function ShopSettingsPage() {
         [field]: event.target.value,
       }));
     };
+
+  function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+
+    revokePreviewUrl(logoPreviewUrl);
+
+    setLogoFile(file);
+    setLogoPreviewUrl(file ? URL.createObjectURL(file) : null);
+    setError('');
+    setMessage('');
+  }
+
+  function handleCoverFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+
+    revokePreviewUrl(coverPreviewUrl);
+
+    setCoverFile(file);
+    setCoverPreviewUrl(file ? URL.createObjectURL(file) : null);
+    setError('');
+    setMessage('');
+  }
+
+  function clearLogoSelection() {
+    revokePreviewUrl(logoPreviewUrl);
+    setLogoFile(null);
+    setLogoPreviewUrl(null);
+
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  }
+
+  function clearCoverSelection() {
+    revokePreviewUrl(coverPreviewUrl);
+    setCoverFile(null);
+    setCoverPreviewUrl(null);
+
+    if (coverInputRef.current) {
+      coverInputRef.current.value = '';
+    }
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -127,7 +196,12 @@ export default function ShopSettingsPage() {
       });
 
       const data = unwrapApiData<ShopView>(response);
-      setShop(data);
+
+      setShop((prev) => ({
+        ...(prev || data),
+        ...data,
+      }));
+
       setMessage('Đã lưu thông tin shop.');
     } catch (err: any) {
       setError(getApiMessage(err));
@@ -145,8 +219,15 @@ export default function ShopSettingsPage() {
 
     try {
       const response = await uploadShopLogo(logoFile);
-      setShop(unwrapApiData<ShopView>(response));
-      setLogoFile(null);
+      const data = unwrapApiData<ShopView>(response);
+
+      setShop((prev) => ({
+        ...(prev || data),
+        ...data,
+        logoUrl: data.logoUrl || prev?.logoUrl || null,
+      }));
+
+      clearLogoSelection();
       setMessage('Đã cập nhật ảnh đại diện shop.');
     } catch (err: any) {
       setError(getApiMessage(err));
@@ -164,8 +245,15 @@ export default function ShopSettingsPage() {
 
     try {
       const response = await uploadShopCover(coverFile);
-      setShop(unwrapApiData<ShopView>(response));
-      setCoverFile(null);
+      const data = unwrapApiData<ShopView>(response);
+
+      setShop((prev) => ({
+        ...(prev || data),
+        ...data,
+        coverUrl: data.coverUrl || prev?.coverUrl || null,
+      }));
+
+      clearCoverSelection();
       setMessage('Đã cập nhật ảnh bìa shop.');
     } catch (err: any) {
       setError(getApiMessage(err));
@@ -219,52 +307,127 @@ export default function ShopSettingsPage() {
             {message ? <div className="shop-settings-message">{message}</div> : null}
 
             <section className="shop-settings-media mochi-card">
-              <div className="shop-settings-logo-box">
-                <h2>Ảnh đại diện shop</h2>
-
-                <img src={shop?.logoUrl || bunnyImg} alt="Logo shop" />
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
-                />
+              <div className="shop-settings-media-card">
+                <div className="shop-settings-media-title">
+                  <div>
+                    <h2>Ảnh đại diện shop</h2>
+                    <p>Nên dùng ảnh vuông, rõ logo hoặc biểu tượng shop.</p>
+                  </div>
+                </div>
 
                 <button
                   type="button"
-                  className="mochi-btn mochi-btn-primary"
-                  disabled={!logoFile || uploadingLogo}
-                  onClick={handleUploadLogo}
+                  className="shop-settings-logo-preview"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  aria-label="Chọn logo shop"
                 >
-                  {uploadingLogo ? 'Đang tải...' : 'Cập nhật logo'}
+                  <img src={logoSrc} alt="Logo shop" />
+                  <span className="shop-settings-upload-overlay">
+                    Bấm để đổi logo
+                  </span>
                 </button>
+
+                <input
+                  ref={logoInputRef}
+                  className="shop-settings-hidden-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoFileChange}
+                />
+
+                {logoFile ? (
+                  <div className="shop-settings-file-note">
+                    <span>{logoFile.name}</span>
+                    <button type="button" onClick={clearLogoSelection}>
+                      Bỏ chọn
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="shop-settings-upload-actions">
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-outline"
+                    disabled={uploadingLogo}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    Đổi logo
+                  </button>
+
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-primary"
+                    disabled={!logoFile || uploadingLogo}
+                    onClick={handleUploadLogo}
+                  >
+                    {uploadingLogo ? 'Đang tải...' : 'Lưu logo'}
+                  </button>
+                </div>
               </div>
 
-              <div className="shop-settings-cover-box">
-                <h2>Ảnh bìa shop</h2>
+              <div className="shop-settings-media-card shop-settings-cover-card">
+                <div className="shop-settings-media-title">
+                  <div>
+                    <h2>Ảnh bìa shop</h2>
+                    <p>Nên dùng ảnh ngang để hiển thị đẹp ở trang shop.</p>
+                  </div>
+                </div>
 
-                <div className="shop-settings-cover-preview">
-                  {shop?.coverUrl ? (
-                    <img src={shop.coverUrl} alt="Ảnh bìa shop" />
+                <button
+                  type="button"
+                  className="shop-settings-cover-preview"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={uploadingCover}
+                  aria-label="Chọn ảnh bìa shop"
+                >
+                  {coverSrc ? (
+                    <img src={coverSrc} alt="Ảnh bìa shop" />
                   ) : (
                     <span>Chưa có ảnh bìa</span>
                   )}
-                </div>
+
+                  <span className="shop-settings-upload-overlay">
+                    Bấm để đổi ảnh bìa
+                  </span>
+                </button>
 
                 <input
+                  ref={coverInputRef}
+                  className="shop-settings-hidden-file"
                   type="file"
                   accept="image/*"
-                  onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
+                  onChange={handleCoverFileChange}
                 />
 
-                <button
-                  type="button"
-                  className="mochi-btn mochi-btn-primary"
-                  disabled={!coverFile || uploadingCover}
-                  onClick={handleUploadCover}
-                >
-                  {uploadingCover ? 'Đang tải...' : 'Cập nhật ảnh bìa'}
-                </button>
+                {coverFile ? (
+                  <div className="shop-settings-file-note">
+                    <span>{coverFile.name}</span>
+                    <button type="button" onClick={clearCoverSelection}>
+                      Bỏ chọn
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="shop-settings-upload-actions">
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-outline"
+                    disabled={uploadingCover}
+                    onClick={() => coverInputRef.current?.click()}
+                  >
+                    Đổi ảnh bìa
+                  </button>
+
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-primary"
+                    disabled={!coverFile || uploadingCover}
+                    onClick={handleUploadCover}
+                  >
+                    {uploadingCover ? 'Đang tải...' : 'Lưu ảnh bìa'}
+                  </button>
+                </div>
               </div>
             </section>
 

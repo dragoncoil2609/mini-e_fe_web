@@ -22,7 +22,9 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('info');
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>(
+    'info',
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,6 +49,24 @@ export default function ForgotPasswordPage() {
     try {
       const data = await AuthApi.forgotPassword(cleanEmail);
 
+      /**
+       * Phòng trường hợp sau này BE đổi từ status 423 sang status 200.
+       */
+      if ((data as any)?.needRecover) {
+        navigate('/auth/account/recover/request', {
+          replace: true,
+          state: {
+            identifier: (data as any).identifier ?? cleanEmail,
+            via: (data as any).via ?? 'email',
+            needRecover: true,
+            message:
+              (data as any).message ??
+              'Tài khoản đang bị vô hiệu hóa. Vui lòng khôi phục tài khoản trước.',
+          },
+        });
+        return;
+      }
+
       navigate('/reset-password', {
         replace: true,
         state: {
@@ -56,7 +76,29 @@ export default function ForgotPasswordPage() {
           devOtp: data.devOtp ?? data.otp,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const responseData = error?.response?.data?.data;
+
+      /**
+       * BE trả 423 khi tài khoản bị soft-delete.
+       * Axios sẽ nhảy vào catch, nên phải lấy data ở đây.
+       */
+      if (status === 423 && responseData?.needRecover) {
+        navigate('/auth/account/recover/request', {
+          replace: true,
+          state: {
+            identifier: responseData.identifier ?? cleanEmail,
+            via: responseData.via ?? 'email',
+            needRecover: true,
+            message:
+              responseData.message ??
+              'Tài khoản đang bị vô hiệu hóa. Vui lòng khôi phục tài khoản trước.',
+          },
+        });
+        return;
+      }
+
       setMessageType('error');
       setMessage(getAuthErrorMessage(error, 'Không thể gửi mã đặt lại mật khẩu'));
     } finally {
@@ -67,7 +109,11 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard variant="compact">
       <div className="auth-title-center">
-        <img className="auth-art" src={forgotPasswordSearch} alt="Quên mật khẩu" />
+        <img
+          className="auth-art"
+          src={forgotPasswordSearch}
+          alt="Quên mật khẩu"
+        />
       </div>
 
       <h1 className="auth-title auth-title-center">Quên mật khẩu</h1>
@@ -92,12 +138,12 @@ export default function ForgotPasswordPage() {
         </label>
 
         <button className="auth-btn" disabled={loading}>
-          {loading ? 'Đang gửi mã...' : 'Gửi mã đặt lại mật khẩu'}
+          {loading ? 'Đang xử lý...' : 'Tiếp tục'}
         </button>
 
         <div className="auth-help-box">
-          🛡️ Mã đặt lại mật khẩu sẽ được gửi qua email. Vui lòng kiểm tra cả hộp thư spam
-          nếu chưa thấy email.
+          🛡️ Nếu tài khoản đang bị vô hiệu hóa, hệ thống sẽ chuyển bạn sang bước
+          khôi phục tài khoản.
         </div>
       </form>
     </AuthCard>

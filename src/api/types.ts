@@ -72,6 +72,8 @@ export interface UserListQuery {
   page?: number;
   limit?: number;
   search?: string;
+  role?: UserRole;
+  isVerified?: boolean;
   sortBy?:
     | 'id'
     | 'name'
@@ -129,6 +131,11 @@ export interface ForgotPasswordResponse {
   devOtp?: string;
   otp?: string;
   expiresAt?: string;
+
+  // Tài khoản bị soft-delete, cần chuyển sang luồng khôi phục
+  needRecover?: true;
+  identifier?: string;
+  message?: string;
 }
 
 export interface RequestVerifyResponse {

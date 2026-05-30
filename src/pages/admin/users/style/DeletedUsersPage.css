@@ -1,0 +1,237 @@
+.deleted-users-page {
+  min-height: calc(100vh - 120px);
+}
+
+.deleted-users-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.deleted-users-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #ff3f7d;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.deleted-users-header h1 {
+  margin: 0;
+  color: #24212a;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.deleted-users-header p {
+  margin: 8px 0 0;
+  color: #8c8290;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.deleted-users-card {
+  border: 1px solid #ffd7e3;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 18px;
+  box-shadow: 0 18px 40px rgba(255, 79, 135, 0.08);
+}
+
+.deleted-users-filter {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 190px 120px;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.deleted-users-search {
+  height: 44px;
+  border: 1px solid #ffd7e3;
+  border-radius: 14px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8d8490;
+}
+
+.deleted-users-search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  color: #403842;
+}
+
+.deleted-users-filter select {
+  height: 44px;
+  border: 1px solid #ffd7e3;
+  border-radius: 14px;
+  background: #fff;
+  padding: 0 14px;
+  color: #403842;
+  outline: none;
+}
+
+.deleted-users-filter button {
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff5b8f, #ff3475);
+  color: #fff;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.deleted-users-table-wrap {
+  overflow-x: auto;
+}
+
+.deleted-users-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.deleted-users-table th {
+  background: #fff1f6;
+  color: #4a404d;
+  font-size: 13px;
+  text-align: left;
+  padding: 14px 16px;
+}
+
+.deleted-users-table td {
+  border-bottom: 1px solid #ffe2ea;
+  padding: 13px 16px;
+  color: #443b46;
+  font-size: 14px;
+}
+
+.deleted-users-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.deleted-users-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: #fff0f5;
+  color: #ff3f7d;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.deleted-users-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deleted-users-user strong {
+  display: block;
+  font-size: 14px;
+}
+
+.deleted-users-user span {
+  color: #918894;
+  font-size: 12px;
+}
+
+.deleted-users-role {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.deleted-users-role.user {
+  color: #248cff;
+  background: #eaf4ff;
+}
+
+.deleted-users-role.seller {
+  color: #ff8a00;
+  background: #fff1de;
+}
+
+.deleted-users-role.admin {
+  color: #9b4dff;
+  background: #f3e9ff;
+}
+
+.deleted-users-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.deleted-users-actions button {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #ffd7e3;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.deleted-users-actions .restore {
+  color: #25a95f;
+}
+
+.deleted-users-actions .hard-delete {
+  color: #ff3f6c;
+}
+
+.deleted-users-empty,
+.deleted-users-message {
+  text-align: center;
+  padding: 24px;
+  color: #ff3f6c;
+  font-weight: 800;
+}
+
+.deleted-users-pagination {
+  padding-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #817781;
+  font-size: 13px;
+}
+
+.deleted-users-pagination button,
+.deleted-users-pagination strong {
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid #ffd7e3;
+  border-radius: 10px;
+  background: #fff;
+  color: #ff3f7d;
+  margin-left: 6px;
+}
+
+.deleted-users-pagination strong {
+  display: inline-grid;
+  place-items: center;
+  background: #ff3f7d;
+  color: #fff;
+}
+
+@media (max-width: 800px) {
+  .deleted-users-filter {
+    grid-template-columns: 1fr;
+  }
+}

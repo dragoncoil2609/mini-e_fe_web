@@ -1,554 +1,437 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  FiEdit3,
+  FiEye,
+  FiLock,
+  FiPlus,
+  FiRefreshCw,
+  FiSearch,
+  FiTrash2,
+  FiUser,
+  FiUsers,
+  FiShield,
+  FiShoppingBag,
+} from 'react-icons/fi';
+
 import {
   createUser,
   getUsers,
-  hardDeleteUser,
   softDeleteUser,
   updateUser,
   type CreateUserPayload,
   type UpdateUserPayload,
 } from '../../../api/users.api';
-import type { Gender, User, UserRole } from '../../../api/types';
+import type { User, UserRole } from '../../../api/types';
+
 import './style/AdminUsersPage.css';
+import { Link } from 'react-router-dom';
 
-const ROOT_ADMIN_EMAIL = 'admin123@admin.com';
+type RoleFilter = '' | UserRole;
+type StatusFilter = '' | 'VERIFIED' | 'UNVERIFIED';
 
-function isProtectedUser(user: User | null | undefined) {
-  if (!user) return false;
-  return user.email === ROOT_ADMIN_EMAIL || (user as any).isSystem === true;
-}
-
-interface ListMeta {
-  page: number;
-  limit: number;
-  total: number;
-  pageCount?: number;
-}
-
-interface FormState {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  avatarUrl: string;
-  birthday: string;
-  gender: '' | Gender;
-  role: UserRole;
-  isVerified: boolean;
-}
-
-const emptyForm: FormState = {
+const emptyForm = {
   name: '',
   email: '',
   phone: '',
   password: '',
-  avatarUrl: '',
+  role: 'USER' as UserRole,
+  gender: '' as '' | 'MALE' | 'FEMALE' | 'OTHER',
   birthday: '',
-  gender: '',
-  role: 'USER',
-  isVerified: false,
+  avatarUrl: '',
+  isVerified: true,
 };
 
-export default function AdminUsersPage() {
-  const [items, setItems] = useState<User[]>([]);
-  const [meta, setMeta] = useState<ListMeta>({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pageCount: 1,
+function roleLabel(role: UserRole) {
+  if (role === 'ADMIN') return 'Admin';
+  if (role === 'SELLER') return 'Seller';
+  return 'User';
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
   });
+}
+
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
+
   const [search, setSearch] = useState('');
+  const [role, setRole] = useState<RoleFilter>('');
+  const [status, setStatus] = useState<StatusFilter>('');
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const [openForm, setOpenForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [saving, setSaving] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [form, setForm] = useState(emptyForm);
 
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const pageCount = Math.max(Math.ceil(total / limit), 1);
 
-  const protectedEditing = useMemo(() => isProtectedUser(editingUser), [editingUser]);
+  const stats = useMemo(() => {
+    return {
+      total,
+      users: users.filter((u) => u.role === 'USER').length,
+      sellers: users.filter((u) => u.role === 'SELLER').length,
+      admins: users.filter((u) => u.role === 'ADMIN').length,
+      blocked: users.filter((u) => !u.isVerified).length,
+    };
+  }, [users, total]);
 
-  const loadData = async (page = meta.page, limit = meta.limit, keyword = search) => {
+  async function fetchUsers() {
     try {
       setLoading(true);
+      setMessage('');
+
       const data = await getUsers({
         page,
         limit,
-        search: keyword || undefined,
+        search: search.trim() || undefined,
+        role: role || undefined,
+        isVerified:
+          status === 'VERIFIED'
+            ? true
+            : status === 'UNVERIFIED'
+              ? false
+              : undefined,
         sortBy: 'createdAt',
         sortOrder: 'DESC',
       });
 
-      setItems(Array.isArray(data.items) ? data.items : []);
-      setMeta({
-        page: Number(data.meta?.page || 1),
-        limit: Number(data.meta?.limit || 10),
-        total: Number(data.meta?.total || 0),
-        pageCount: Number(data.meta?.pageCount || 1),
-      });
-    } catch (err: any) {
-      console.error(err);
-      setToast({
-        type: 'error',
-        message: err?.response?.data?.message || 'Không tải được danh sách user',
-      });
+      setUsers(data.items);
+      setTotal(data.meta.total);
+    } catch (error: any) {
+      setMessage(
+        error?.response?.data?.message || 'Không thể tải danh sách người dùng',
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    void loadData(1, 10, '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void fetchUsers();
+  }, [page, role, status]);
 
-  const openCreate = () => {
-    setEditingUser(null);
+  function openCreate() {
+    setSelectedUser(null);
     setForm(emptyForm);
-    setOpenForm(true);
-  };
+    setModalMode('create');
+  }
 
-  const openEdit = (user: User) => {
-    setEditingUser(user);
+  function openView(user: User) {
+    setSelectedUser(user);
+    setModalMode('view');
+  }
+
+  function openEdit(user: User) {
+    setSelectedUser(user);
     setForm({
       name: user.name || '',
       email: user.email || '',
       phone: user.phone || '',
       password: '',
-      avatarUrl: user.avatarUrl || '',
-      birthday: user.birthday || '',
-      gender: (user.gender as any) || '',
       role: user.role,
-      isVerified: !!user.isVerified,
+      gender: user.gender || '',
+      birthday: user.birthday?.slice(0, 10) || '',
+      avatarUrl: user.avatarUrl || '',
+      isVerified: user.isVerified,
     });
-    setOpenForm(true);
-  };
+    setModalMode('edit');
+  }
 
-  const closeForm = () => {
-    setOpenForm(false);
-    setEditingUser(null);
+  function closeModal() {
+    setModalMode(null);
+    setSelectedUser(null);
     setForm(emptyForm);
-    setSaving(false);
-  };
+  }
 
-  const validate = () => {
-    if (!form.name.trim()) return 'Vui lòng nhập họ tên.';
-    if (!form.email.trim() && !form.phone.trim()) {
-      return 'Phải nhập email hoặc số điện thoại.';
-    }
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      return 'Email không hợp lệ.';
-    }
-    if (form.phone.trim() && !/^(?:\+?84|0)\d{9,10}$/.test(form.phone.trim())) {
-      return 'Số điện thoại không hợp lệ.';
-    }
-    if (!editingUser && !form.password.trim()) {
-      return 'Vui lòng nhập mật khẩu.';
-    }
-    if (form.password.trim() && !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(form.password.trim())) {
-      return 'Mật khẩu phải có ít nhất 8 ký tự, gồm cả chữ và số.';
-    }
-    return '';
-  };
-
-  const handleSubmitForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const validateMessage = validate();
-    if (validateMessage) {
-      setToast({ type: 'error', message: validateMessage });
-      return;
-    }
-
-    if (editingUser && protectedEditing) {
-      setToast({ type: 'error', message: 'Không được sửa tài khoản admin gốc.' });
-      return;
-    }
-
+  async function handleSave() {
     try {
-      setSaving(true);
+      setLoading(true);
 
-      if (editingUser) {
-        const payload: UpdateUserPayload = {
-          name: form.name.trim() || undefined,
-          email: form.email.trim() || undefined,
-          phone: form.phone.trim() || undefined,
-          password: form.password.trim() || undefined,
-          avatarUrl: form.avatarUrl.trim() || undefined,
-          birthday: form.birthday || undefined,
-          gender: (form.gender as any) || undefined,
-          role: form.role,
-          isVerified: form.isVerified,
-        };
-
-        await updateUser(editingUser.id, payload);
-        setToast({ type: 'success', message: 'Cập nhật user thành công.' });
-      } else {
+      if (modalMode === 'create') {
         const payload: CreateUserPayload = {
           name: form.name.trim(),
-          email: form.email.trim() || undefined,
-          phone: form.phone.trim() || undefined,
-          password: form.password.trim(),
-          avatarUrl: form.avatarUrl.trim() || undefined,
-          birthday: form.birthday || undefined,
-          gender: (form.gender as any) || undefined,
+          password: form.password,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
           role: form.role,
+          gender: form.gender || null,
+          birthday: form.birthday || null,
+          avatarUrl: form.avatarUrl.trim() || null,
           isVerified: form.isVerified,
         };
 
         await createUser(payload);
-        setToast({ type: 'success', message: 'Tạo user thành công.' });
       }
 
-      closeForm();
-      await loadData(meta.page, meta.limit, search);
-    } catch (err: any) {
-      console.error(err);
-      setToast({
-        type: 'error',
-        message: err?.response?.data?.message || 'Lưu user thất bại',
-      });
+      if (modalMode === 'edit' && selectedUser) {
+        const payload: UpdateUserPayload = {
+          name: form.name.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          role: form.role,
+          gender: form.gender || null,
+          birthday: form.birthday || null,
+          avatarUrl: form.avatarUrl.trim() || null,
+          isVerified: form.isVerified,
+        };
+
+        if (form.password.trim()) payload.password = form.password;
+
+        await updateUser(selectedUser.id, payload);
+      }
+
+      closeModal();
+      await fetchUsers();
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Lưu người dùng thất bại');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
-  };
+  }
 
-  const handleSoftDelete = async (user: User) => {
-    if (isProtectedUser(user)) {
-      setToast({ type: 'error', message: 'Không được xoá tài khoản admin gốc.' });
-      return;
-    }
-
-    if (!window.confirm(`Xoá mềm user "${user.name}"?`)) return;
+  async function handleDelete(user: User) {
+    const ok = window.confirm(`Bạn chắc muốn xóa mềm user "${user.name}"?`);
+    if (!ok) return;
 
     try {
       await softDeleteUser(user.id);
-      setToast({ type: 'success', message: 'Đã xoá mềm user.' });
-      await loadData(meta.page, meta.limit, search);
-    } catch (err: any) {
-      console.error(err);
-      setToast({
-        type: 'error',
-        message: err?.response?.data?.message || 'Xoá mềm thất bại',
-      });
+      await fetchUsers();
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Xóa user thất bại');
     }
-  };
+  }
 
-  const handleHardDelete = async (user: User) => {
-    if (isProtectedUser(user)) {
-      setToast({ type: 'error', message: 'Không được xoá tài khoản admin gốc.' });
+  function handleSearchSubmit() {
+    if (page === 1) {
+      void fetchUsers();
       return;
     }
 
-    if (!window.confirm(`Xoá cứng user "${user.name}"? Hành động này khó khôi phục.`)) return;
-
-    try {
-      await hardDeleteUser(user.id);
-      setToast({ type: 'success', message: 'Đã xoá cứng user.' });
-      await loadData(meta.page, meta.limit, search);
-    } catch (err: any) {
-      console.error(err);
-      setToast({
-        type: 'error',
-        message: err?.response?.data?.message || 'Xoá cứng thất bại',
-      });
-    }
-  };
-
-  const submitSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await loadData(1, meta.limit, search);
-  };
+    setPage(1);
+  }
 
   return (
-    <div className="admin-users">
-      <div className="admin-users__topbar">
-        <div className="admin-users__titlewrap">
-          <h1 className="admin-users__title">Quản lý người dùng</h1>
-          <div className="admin-users__subtitle">
-            Danh sách user đang hoạt động trong hệ thống.
-          </div>
+    <div className="admin-users-page">
+      <div className="admin-users-header">
+        <div>
+          <h1>Quản lý người dùng</h1>
+          <p>Trang chủ › Quản lý người dùng</p>
         </div>
 
-        <div className="admin-users__top-actions">
-          <button className="btn btn--ghost" onClick={() => (window.location.href = '/admin/users/deleted')}>
-            User đã xoá
-          </button>
-          <button className="btn btn--primary" onClick={openCreate}>
-            + Thêm user
+        <div className="admin-users-header-actions">
+          <Link to="/admin/users/deleted" className="admin-users-deleted-btn">
+            <FiTrash2 />
+            User đã xóa
+          </Link>
+
+          <button className="admin-users-primary-btn" onClick={openCreate}>
+            <FiPlus />
+            Thêm người dùng
           </button>
         </div>
       </div>
 
-      <div className="admin-card">
-        <div className="admin-toolbar">
-          <form className="admin-toolbar__search" onSubmit={submitSearch}>
+      <div className="admin-users-stats">
+        <StatCard icon={<FiUsers />} label="Tổng người dùng" value={stats.total} />
+        <StatCard icon={<FiUser />} label="Người dùng" value={stats.users} />
+        <StatCard icon={<FiShoppingBag />} label="Người bán" value={stats.sellers} />
+        <StatCard icon={<FiShield />} label="Quản trị viên" value={stats.admins} />
+        <StatCard icon={<FiLock />} label="Chưa xác thực" value={stats.blocked} />
+      </div>
+
+      <section className="admin-users-card">
+        <div className="admin-users-filter">
+          <div className="admin-users-search">
+            <FiSearch />
             <input
-              className="input"
-              placeholder="Tìm theo tên, email, số điện thoại..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchSubmit();
+              }}
             />
-            <button type="submit" className="btn btn--primary">
-              Tìm
-            </button>
-          </form>
-        </div>
-
-        {loading ? (
-          <div className="admin-loading">Đang tải dữ liệu...</div>
-        ) : items.length === 0 ? (
-          <div className="empty">Không có user nào.</div>
-        ) : (
-          <div className="table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Người dùng</th>
-                  <th>Liên hệ</th>
-                  <th>Role</th>
-                  <th>Xác minh</th>
-                  <th>Tạo lúc</th>
-                  <th className="col-actions">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((user) => {
-                  const protectedUser = isProtectedUser(user);
-
-                  return (
-                    <tr key={user.id}>
-                      <td>#{user.id}</td>
-                      <td>
-                        <div className="user-cell">
-                          <div className="avatar">
-                            {user.avatarUrl ? (
-                              <img src={user.avatarUrl} alt={user.name} />
-                            ) : (
-                              <span>{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
-                            )}
-                          </div>
-                          <div className="stack">
-                            <div className="user-cell__name">{user.name}</div>
-                            {protectedUser && <span className="badge badge--amber">ROOT ADMIN</span>}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="stack">
-                          <span>{user.email || '—'}</span>
-                          <span className="muted">{user.phone || '—'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge ${user.role === 'ADMIN' ? 'badge--blue' : 'badge--gray'}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`badge ${user.isVerified ? 'badge--green' : 'badge--red'}`}>
-                          {user.isVerified ? 'Đã xác minh' : 'Chưa xác minh'}
-                        </span>
-                      </td>
-                      <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
-                      <td className="col-actions">
-                        <div className="actions">
-                          <button
-                            className="btn btn--ghost btn--sm"
-                            type="button"
-                            onClick={() => openEdit(user)}
-                            disabled={protectedUser}
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            className="btn btn--warning btn--sm"
-                            type="button"
-                            onClick={() => void handleSoftDelete(user)}
-                            disabled={protectedUser}
-                          >
-                            Xoá mềm
-                          </button>
-                          <button
-                            className="btn btn--danger btn--sm"
-                            type="button"
-                            onClick={() => void handleHardDelete(user)}
-                            disabled={protectedUser}
-                          >
-                            Xoá cứng
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="pager">
-          <div className="muted">
-            Trang {meta.page}/{meta.pageCount || 1} — Tổng {meta.total} user
           </div>
 
-          <div className="pager__btns">
-            <button
-              className="btn btn--ghost btn--sm"
-              disabled={meta.page <= 1}
-              onClick={() => void loadData(meta.page - 1, meta.limit, search)}
-            >
-              Trước
-            </button>
-            <button
-              className="btn btn--ghost btn--sm"
-              disabled={meta.page >= (meta.pageCount || 1)}
-              onClick={() => void loadData(meta.page + 1, meta.limit, search)}
-            >
-              Sau
-            </button>
-          </div>
-        </div>
-      </div>
+          <select value={role} onChange={(e) => setRole(e.target.value as RoleFilter)}>
+            <option value="">Vai trò: Tất cả</option>
+            <option value="USER">User</option>
+            <option value="SELLER">Seller</option>
+            <option value="ADMIN">Admin</option>
+          </select>
 
-      {openForm && (
-        <div className="admin-modal-overlay" onMouseDown={closeForm}>
-          <div className="admin-modal admin-modal--lg" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="admin-modal__header">
-              <h3 className="admin-modal__title">
-                {editingUser ? 'Cập nhật user' : 'Tạo user mới'}
-              </h3>
-            </div>
+          <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
+            <option value="">Trạng thái: Tất cả</option>
+            <option value="VERIFIED">Đã xác thực</option>
+            <option value="UNVERIFIED">Chưa xác thực</option>
+          </select>
 
-            <form className="user-form" onSubmit={handleSubmitForm}>
-              <div className="user-form__grid">
-                <div>
-                  <label className="field__label">Họ tên</label>
-                  <input
-                    className="field__input"
-                    value={form.name}
-                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="field__label">Email</label>
-                  <input
-                    className="field__input"
-                    value={form.email}
-                    onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-                    disabled={protectedEditing}
-                  />
-                </div>
-
-                <div>
-                  <label className="field__label">Số điện thoại</label>
-                  <input
-                    className="field__input"
-                    value={form.phone}
-                    onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="field__label">
-                    {editingUser ? 'Mật khẩu mới (nếu đổi)' : 'Mật khẩu'}
-                  </label>
-                  <input
-                    className="field__input"
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-                    disabled={protectedEditing}
-                  />
-                </div>
-
-                <div>
-                  <label className="field__label">Avatar URL</label>
-                  <input
-                    className="field__input"
-                    value={form.avatarUrl}
-                    onChange={(e) => setForm((prev) => ({ ...prev, avatarUrl: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="field__label">Ngày sinh</label>
-                  <input
-                    className="field__input"
-                    type="date"
-                    value={form.birthday}
-                    onChange={(e) => setForm((prev) => ({ ...prev, birthday: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="field__label">Giới tính</label>
-                  <select
-                    className="field__select"
-                    value={form.gender}
-                    onChange={(e) => setForm((prev) => ({ ...prev, gender: e.target.value as any }))}
-                  >
-                    <option value="">Chọn giới tính</option>
-                    <option value="MALE">Nam</option>
-                    <option value="FEMALE">Nữ</option>
-                    <option value="OTHER">Khác</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="field__label">Role</label>
-                  <select
-                    className="field__select"
-                    value={form.role}
-                    onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as UserRole }))}
-                    disabled={protectedEditing}
-                  >
-                    <option value="USER">USER</option>
-                    <option value="SELLER">SELLER</option>
-                    <option value="ADMIN">ADMIN</option>
-                  </select>
-                </div>
-              </div>
-
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={form.isVerified}
-                  onChange={(e) => setForm((prev) => ({ ...prev, isVerified: e.target.checked }))}
-                  disabled={protectedEditing}
-                />
-                Tài khoản đã xác minh
-              </label>
-
-              <div className="admin-modal__actions" style={{ paddingInline: 0, borderTop: 'none' }}>
-                <button type="button" className="btn btn--ghost" onClick={closeForm}>
-                  Huỷ
-                </button>
-                <button type="submit" className="btn btn--primary" disabled={saving}>
-                  {saving ? 'Đang lưu...' : editingUser ? 'Lưu thay đổi' : 'Tạo user'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className={`admin-toast admin-toast--${toast.type}`} role="status">
-          <div className="admin-toast__dot" />
-          <div className="admin-toast__text">{toast.message}</div>
-          <button
-            className="admin-toast__close"
-            type="button"
-            onClick={() => setToast(null)}
-          >
-            ✕
+          <button onClick={handleSearchSubmit}>
+            <FiRefreshCw />
+            Lọc
           </button>
         </div>
+
+        {message && <div className="admin-users-message">{message}</div>}
+
+        <div className="admin-users-table-wrap">
+          <table className="admin-users-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>Số điện thoại</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="admin-users-empty">Đang tải...</td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="admin-users-empty">Chưa có người dùng</td>
+                </tr>
+              ) : (
+                users.map((user, index) => (
+                  <tr key={user.id}>
+                    <td>{(page - 1) * limit + index + 1}</td>
+                    <td>
+                      <div className="admin-users-user">
+                        <img src={user.avatarUrl || '/src/assets/brand/login_bunny_bear.png'} />
+                        <div>
+                          <strong>{user.name}</strong>
+                          <span>ID: {user.id}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{user.email || '—'}</td>
+                    <td>{user.phone || '—'}</td>
+                    <td>
+                      <span className={`admin-users-role ${user.role.toLowerCase()}`}>
+                        {roleLabel(user.role)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={user.isVerified ? 'admin-users-status active' : 'admin-users-status lock'}>
+                        {user.isVerified ? 'Hoạt động' : 'Chưa xác thực'}
+                      </span>
+                    </td>
+                    <td>{formatDate(user.createdAt)}</td>
+                    <td>
+                      <div className="admin-users-actions">
+                        <button onClick={() => openView(user)}><FiEye /></button>
+                        <button onClick={() => openEdit(user)}><FiEdit3 /></button>
+                        <button onClick={() => handleDelete(user)}><FiTrash2 /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="admin-users-pagination">
+          <span>Hiển thị {users.length} / {total} người dùng</span>
+
+          <div>
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>‹</button>
+            <strong>{page}</strong>
+            <button disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)}>›</button>
+          </div>
+        </div>
+      </section>
+
+      {modalMode && (
+        <div className="admin-users-modal-backdrop">
+          <div className="admin-users-modal">
+            <h2>
+              {modalMode === 'create' && 'Thêm người dùng'}
+              {modalMode === 'edit' && 'Chỉnh sửa người dùng'}
+              {modalMode === 'view' && 'Chi tiết người dùng'}
+            </h2>
+
+            {modalMode === 'view' && selectedUser ? (
+              <div className="admin-users-detail">
+                <p><b>Họ tên:</b> {selectedUser.name}</p>
+                <p><b>Email:</b> {selectedUser.email || '—'}</p>
+                <p><b>SĐT:</b> {selectedUser.phone || '—'}</p>
+                <p><b>Vai trò:</b> {roleLabel(selectedUser.role)}</p>
+                <p><b>Trạng thái:</b> {selectedUser.isVerified ? 'Hoạt động' : 'Chưa xác thực'}</p>
+                <p><b>Ngày tạo:</b> {formatDate(selectedUser.createdAt)}</p>
+              </div>
+            ) : (
+              <div className="admin-users-form">
+                <input placeholder="Họ và tên" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <input placeholder="Số điện thoại" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <input placeholder="URL avatar" value={form.avatarUrl} onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })} />
+                <input type="date" value={form.birthday} onChange={(e) => setForm({ ...form, birthday: e.target.value })} />
+
+                <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value as any })}>
+                  <option value="">Giới tính</option>
+                  <option value="MALE">Nam</option>
+                  <option value="FEMALE">Nữ</option>
+                  <option value="OTHER">Khác</option>
+                </select>
+
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}>
+                  <option value="USER">User</option>
+                  <option value="SELLER">Seller</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+
+                <select value={String(form.isVerified)} onChange={(e) => setForm({ ...form, isVerified: e.target.value === 'true' })}>
+                  <option value="true">Hoạt động</option>
+                  <option value="false">Chưa xác thực</option>
+                </select>
+
+                <input
+                  type="password"
+                  placeholder={modalMode === 'create' ? 'Mật khẩu' : 'Mật khẩu mới nếu muốn đổi'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+              </div>
+            )}
+
+            <div className="admin-users-modal-actions">
+              <button onClick={closeModal}>Hủy bỏ</button>
+              {modalMode !== 'view' && <button onClick={handleSave}>Lưu thay đổi</button>}
+            </div>
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="admin-users-stat">
+      <span>{icon}</span>
+      <div>
+        <p>{label}</p>
+        <strong>{value}</strong>
+      </div>
     </div>
   );
 }
