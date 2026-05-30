@@ -1,3 +1,4 @@
+// src/pages/auth/LoginPage.tsx
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -23,10 +24,24 @@ function buildLoginPayload(identifier: string, password: string) {
   const value = identifier.trim();
 
   if (value.includes('@')) {
-    return { email: value.toLowerCase(), password };
+    return {
+      email: value.toLowerCase(),
+      password,
+    };
   }
 
-  return { phone: value, password };
+  return {
+    phone: value,
+    password,
+  };
+}
+
+function getRedirectPathByRole(role?: string) {
+  if (role === 'ADMIN') {
+    return '/admin';
+  }
+
+  return '/home';
 }
 
 export default function LoginPage() {
@@ -68,9 +83,14 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      const data = await AuthApi.login(buildLoginPayload(cleanIdentifier, password));
+      const data = await AuthApi.login(
+        buildLoginPayload(cleanIdentifier, password),
+      );
 
-      // Phòng trường hợp sau này BE đổi về status 200 cho needRecover
+      /**
+       * Trường hợp tài khoản bị xóa mềm.
+       * Phòng khi sau này BE đổi từ status 423 sang status 200.
+       */
       if (data.needRecover) {
         navigate('/auth/account/recover/request', {
           replace: true,
@@ -83,25 +103,43 @@ export default function LoginPage() {
         return;
       }
 
-      if (data.verificationOnly || data.verify?.required || data.user?.isVerified === false) {
+      /**
+       * Điều hướng theo role:
+       * ADMIN -> /admin
+       * USER / SELLER -> /home
+       */
+      const redirectPath = getRedirectPathByRole(data.user?.role);
+
+      /**
+       * Nếu tài khoản chưa xác thực:
+       * - chuyển sang trang verify
+       * - sau khi verify xong sẽ quay về đúng trang theo role
+       */
+      if (
+        data.verificationOnly ||
+        data.verify?.required ||
+        data.user?.isVerified === false
+      ) {
         navigate('/verify-account', {
           replace: true,
           state: {
             identifier: cleanIdentifier,
             verify: data.verify,
-            from: locationState?.from ?? '/home',
+            from: redirectPath,
           },
         });
         return;
       }
 
-      navigate(locationState?.from ?? '/home', { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (error: any) {
       const status = error?.response?.status;
       const responseData = error?.response?.data?.data;
 
-      // BE đang trả 423 khi tài khoản bị soft-delete.
-      // Axios sẽ nhảy vào catch, nên phải bắt riêng tại đây.
+      /**
+       * BE hiện tại trả 423 khi tài khoản bị soft-delete.
+       * Axios sẽ nhảy vào catch nên phải bắt riêng ở đây.
+       */
       if (status === 423) {
         navigate('/auth/account/recover/request', {
           replace: true,
@@ -133,6 +171,7 @@ export default function LoginPage() {
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field">
               <span className="auth-label">Email hoặc số điện thoại</span>
+
               <span className="auth-input-wrap">
                 <span className="auth-input-icon">👤</span>
                 <input
@@ -172,7 +211,11 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <img className="auth-art" src={loginBunnyBear} alt="Đăng nhập Mochi" />
+          <img
+            className="auth-art"
+            src={loginBunnyBear}
+            alt="Đăng nhập Mochi"
+          />
         </div>
       </div>
 
