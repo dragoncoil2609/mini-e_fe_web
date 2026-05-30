@@ -1,4 +1,3 @@
-// src/api/http.ts
 import axios, {
   AxiosError,
   type AxiosInstance,
@@ -16,7 +15,7 @@ export const http: AxiosInstance = axios.create({
 });
 
 /**
- * Các route auth không nên tự động refresh token.
+ * Các route auth này không nên tự động refresh token để tránh vòng lặp.
  */
 function shouldSkipAutoRefresh(url?: string): boolean {
   if (!url) return false;
@@ -68,10 +67,10 @@ function isTokenNearExpiry(token: string, offsetSeconds = 60): boolean {
 
 /**
  * Refresh queue:
- * Tránh nhiều request cùng lúc đều gọi /auth/refresh.
+ * Dùng chung một Promise refresh để tránh nhiều request cùng lúc
+ * đều gọi /auth/refresh.
  */
-let isRefreshing = false;
-let pendingRequests: (() => void)[] = [];
+let refreshPromise: Promise<string> | null = null;
 
 async function doRefreshAccessToken(): Promise<string> {
   const res = await axios.post<ApiResponse<RefreshResponse>>(
@@ -86,29 +85,19 @@ async function doRefreshAccessToken(): Promise<string> {
   return newAccessToken;
 }
 
-async function queueRefreshToken(): Promise<void> {
-  if (isRefreshing) {
-    await new Promise<void>((resolve) => {
-      pendingRequests.push(resolve);
+function queueRefreshToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = doRefreshAccessToken().finally(() => {
+      refreshPromise = null;
     });
-
-    return;
   }
 
-  isRefreshing = true;
-
-  try {
-    await doRefreshAccessToken();
-  } finally {
-    isRefreshing = false;
-    pendingRequests.forEach((fn) => fn());
-    pendingRequests = [];
-  }
+  return refreshPromise;
 }
 
 /**
  * Request interceptor:
- * - Gắn access token vào header
+ * - Gắn access token vào header Authorization
  * - Nếu token gần hết hạn thì refresh trước
  */
 http.interceptors.request.use(
@@ -144,7 +133,7 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
 
 /**
  * Response interceptor:
- * - Nếu gặp 401 thì thử refresh token và gọi lại request cũ
+ * - Nếu gặp 401 thì thử refresh token và gọi lại request cũ một lần
  * - Nếu refresh thất bại hoặc retry xong vẫn 401 thì clear token
  */
 http.interceptors.response.use(
@@ -163,9 +152,7 @@ http.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        await queueRefreshToken();
-
-        const newToken = getAccessToken();
+        const newToken = await queueRefreshToken();
 
         if (newToken) {
           originalRequest.headers = originalRequest.headers ?? {};
@@ -179,12 +166,6 @@ http.interceptors.response.use(
       }
     }
 
-    /**
-     * Nếu request đã retry rồi mà vẫn 401:
-     * - token hết hạn thật
-     * - refresh token không hợp lệ
-     * - hoặc user đã bị vô hiệu hóa
-     */
     if (status === 401 && originalRequest?._retry) {
       clearAccessToken();
     }

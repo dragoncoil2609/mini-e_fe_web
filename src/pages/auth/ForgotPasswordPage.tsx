@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FormEvent } from "react";
+import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { AuthApi } from '../../api/auth.api';
@@ -11,10 +11,14 @@ import forgotPasswordSearch from '../../assets/brand/forgot_password_search.png'
 
 import './style/auth.css';
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [message, setMessage] = useState('');
@@ -23,9 +27,17 @@ export default function ForgotPasswordPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (!identifier.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
       setMessageType('error');
-      setMessage('Vui lòng nhập email hoặc số điện thoại');
+      setMessage('Vui lòng nhập email');
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setMessageType('error');
+      setMessage('Email không hợp lệ');
       return;
     }
 
@@ -33,13 +45,13 @@ export default function ForgotPasswordPage() {
     setMessage('');
 
     try {
-      const data = await AuthApi.forgotPassword(identifier.trim());
+      const data = await AuthApi.forgotPassword(cleanEmail);
 
       navigate('/reset-password', {
         replace: true,
         state: {
-          identifier: identifier.trim(),
-          target: data.target ?? data.email ?? data.phone ?? identifier.trim(),
+          identifier: cleanEmail,
+          target: data.target ?? data.email ?? cleanEmail,
           expiresAt: data.expiresAt,
           devOtp: data.devOtp ?? data.otp,
         },
@@ -60,7 +72,7 @@ export default function ForgotPasswordPage() {
 
       <h1 className="auth-title auth-title-center">Quên mật khẩu</h1>
       <p className="auth-subtitle auth-subtitle-center">
-        Nhập email hoặc số điện thoại để tìm tài khoản của bạn
+        Nhập email của tài khoản để nhận mã đặt lại mật khẩu
       </p>
 
       <AuthMessage type={messageType} message={message} />
@@ -71,20 +83,21 @@ export default function ForgotPasswordPage() {
             <span className="auth-input-icon">✉️</span>
             <input
               className="auth-input auth-input-has-icon"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Email hoặc số điện thoại"
-              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Nhập email của bạn"
+              autoComplete="email"
             />
           </span>
         </label>
 
         <button className="auth-btn" disabled={loading}>
-          {loading ? 'Đang xử lý...' : 'Tiếp tục'}
+          {loading ? 'Đang gửi mã...' : 'Gửi mã đặt lại mật khẩu'}
         </button>
 
         <div className="auth-help-box">
-          🛡️ Chúng tôi cam kết bảo mật thông tin của bạn theo chính sách bảo mật.
+          🛡️ Mã đặt lại mật khẩu sẽ được gửi qua email. Vui lòng kiểm tra cả hộp thư spam
+          nếu chưa thấy email.
         </div>
       </form>
     </AuthCard>

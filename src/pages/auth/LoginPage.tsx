@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FormEvent } from "react";
+import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { AuthApi } from '../../api/auth.api';
@@ -23,7 +23,7 @@ function buildLoginPayload(identifier: string, password: string) {
   const value = identifier.trim();
 
   if (value.includes('@')) {
-    return { email: value, password };
+    return { email: value.toLowerCase(), password };
   }
 
   return { phone: value, password };
@@ -36,7 +36,6 @@ export default function LoginPage() {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(
@@ -51,7 +50,9 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (!identifier.trim()) {
+    const cleanIdentifier = identifier.trim();
+
+    if (!cleanIdentifier) {
       setMessageType('error');
       setMessage('Vui lòng nhập email hoặc số điện thoại');
       return;
@@ -67,13 +68,14 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      const data = await AuthApi.login(buildLoginPayload(identifier, password));
+      const data = await AuthApi.login(buildLoginPayload(cleanIdentifier, password));
 
+      // Phòng trường hợp sau này BE đổi về status 200 cho needRecover
       if (data.needRecover) {
         navigate('/auth/account/recover/request', {
           replace: true,
           state: {
-            identifier: data.identifier ?? identifier,
+            identifier: data.identifier ?? cleanIdentifier,
             via: data.via,
             needRecover: true,
           },
@@ -85,7 +87,7 @@ export default function LoginPage() {
         navigate('/verify-account', {
           replace: true,
           state: {
-            identifier,
+            identifier: cleanIdentifier,
             verify: data.verify,
             from: locationState?.from ?? '/home',
           },
@@ -94,7 +96,24 @@ export default function LoginPage() {
       }
 
       navigate(locationState?.from ?? '/home', { replace: true });
-    } catch (error) {
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const responseData = error?.response?.data?.data;
+
+      // BE đang trả 423 khi tài khoản bị soft-delete.
+      // Axios sẽ nhảy vào catch, nên phải bắt riêng tại đây.
+      if (status === 423) {
+        navigate('/auth/account/recover/request', {
+          replace: true,
+          state: {
+            identifier: responseData?.identifier ?? cleanIdentifier,
+            via: responseData?.via,
+            needRecover: true,
+          },
+        });
+        return;
+      }
+
       setMessageType('error');
       setMessage(getAuthErrorMessage(error, 'Đăng nhập thất bại'));
     } finally {
@@ -133,16 +152,7 @@ export default function LoginPage() {
               onChange={setPassword}
             />
 
-            <div className="auth-options">
-              <label className="auth-check">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />
-                <span>Ghi nhớ đăng nhập</span>
-              </label>
-
+            <div className="auth-options" style={{ justifyContent: 'flex-end' }}>
               <Link to="/forgot-password" className="auth-link">
                 Quên mật khẩu?
               </Link>
@@ -151,20 +161,6 @@ export default function LoginPage() {
             <button className="auth-btn" disabled={loading}>
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
-
-            <div className="auth-divider">Hoặc đăng nhập với</div>
-
-            <div className="auth-socials">
-              <button type="button" className="auth-social-btn">
-                🌈 Google
-              </button>
-              <button type="button" className="auth-social-btn">
-                🔵 Facebook
-              </button>
-              <button type="button" className="auth-social-btn">
-                 Apple
-              </button>
-            </div>
           </form>
 
           <div className="auth-footer">

@@ -11,19 +11,22 @@ import verifyEnvelope from '../../assets/brand/verify_envelope.png';
 
 import './style/auth.css';
 
+type VerifyInfo = {
+  required?: true;
+  via?: 'email' | 'phone';
+  target?: string;
+  expiresAt?: string;
+  sent?: boolean;
+  cooldownRemaining?: number;
+  devOtp?: string;
+  otp?: string;
+  isVerified?: boolean;
+};
+
 type VerifyState = {
   identifier?: string;
   from?: string;
-  verify?: {
-    required: true;
-    via: 'email' | 'phone';
-    target: string;
-    expiresAt: string;
-    sent: boolean;
-    cooldownRemaining?: number;
-    devOtp?: string;
-    otp?: string;
-  };
+  verify?: VerifyInfo;
 };
 
 function formatTime(totalSeconds: number) {
@@ -37,6 +40,40 @@ function getSecondsLeft(expiresAt?: string) {
   return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
 }
 
+function getVerifyMessage(info?: VerifyInfo | null) {
+  if (!info) return '';
+
+  if (info.isVerified) {
+    return 'Tài khoản của bạn đã được xác thực.';
+  }
+
+  if (info.sent === false && info.cooldownRemaining) {
+    return `Mã xác thực đã được tạo trước đó. Vui lòng đợi ${info.cooldownRemaining}s trước khi gửi lại, hoặc nhập mã hiện tại nếu bạn đã nhận được.`;
+  }
+
+  if (info.sent === false) {
+    if (info.via === 'phone') {
+      return 'Không gửi được mã qua SMS. Vui lòng ưu tiên dùng email để xác minh tài khoản hoặc thử lại sau.';
+    }
+
+    return 'Không gửi được mã xác thực. Vui lòng thử gửi lại sau.';
+  }
+
+  return 'Mã xác thực đã được gửi. Vui lòng nhập mã để hoàn tất xác minh.';
+}
+
+function getVerifyMessageType(info?: VerifyInfo | null): 'error' | 'success' | 'info' {
+  if (!info) return 'info';
+
+  if (info.isVerified) return 'success';
+
+  if (info.sent === false && !info.cooldownRemaining) {
+    return 'error';
+  }
+
+  return 'info';
+}
+
 export default function VerifyAccountPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,19 +82,21 @@ export default function VerifyAccountPage() {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
-  const [verifyInfo, setVerifyInfo] = useState(locationState?.verify ?? null);
+  const [verifyInfo, setVerifyInfo] = useState<VerifyInfo | null>(
+    locationState?.verify ?? null,
+  );
 
-  const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft(locationState?.verify?.expiresAt));
+  const [secondsLeft, setSecondsLeft] = useState(
+    getSecondsLeft(locationState?.verify?.expiresAt),
+  );
 
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
-  const [message, setMessage] = useState(
-    locationState?.verify
-      ? 'Mã xác thực đã được gửi. Vui lòng nhập mã để hoàn tất xác minh.'
-      : '',
+  const [message, setMessage] = useState(getVerifyMessage(locationState?.verify));
+  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>(
+    getVerifyMessageType(locationState?.verify),
   );
-  const [messageType, setMessageType] = useState<'error' | 'success' | 'info'>('info');
 
   const otp = useMemo(() => otpValues.join(''), [otpValues]);
   const devOtp = verifyInfo?.devOtp ?? verifyInfo?.otp;
@@ -81,15 +120,17 @@ export default function VerifyAccountPage() {
 
     AuthApi.requestVerify()
       .then((data) => {
-        setVerifyInfo(data as any);
-        setMessageType('info');
-        setMessage('Mã xác thực đã được gửi đến tài khoản của bạn.');
+        const info = data as VerifyInfo;
+
+        setVerifyInfo(info);
+        setMessageType(getVerifyMessageType(info));
+        setMessage(getVerifyMessage(info));
       })
       .catch((error) => {
         setMessageType('error');
         setMessage(getAuthErrorMessage(error, 'Không thể gửi mã xác thực'));
       });
-  }, []);
+  }, [locationState?.verify]);
 
   function handleOtpChange(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1);
@@ -144,11 +185,19 @@ export default function VerifyAccountPage() {
 
     try {
       const data = await AuthApi.requestVerify(verifyInfo?.via);
-      setVerifyInfo(data as any);
+      const info = data as VerifyInfo;
+
+      setVerifyInfo(info);
       setOtpValues(['', '', '', '', '', '']);
 
-      setMessageType('success');
-      setMessage('Đã gửi lại mã xác thực');
+      if (info.sent === false) {
+        setMessageType(getVerifyMessageType(info));
+        setMessage(getVerifyMessage(info));
+      } else {
+        setMessageType('success');
+        setMessage('Đã gửi lại mã xác thực');
+      }
+
       inputRefs.current[0]?.focus();
     } catch (error) {
       setMessageType('error');

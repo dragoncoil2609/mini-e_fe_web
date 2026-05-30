@@ -182,20 +182,6 @@ export default function RegisterPage() {
             <button className="auth-btn" disabled={loading}>
               {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </button>
-
-            <div className="auth-divider">Hoặc đăng ký với</div>
-
-            <div className="auth-socials">
-              <button type="button" className="auth-social-btn">
-                🌈 Google
-              </button>
-              <button type="button" className="auth-social-btn">
-                🔵 Facebook
-              </button>
-              <button type="button" className="auth-social-btn">
-                 Apple
-              </button>
-            </div>
           </form>
 
           <div className="auth-footer">

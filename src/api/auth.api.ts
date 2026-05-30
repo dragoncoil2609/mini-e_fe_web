@@ -1,4 +1,3 @@
-// src/api/auth.api.ts
 import { http } from './http';
 import type {
   ApiResponse,
@@ -13,6 +12,7 @@ import type {
 import { setAccessToken, clearAccessToken } from './authToken';
 
 // ====== PAYLOAD TYPES ======
+
 export interface RegisterPayload {
   name: string;
   email?: string;
@@ -43,6 +43,7 @@ export interface RecoverConfirmPayload {
 }
 
 // ====== API FUNCTIONS ======
+
 export const AuthApi = {
   async register(payload: RegisterPayload) {
     const res = await http.post<ApiResponse<any>>('/auth/register', payload);
@@ -53,8 +54,8 @@ export const AuthApi = {
     const res = await http.post<ApiResponse<LoginResponse>>('/auth/login', payload);
     const data = res.data.data;
 
-    // Nếu login thành công hoặc login nhưng chưa verify,
-    // BE vẫn có thể trả access_token tạm để gọi /request-verify và /verify-account.
+    // Login thành công hoặc login chưa verify đều có thể có access_token.
+    // access_token chưa verify dùng để gọi /auth/request-verify và /auth/verify-account.
     if (data.access_token) {
       setAccessToken(data.access_token);
     }
@@ -80,9 +81,11 @@ export const AuthApi = {
   },
 
   async forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+    const cleanEmail = email.trim().toLowerCase();
+
     const res = await http.post<ApiResponse<ForgotPasswordResponse>>(
       '/auth/forgot-password',
-      { email },
+      { email: cleanEmail },
     );
 
     return res.data.data;
@@ -91,7 +94,11 @@ export const AuthApi = {
   async resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResponse> {
     const res = await http.post<ApiResponse<ResetPasswordResponse>>(
       '/auth/reset-password',
-      payload,
+      {
+        ...payload,
+        email: payload.email.trim().toLowerCase(),
+        otp: payload.otp.trim(),
+      },
     );
 
     return res.data.data;
@@ -109,7 +116,7 @@ export const AuthApi = {
   async verifyAccount(otp: string): Promise<VerifyAccountResponse> {
     const res = await http.post<ApiResponse<VerifyAccountResponse>>(
       '/auth/verify-account',
-      { otp },
+      { otp: otp.trim() },
     );
 
     const data = res.data.data;
@@ -123,13 +130,15 @@ export const AuthApi = {
   },
 
   async recoverRequest(identifier: string): Promise<any> {
-    const payload = identifier.includes('@')
-      ? { email: identifier }
-      : { phone: identifier };
+    const cleanIdentifier = identifier.trim();
 
     const res = await http.post<ApiResponse<any>>(
       '/auth/account/recover/request',
-      payload,
+      {
+        // BE hiện tại nhận field email nhưng service dùng nó như identifier:
+        // có thể là email hoặc số điện thoại.
+        email: cleanIdentifier,
+      },
     );
 
     return res.data.data;
@@ -138,7 +147,11 @@ export const AuthApi = {
   async recoverConfirm(payload: RecoverConfirmPayload): Promise<any> {
     const res = await http.post<ApiResponse<any>>(
       '/auth/account/recover/confirm',
-      payload,
+      {
+        ...payload,
+        email: payload.email.trim(),
+        otp: payload.otp.trim(),
+      },
     );
 
     return res.data.data;
