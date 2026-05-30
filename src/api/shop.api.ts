@@ -20,7 +20,7 @@ export interface RegisterShopPayload {
 }
 
 export async function registerShop(
-  payload: RegisterShopPayload,
+  payload: RegisterShopPayload | FormData,
 ): Promise<ApiResponse<Shop>> {
   const res = await http.post<ApiResponse<Shop>>('/shops/register', payload);
   return res.data;
@@ -44,7 +44,7 @@ export async function checkShopName(
   return res.data;
 }
 
-// 3) Tìm kiếm / liệt kê shop
+// 3) Tìm kiếm / liệt kê shop public
 export interface SearchShopsParams {
   q?: string;
   status?: ShopStatus;
@@ -62,13 +62,40 @@ export async function searchShops(
   return res.data;
 }
 
-// 4) Lấy shop của tài khoản hiện tại
+// 4) Admin lấy tất cả shop
+export async function getAdminShops(
+  params: SearchShopsParams = {},
+): Promise<ApiResponse<PaginatedResult<Shop>>> {
+  const res = await http.get<ApiResponse<PaginatedResult<Shop>>>(
+    '/shops/admin/all',
+    {
+      params,
+    },
+  );
+
+  return res.data;
+}
+
+// 5) Admin lấy thống kê shop từ BE
+export interface AdminShopStats {
+  total: number;
+  pending: number;
+  active: number;
+  suspended: number;
+}
+
+export async function getAdminShopStats(): Promise<ApiResponse<AdminShopStats>> {
+  const res = await http.get<ApiResponse<AdminShopStats>>('/shops/admin/stats');
+  return res.data;
+}
+
+// 6) Lấy shop của tài khoản hiện tại
 export async function getMyShop(): Promise<ApiResponse<Shop>> {
   const res = await http.get<ApiResponse<Shop>>('/shops/me');
   return res.data;
 }
 
-// 5) Cập nhật shop
+// 7) Cập nhật shop
 export interface UpdateShopPayload {
   name?: string;
   email?: string;
@@ -79,57 +106,51 @@ export interface UpdateShopPayload {
   shopPlaceId?: string;
   shopPhone?: string;
   status?: ShopStatus;
+  logoUrl?: string;
+  coverUrl?: string;
 }
 
 export async function updateShop(
   id: number,
-  payload: UpdateShopPayload,
+  payload: UpdateShopPayload | FormData,
 ): Promise<ApiResponse<Shop>> {
   const res = await http.patch<ApiResponse<Shop>>(`/shops/${id}`, payload);
   return res.data;
 }
 
-// 6) Xóa shop
+// 8) Xóa shop
 export async function deleteShop(id: number): Promise<ApiResponse<null>> {
   const res = await http.delete<ApiResponse<null>>(`/shops/${id}`);
   return res.data;
 }
 
-// 7) Upload logo shop
+// 9) Upload logo shop
 export async function uploadShopLogo(file: File): Promise<ApiResponse<Shop>> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await http.patch<ApiResponse<Shop>>('/shops/me/logo', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const res = await http.patch<ApiResponse<Shop>>('/shops/me/logo', formData);
 
   return res.data;
 }
 
-// 8) Upload cover shop
+// 10) Upload cover shop
 export async function uploadShopCover(file: File): Promise<ApiResponse<Shop>> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await http.patch<ApiResponse<Shop>>('/shops/me/cover', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const res = await http.patch<ApiResponse<Shop>>('/shops/me/cover', formData);
 
   return res.data;
 }
 
-// 9) Lấy chi tiết shop public
+// 11) Lấy chi tiết shop public
 export async function getShopDetail(id: number): Promise<ApiResponse<Shop>> {
   const res = await http.get<ApiResponse<Shop>>(`/shops/${id}`);
   return res.data;
 }
 
-// 10) Lấy danh sách đơn hàng của shop
+// 12) Lấy danh sách đơn hàng của shop
 export type ShopOrderRange = '1' | '7' | '30' | 'all';
 
 export interface MyShopOrdersParams {
@@ -151,7 +172,7 @@ export async function getMyShopOrders(
   return res.data;
 }
 
-// 11) Lấy chi tiết 1 đơn hàng của shop
+// 13) Lấy chi tiết 1 đơn hàng của shop
 export async function getMyShopOrderDetail(
   id: string,
 ): Promise<ApiResponse<any>> {
@@ -159,7 +180,7 @@ export async function getMyShopOrderDetail(
   return res.data;
 }
 
-// 12) Shop cập nhật trạng thái giao hàng
+// 14) Shop cập nhật trạng thái giao hàng
 export async function updateMyShopOrderShippingStatus(
   id: string,
   shippingStatus: string,
@@ -174,7 +195,7 @@ export async function updateMyShopOrderShippingStatus(
   return res.data;
 }
 
-// 13) Lấy danh sách review theo shop
+// 15) Lấy danh sách review theo shop
 export interface ShopReviewsParams {
   page?: number;
   limit?: number;
@@ -192,14 +213,6 @@ export interface ShopReviewsResult extends PaginatedResult<ProductReview> {
   summary?: ShopReviewsSummary;
 }
 
-/**
- * API chính đang dùng:
- * GET /reviews/shop/:shopId
- *
- * Nếu BE của bạn đang là:
- * GET /reviews/shop/me
- * thì hàm này có fallback tự thử route /me.
- */
 export async function getShopReviewsByShopId(
   shopId: number,
   params: ShopReviewsParams = {},

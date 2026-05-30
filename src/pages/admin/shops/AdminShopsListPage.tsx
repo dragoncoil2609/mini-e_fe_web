@@ -1,7 +1,12 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { searchShops, updateShop } from '../../../api/shop.api';
+import {
+  getAdminShopStats,
+  getAdminShops,
+  updateShop,
+  type AdminShopStats,
+} from '../../../api/shop.api';
 
 import './style/AdminShopsListPage.css';
 
@@ -37,6 +42,13 @@ type AdminShop = {
 };
 
 const SHOP_STATUSES: ShopStatusValue[] = ['PENDING', 'ACTIVE', 'SUSPENDED'];
+
+const emptyShopStats: AdminShopStats = {
+  total: 0,
+  pending: 0,
+  active: 0,
+  suspended: 0,
+};
 
 function unwrapPaginated<T>(response: any) {
   const data = response?.data?.data ?? response?.data ?? response;
@@ -87,6 +99,14 @@ function getStatusClass(status?: string) {
   return 'admin-shop-status-pending';
 }
 
+function normalizeStatus(status?: string): ShopStatusValue {
+  if (SHOP_STATUSES.includes(status as ShopStatusValue)) {
+    return status as ShopStatusValue;
+  }
+
+  return 'PENDING';
+}
+
 function getProductCount(shop: AdminShop) {
   return shop.productCount ?? shop.stats?.productCount ?? 0;
 }
@@ -101,7 +121,10 @@ function getTotalRevenue(shop: AdminShop) {
 
 export default function AdminShopsListPage() {
   const [shops, setShops] = useState<AdminShop[]>([]);
-  const [draftStatuses, setDraftStatuses] = useState<Record<number, ShopStatusValue>>({});
+  const [shopStats, setShopStats] = useState<AdminShopStats>(emptyShopStats);
+  const [draftStatuses, setDraftStatuses] = useState<
+    Record<number, ShopStatusValue>
+  >({});
 
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'' | ShopStatusValue>('');
@@ -124,33 +147,41 @@ export default function AdminShopsListPage() {
     setMessage('');
 
     try {
-      const response = await searchShops({
-        q: q.trim() || undefined,
-        status: status || undefined,
-        page: nextPage,
-        limit,
-      });
+      const [shopsResponse, statsResponse] = await Promise.all([
+        getAdminShops({
+          q: q.trim() || undefined,
+          status: status || undefined,
+          page: nextPage,
+          limit,
+        }),
+        getAdminShopStats(),
+      ]);
 
-      const data = unwrapPaginated<AdminShop>(response);
+      const data = unwrapPaginated<AdminShop>(shopsResponse);
+      const statsData = unwrapData<AdminShopStats>(statsResponse);
 
       setShops(data.items);
       setTotal(data.total);
       setPage(data.page);
 
+      setShopStats({
+        total: Number(statsData?.total ?? 0),
+        pending: Number(statsData?.pending ?? 0),
+        active: Number(statsData?.active ?? 0),
+        suspended: Number(statsData?.suspended ?? 0),
+      });
+
       const nextDrafts: Record<number, ShopStatusValue> = {};
 
       data.items.forEach((shop) => {
-        const currentStatus = SHOP_STATUSES.includes(shop.status as ShopStatusValue)
-          ? (shop.status as ShopStatusValue)
-          : 'PENDING';
-
-        nextDrafts[shop.id] = currentStatus;
+        nextDrafts[shop.id] = normalizeStatus(shop.status);
       });
 
       setDraftStatuses(nextDrafts);
     } catch (err: any) {
       setShops([]);
       setTotal(0);
+      setShopStats(emptyShopStats);
       setError(getApiMessage(err));
     } finally {
       setLoading(false);
@@ -167,11 +198,30 @@ export default function AdminShopsListPage() {
     void loadShops(1);
   };
 
-  const handleChangeDraftStatus = (shopId: number, nextStatus: ShopStatusValue) => {
+  const handleChangeDraftStatus = (
+    shopId: number,
+    nextStatus: ShopStatusValue,
+  ) => {
     setDraftStatuses((prev) => ({
       ...prev,
       [shopId]: nextStatus,
     }));
+  };
+
+  const refreshStatsOnly = async () => {
+    try {
+      const statsResponse = await getAdminShopStats();
+      const statsData = unwrapData<AdminShopStats>(statsResponse);
+
+      setShopStats({
+        total: Number(statsData?.total ?? 0),
+        pending: Number(statsData?.pending ?? 0),
+        active: Number(statsData?.active ?? 0),
+        suspended: Number(statsData?.suspended ?? 0),
+      });
+    } catch {
+      // Không chặn thao tác chính nếu thống kê lỗi.
+    }
   };
 
   const handleSaveStatus = async (shop: AdminShop) => {
@@ -212,6 +262,8 @@ export default function AdminShopsListPage() {
         [shop.id]: nextStatus,
       }));
 
+      await refreshStatsOnly();
+
       setMessage(`Đã cập nhật trạng thái shop "${shop.name}".`);
     } catch (err: any) {
       setError(getApiMessage(err));
@@ -226,7 +278,10 @@ export default function AdminShopsListPage() {
         <div>
           <p className="admin-shops-eyebrow">Admin / Shops</p>
           <h1>Quản lý shop</h1>
-          <p>Danh sách shop đăng ký bán hàng. Admin có thể duyệt hoặc tạm khóa shop.</p>
+          <p>
+            Danh sách shop đăng ký bán hàng. Admin có thể duyệt hoặc tạm khóa
+            shop.
+          </p>
         </div>
 
         <button
@@ -248,7 +303,9 @@ export default function AdminShopsListPage() {
 
         <select
           value={status}
-          onChange={(event) => setStatus(event.target.value as '' | ShopStatusValue)}
+          onChange={(event) =>
+            setStatus(event.target.value as '' | ShopStatusValue)
+          }
         >
           <option value="">Tất cả trạng thái</option>
           <option value="PENDING">Chờ duyệt</option>
@@ -265,22 +322,22 @@ export default function AdminShopsListPage() {
       <div className="admin-shops-summary">
         <div>
           <span>Tổng shop</span>
-          <strong>{total}</strong>
+          <strong>{shopStats.total}</strong>
         </div>
 
         <div>
           <span>Chờ duyệt</span>
-          <strong>{shops.filter((shop) => shop.status === 'PENDING').length}</strong>
+          <strong>{shopStats.pending}</strong>
         </div>
 
         <div>
           <span>Đang hoạt động</span>
-          <strong>{shops.filter((shop) => shop.status === 'ACTIVE').length}</strong>
+          <strong>{shopStats.active}</strong>
         </div>
 
         <div>
           <span>Tạm khóa</span>
-          <strong>{shops.filter((shop) => shop.status === 'SUSPENDED').length}</strong>
+          <strong>{shopStats.suspended}</strong>
         </div>
       </div>
 
@@ -307,7 +364,8 @@ export default function AdminShopsListPage() {
               <tbody>
                 {shops.map((shop) => {
                   const draftStatus = draftStatuses[shop.id] || 'PENDING';
-                  const isChanged = draftStatus !== shop.status;
+                  const currentStatus = normalizeStatus(shop.status);
+                  const isChanged = draftStatus !== currentStatus;
 
                   return (
                     <tr key={shop.id}>
@@ -317,7 +375,9 @@ export default function AdminShopsListPage() {
                             {shop.logoUrl ? (
                               <img src={shop.logoUrl} alt={shop.name} />
                             ) : (
-                              <span>{shop.name?.charAt(0)?.toUpperCase() || 'S'}</span>
+                              <span>
+                                {shop.name?.charAt(0)?.toUpperCase() || 'S'}
+                              </span>
                             )}
                           </div>
 
@@ -346,7 +406,11 @@ export default function AdminShopsListPage() {
                       </td>
 
                       <td>
-                        <span className={`admin-shop-status ${getStatusClass(shop.status)}`}>
+                        <span
+                          className={`admin-shop-status ${getStatusClass(
+                            shop.status,
+                          )}`}
+                        >
                           {getStatusLabel(shop.status)}
                         </span>
                       </td>

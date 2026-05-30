@@ -8,28 +8,56 @@ import {
 } from 'react-icons/fi';
 
 import { getUsers } from '../../api/users.api';
+import {
+  getAdminShopStats,
+  type AdminShopStats,
+} from '../../api/shop.api';
 import type { User } from '../../api/types';
 
 import './HomePageAdmin.css';
 
+const emptyShopStats: AdminShopStats = {
+  total: 0,
+  pending: 0,
+  active: 0,
+  suspended: 0,
+};
+
+function unwrapData<T>(response: any): T {
+  return response?.data?.data ?? response?.data ?? response;
+}
+
 export default function HomePageAdmin() {
   const [users, setUsers] = useState<User[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [shopStats, setShopStats] = useState<AdminShopStats>(emptyShopStats);
   const [loading, setLoading] = useState(true);
 
   async function fetchOverview() {
     try {
       setLoading(true);
 
-      const data = await getUsers({
-        page: 1,
-        limit: 100,
-        sortBy: 'createdAt',
-        sortOrder: 'DESC',
-      });
+      const [usersData, shopsStatsResponse] = await Promise.all([
+        getUsers({
+          page: 1,
+          limit: 100,
+          sortBy: 'createdAt',
+          sortOrder: 'DESC',
+        }),
+        getAdminShopStats(),
+      ]);
 
-      setUsers(data.items);
-      setTotalUsers(data.meta.total);
+      const statsData = unwrapData<AdminShopStats>(shopsStatsResponse);
+
+      setUsers(usersData.items);
+      setTotalUsers(usersData.meta.total);
+
+      setShopStats({
+        total: Number(statsData?.total ?? 0),
+        pending: Number(statsData?.pending ?? 0),
+        active: Number(statsData?.active ?? 0),
+        suspended: Number(statsData?.suspended ?? 0),
+      });
     } finally {
       setLoading(false);
     }
@@ -39,7 +67,7 @@ export default function HomePageAdmin() {
     void fetchOverview();
   }, []);
 
-  const stats = useMemo(() => {
+  const userStats = useMemo(() => {
     return {
       total: totalUsers,
       users: users.filter((u) => u.role === 'USER').length,
@@ -58,48 +86,92 @@ export default function HomePageAdmin() {
         </div>
       </div>
 
-      <div className="admin-home-stats">
-        <AdminHomeStatCard
-          icon={<FiUsers />}
-          label="Tổng người dùng"
-          value={stats.total}
-          loading={loading}
-        />
+      <section className="admin-home-section">
+        <div className="admin-home-section-title">
+          <h2>Người dùng</h2>
+          <p>Thống kê tài khoản trong hệ thống</p>
+        </div>
 
-        <AdminHomeStatCard
-          icon={<FiUser />}
-          label="Người dùng"
-          value={stats.users}
-          loading={loading}
-        />
+        <div className="admin-home-stats">
+          <AdminHomeStatCard
+            icon={<FiUsers />}
+            label="Tổng người dùng"
+            value={userStats.total}
+            loading={loading}
+          />
 
-        <AdminHomeStatCard
-          icon={<FiShoppingBag />}
-          label="Người bán"
-          value={stats.sellers}
-          loading={loading}
-        />
+          <AdminHomeStatCard
+            icon={<FiUser />}
+            label="Người dùng"
+            value={userStats.users}
+            loading={loading}
+          />
 
-        <AdminHomeStatCard
-          icon={<FiShield />}
-          label="Quản trị viên"
-          value={stats.admins}
-          loading={loading}
-        />
+          <AdminHomeStatCard
+            icon={<FiShoppingBag />}
+            label="Người bán"
+            value={userStats.sellers}
+            loading={loading}
+          />
 
-        <AdminHomeStatCard
-          icon={<FiLock />}
-          label="Chưa xác thực"
-          value={stats.unverified}
-          loading={loading}
-        />
-      </div>
+          <AdminHomeStatCard
+            icon={<FiShield />}
+            label="Quản trị viên"
+            value={userStats.admins}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiLock />}
+            label="Chưa xác thực"
+            value={userStats.unverified}
+            loading={loading}
+          />
+        </div>
+      </section>
+
+      <section className="admin-home-section">
+        <div className="admin-home-section-title">
+          <h2>Shop</h2>
+          <p>Thống kê trạng thái shop đăng ký bán hàng</p>
+        </div>
+
+        <div className="admin-home-stats admin-home-shop-stats">
+          <AdminHomeStatCard
+            icon={<FiShoppingBag />}
+            label="Tổng shop"
+            value={shopStats.total}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiLock />}
+            label="Chờ duyệt"
+            value={shopStats.pending}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiShield />}
+            label="Đang hoạt động"
+            value={shopStats.active}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiLock />}
+            label="Tạm khóa"
+            value={shopStats.suspended}
+            loading={loading}
+          />
+        </div>
+      </section>
 
       <section className="admin-home-empty">
         <h2>Trang tổng quan đang được xây dựng</h2>
         <p>
-          Hiện tại mới thống kê người dùng. Sau này có API shop, sản phẩm, đơn hàng
-          thì gắn thêm vào đây.
+          Hiện tại đã có thống kê người dùng và shop. Sau này có API sản phẩm,
+          đơn hàng thì gắn thêm vào đây.
         </p>
       </section>
     </div>
