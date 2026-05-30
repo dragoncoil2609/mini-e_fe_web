@@ -29,6 +29,7 @@ import OrderDetailPage from '../pages/orders/OrderDetailPage';
 import PaymentResultPage from '../pages/payments/PaymentResultPage';
 
 import ProductsListPage from '../pages/products/ProductsListPage';
+import ProductCategoryPage from '../pages/products/ProductCategoryPage';
 import ProductDetailPage from '../pages/products/ProductDetailPage';
 import ProductCreatePage from '../pages/products/ProductCreatePage';
 import ProductEditPage from '../pages/products/ProductEditPage';
@@ -48,6 +49,8 @@ import AdminUsersPage from '../pages/admin/users/AdminUsersPage';
 import DeletedUsersPage from '../pages/admin/users/DeletedUsersPage';
 import AdminCategoriesPage from '../pages/admin/categories/AdminCategoriesPage';
 import AdminShopsListPage from '../pages/admin/shops/AdminShopsListPage';
+import AdminProductsPage from '../pages/admin/products/AdminProductsPage';
+import AdminProductDetailPage from '../pages/admin/products/AdminProductDetailPage';
 
 function ProductEditAlias() {
   const { id } = useParams();
@@ -77,9 +80,12 @@ function AdminGate() {
         setAllowed(me.role === 'ADMIN');
       } catch {
         if (!mounted) return;
+
         setAllowed(false);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
@@ -115,8 +121,14 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verify-account" element={<VerifyAccountPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/auth/account/recover/request" element={<RecoverRequestPage />} />
-      <Route path="/auth/account/recover/confirm" element={<RecoverConfirmPage />} />
+      <Route
+        path="/auth/account/recover/request"
+        element={<RecoverRequestPage />}
+      />
+      <Route
+        path="/auth/account/recover/confirm"
+        element={<RecoverConfirmPage />}
+      />
 
       <Route element={<MainLayout />}>
         <Route path="/home" element={<HomePage />} />
@@ -124,13 +136,19 @@ export default function AppRoutes() {
         <Route path="/me" element={<MeProfilePage />} />
         <Route path="/me/profile" element={<MeProfilePage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
-        <Route path="/me/change-password" element={<Navigate to="/change-password" replace />} />
+        <Route
+          path="/me/change-password"
+          element={<Navigate to="/change-password" replace />}
+        />
         <Route path="/addresses" element={<AddressesPage />} />
 
         <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/account" element={<Navigate to="/me" replace />} />
         <Route path="/address" element={<Navigate to="/addresses" replace />} />
-        <Route path="/my-addresses" element={<Navigate to="/addresses" replace />} />
+        <Route
+          path="/my-addresses"
+          element={<Navigate to="/addresses" replace />}
+        />
 
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
@@ -151,15 +169,25 @@ export default function AppRoutes() {
         <Route path="/shops/me/settings" element={<ShopSettingsPage />} />
         <Route path="/shops/me/products/create" element={<ProductCreatePage />} />
         <Route path="/shops/me/products/:id/edit" element={<ProductEditPage />} />
-        <Route path="/shops/me/products/:id/variants" element={<ProductVariantsPage />} />
+        <Route
+          path="/shops/me/products/:id/variants"
+          element={<ProductVariantsPage />}
+        />
 
         <Route path="/shops/:id" element={<ShopDetailsPage />} />
 
         <Route path="/products" element={<ProductsListPage />} />
-        <Route path="/products/:id" element={<ProductDetailPage />} />
-        <Route path="/products/create" element={<Navigate to="/shops/me/products/create" replace />} />
+        <Route
+          path="/products/category/:categoryId"
+          element={<ProductCategoryPage />}
+        />
+        <Route
+          path="/products/create"
+          element={<Navigate to="/shops/me/products/create" replace />}
+        />
         <Route path="/products/:id/edit" element={<ProductEditAlias />} />
         <Route path="/products/:id/variants" element={<ProductVariantsAlias />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
       </Route>
 
       <Route path="/admin" element={<AdminGate />}>
@@ -168,6 +196,8 @@ export default function AppRoutes() {
         <Route path="users/deleted" element={<DeletedUsersPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="shops" element={<AdminShopsListPage />} />
+        <Route path="products" element={<AdminProductsPage />} />
+        <Route path="products/:id" element={<AdminProductDetailPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/home" replace />} />

@@ -12,33 +12,58 @@ export type RecommendedProduct = {
   id: number;
   shopId?: number | null;
   categoryId?: number | null;
+
   title: string;
   name?: string;
   slug?: string;
+
   description?: string | null;
+
   price: number | string;
   compareAtPrice?: number | string | null;
   currency?: string;
+
   stock?: number;
   sold?: number;
   status?: string;
+
   createdAt?: string;
   updatedAt?: string;
+
   shopName?: string | null;
   categoryName?: string | null;
-  recommendationScore?: number;
+
+  productScore?: number | string;
+  categoryScore?: number | string;
+  rawTagScore?: number | string;
+  tagScore?: number | string;
+  trendingBonus?: number | string;
+  trendingRank?: number | string | null;
+  trendingScore7d?: number | string;
+  recommendationScore?: number | string;
+
   imageUrl?: string | null;
   mainImageUrl?: string | null;
   thumbnail?: string | null;
+  thumbnailUrl?: string | null;
+
   isFavorite?: boolean | 0 | 1 | '0' | '1';
+
   [key: string]: any;
 };
 
 export type RecommendationResponse = {
   page: number;
   limit: number;
-  source: 'personalized' | 'fallback';
+
+  categoryId?: number | null;
+  categoryIds?: number[];
+
+  source: 'personalized' | 'fallback' | 'category_not_found' | string;
   message?: string;
+
+  formula?: Record<string, any>;
+
   items: RecommendedProduct[];
 };
 
@@ -48,10 +73,15 @@ export type FavoriteProductsResponse = {
   items: RecommendedProduct[];
 };
 
-export async function getRecommendedProducts(params?: {
+export type GetRecommendedProductsParams = {
   page?: number;
   limit?: number;
-}) {
+  categoryId?: number;
+};
+
+export async function getRecommendedProducts(
+  params?: GetRecommendedProductsParams,
+) {
   const res = await http.get<RecommendationResponse>(
     '/recommendations/products',
     { params },

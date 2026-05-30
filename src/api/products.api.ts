@@ -10,6 +10,7 @@ import type {
   UpdateProductDto,
   UpdateVariantDto,
   ProductSort,
+  ProductStatus,
 } from './types';
 
 function isNotFoundError(error: any) {
@@ -33,6 +34,31 @@ export async function getPublicProducts(params?: {
   const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
     '/products',
     { params },
+  );
+
+  return res.data;
+}
+
+// Trang category gọi API thường.
+// BE đã xử lý category cha lấy cả category con/cháu.
+export async function getProductsByCategory(
+  categoryId: number | string,
+  params?: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    status?: string;
+    sort?: ProductSort;
+  },
+): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
+  const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
+    '/products',
+    {
+      params: {
+        ...params,
+        categoryId,
+      },
+    },
   );
 
   return res.data;
@@ -117,8 +143,16 @@ export async function updateProduct(
   return res.data;
 }
 
+// Admin chỉ đổi trạng thái sản phẩm.
+export async function updateProductStatus(
+  id: number | string,
+  status: ProductStatus,
+): Promise<ApiResponse<ProductDetail>> {
+  return updateProduct(id, { status });
+}
+
 // DELETE /products/:id
-// BE xử lý soft delete: deleted_at = NOW()
+// BE mới đã xử lý xóa thật product + xóa cart item.
 export async function deleteProduct(
   id: number | string,
 ): Promise<ApiResponse<null>> {
@@ -131,7 +165,8 @@ export async function deleteProduct(
  */
 
 // GET /products/:id/manage
-// Nếu BE chưa có route manage thì fallback về public detail.
+// Route này nên có ở BE để admin xem được cả product LOCKED.
+// Nếu BE chưa có thì fallback public detail.
 export async function getManageProductDetail(
   id: number | string,
 ): Promise<ApiResponse<ProductDetail>> {
@@ -150,8 +185,6 @@ export async function getManageProductDetail(
   }
 }
 
-// Alias dùng cho ProductEditPage.
-// Ưu tiên route private nếu sau này BE có, không thì dùng public detail.
 export async function getProductDetail(
   id: number | string,
 ): Promise<ApiResponse<ProductDetail>> {
@@ -159,7 +192,6 @@ export async function getProductDetail(
 }
 
 // GET /products/my-shop
-// Fallback /products/me nếu BE cũ đang dùng route đó.
 export async function getMyProducts(params?: {
   page?: number;
   limit?: number;
@@ -188,9 +220,7 @@ export async function getMyProducts(params?: {
   }
 }
 
-// Admin xem toàn bộ sản phẩm.
-// BE mới: GET /products/admin/all
-// Fallback: /admin/products nếu FE/BE cũ còn dùng.
+// ADMIN: GET /products/admin/all
 export async function getAdminProducts(params?: {
   page?: number;
   limit?: number;
@@ -200,40 +230,20 @@ export async function getAdminProducts(params?: {
   shopId?: number;
   sort?: ProductSort;
 }): Promise<ApiResponse<PaginatedResult<ProductListItem>>> {
-  try {
-    const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
-      '/products/admin/all',
-      { params },
-    );
+  const res = await http.get<ApiResponse<PaginatedResult<ProductListItem>>>(
+    '/products/admin/all',
+    { params },
+  );
 
-    return res.data;
-  } catch (error) {
-    if (isNotFoundError(error)) {
-      try {
-        const fallback = await http.get<
-          ApiResponse<PaginatedResult<ProductListItem>>
-        >('/admin/products', { params });
+  return res.data;
+}
 
-        return fallback.data;
-      } catch (fallbackError) {
-        if (isNotFoundError(fallbackError)) {
-          return getPublicProducts({
-            page: params?.page,
-            limit: params?.limit,
-            q: params?.q,
-            categoryId: params?.categoryId,
-            shopId: params?.shopId,
-            status: params?.status,
-            sort: params?.sort,
-          });
-        }
-
-        throw fallbackError;
-      }
-    }
-
-    throw error;
-  }
+// ADMIN detail.
+// Ưu tiên /products/:id/manage để xem cả LOCKED.
+export async function getAdminProductDetail(
+  id: number | string,
+): Promise<ApiResponse<ProductDetail>> {
+  return getManageProductDetail(id);
 }
 
 /**

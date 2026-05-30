@@ -4,8 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { getProductDetail, updateProduct } from '../../api/products.api';
 import {
-  getPublicCategoryTree,
-  type Category,
+  getSellerCategoryOptions,
+  type SellerCategoryOption,
 } from '../../api/categories.api';
 
 import './style/ProductEditPage.css';
@@ -26,8 +26,6 @@ type CategorySelectOption = {
   id: number;
   name: string;
   label: string;
-  depth: number;
-  hasChildren: boolean;
 };
 
 function unwrapApiData<T>(response: any): T {
@@ -54,34 +52,6 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '');
 }
 
-function flattenCategoryTree(
-  categories: Category[],
-  depth = 0,
-): CategorySelectOption[] {
-  const result: CategorySelectOption[] = [];
-
-  for (const category of categories) {
-    const children = category.children ?? [];
-    const hasChildren = children.length > 0;
-
-    const prefix = depth === 0 ? '' : `${'— '.repeat(depth)}`;
-
-    result.push({
-      id: category.id,
-      name: category.name,
-      label: `${prefix}${category.name}${depth === 0 ? ' (Danh mục cha)' : ''}`,
-      depth,
-      hasChildren,
-    });
-
-    if (hasChildren) {
-      result.push(...flattenCategoryTree(children, depth + 1));
-    }
-  }
-
-  return result;
-}
-
 export default function ProductEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -95,7 +65,7 @@ export default function ProductEditPage() {
   const [categoryId, setCategoryId] = useState('');
   const [status, setStatus] = useState('ACTIVE');
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<SellerCategoryOption[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
 
@@ -107,8 +77,12 @@ export default function ProductEditPage() {
   const isLocked = status === 'LOCKED';
   const isDeleted = Boolean(product?.deletedAt);
 
-  const categoryOptions = useMemo(() => {
-    return flattenCategoryTree(categories);
+  const categoryOptions = useMemo<CategorySelectOption[]>(() => {
+    return categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      label: category.fullName || category.name,
+    }));
   }, [categories]);
 
   async function loadProduct() {
@@ -144,7 +118,7 @@ export default function ProductEditPage() {
       setCategoryLoading(true);
       setCategoryError('');
 
-      const response = await getPublicCategoryTree();
+      const response = await getSellerCategoryOptions();
 
       setCategories(response.data ?? []);
     } catch (err: any) {
@@ -340,11 +314,7 @@ export default function ProductEditPage() {
                       </option>
 
                       {categoryOptions.map((category) => (
-                        <option
-                          key={category.id}
-                          value={category.id}
-                          disabled={category.hasChildren}
-                        >
+                        <option key={category.id} value={category.id}>
                           {category.label}
                         </option>
                       ))}

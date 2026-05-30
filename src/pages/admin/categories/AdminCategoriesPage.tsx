@@ -1,4 +1,10 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import './AdminCategoriesPage.css';
 
 import {
@@ -9,6 +15,8 @@ import {
   type Category,
   type CategoryFormPayload,
 } from '../../../api/categories.api';
+
+type ModalMode = 'create' | 'edit' | null;
 
 type CategoryFormState = {
   name: string;
@@ -63,9 +71,23 @@ function normalizeSlug(value: string) {
     .replace(/^-+|-+$/g, '');
 }
 
+function unwrapAdminCategories(responseData: any): Category[] {
+  if (Array.isArray(responseData)) {
+    return responseData;
+  }
+
+  if (Array.isArray(responseData?.items)) {
+    return responseData.items;
+  }
+
+  return [];
+}
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<CategoryFormState>(emptyForm);
+
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [keyword, setKeyword] = useState('');
@@ -74,6 +96,8 @@ export default function AdminCategoriesPage() {
 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const isEditMode = modalMode === 'edit';
 
   const parentOptions = useMemo(() => {
     return categories.filter((category) => category.id !== editingId);
@@ -106,7 +130,7 @@ export default function AdminCategoriesPage() {
   }, [categories]);
 
   useEffect(() => {
-    loadCategories();
+    void loadCategories();
   }, []);
 
   async function loadCategories() {
@@ -114,8 +138,14 @@ export default function AdminCategoriesPage() {
       setLoading(true);
       setError('');
 
-      const res = await getAdminCategories();
-      setCategories(res.data ?? []);
+      const res = await getAdminCategories({
+        page: 1,
+        limit: 100,
+        sortBy: 'sortOrder',
+        sortOrder: 'ASC',
+      });
+
+      setCategories(unwrapAdminCategories(res.data));
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -137,8 +167,7 @@ export default function AdminCategoriesPage() {
     setForm((prev) => ({
       ...prev,
       name: value,
-      // Nếu đang tạo mới và slug đang rỗng thì tự gợi ý slug.
-      slug: editingId ? prev.slug : normalizeSlug(value),
+      slug: modalMode === 'create' ? normalizeSlug(value) : prev.slug,
     }));
   }
 
@@ -167,6 +196,8 @@ export default function AdminCategoriesPage() {
       imagePreview: previewUrl,
       imageRemoved: false,
     }));
+
+    setError('');
   }
 
   function removeImage() {
@@ -178,14 +209,27 @@ export default function AdminCategoriesPage() {
     }));
   }
 
-  function resetForm() {
+  function closeModal(options?: { keepMessage?: boolean }) {
+    setModalMode(null);
+    setEditingId(null);
+    setForm(emptyForm);
+    setError('');
+
+    if (!options?.keepMessage) {
+      setMessage('');
+    }
+  }
+
+  function openCreateModal() {
+    setModalMode('create');
     setEditingId(null);
     setForm(emptyForm);
     setMessage('');
     setError('');
   }
 
-  function handleEdit(category: Category) {
+  function openEditModal(category: Category) {
+    setModalMode('edit');
     setEditingId(category.id);
     setMessage('');
     setError('');
@@ -200,11 +244,6 @@ export default function AdminCategoriesPage() {
       imageFile: null,
       imagePreview: category.imageUrl ?? '',
       imageRemoved: false,
-    });
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
     });
   }
 
@@ -229,7 +268,7 @@ export default function AdminCategoriesPage() {
         description: form.description.trim() || undefined,
         parentId: form.parentId
           ? Number(form.parentId)
-          : editingId
+          : isEditMode
             ? null
             : undefined,
         sortOrder: Number(form.sortOrder || 0),
@@ -238,7 +277,7 @@ export default function AdminCategoriesPage() {
         imageUrl: form.imageRemoved ? null : undefined,
       };
 
-      if (editingId) {
+      if (isEditMode && editingId) {
         await updateCategory(editingId, payload);
         setMessage('Cập nhật category thành công');
       } else {
@@ -246,7 +285,7 @@ export default function AdminCategoriesPage() {
         setMessage('Tạo category thành công');
       }
 
-      resetForm();
+      closeModal({ keepMessage: true });
       await loadCategories();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -273,7 +312,7 @@ export default function AdminCategoriesPage() {
       setMessage('Xóa category thành công');
 
       if (editingId === category.id) {
-        resetForm();
+        closeModal({ keepMessage: true });
       }
 
       await loadCategories();
@@ -314,185 +353,22 @@ export default function AdminCategoriesPage() {
         {message && <div className="admin-category-alert success">{message}</div>}
         {error && <div className="admin-category-alert error">{error}</div>}
 
-        <div className="admin-categories-layout">
-          {/* Form tạo/sửa category */}
-          <section className="mochi-card mochi-card-padding admin-category-form-card">
-            <div className="admin-card-title-row">
-              <div>
-                <h2>{editingId ? 'Cập nhật category' : 'Thêm category mới'}</h2>
-                <p>
-                  Ảnh sẽ được gửi lên backend, sau đó backend upload lên
-                  Cloudinary.
-                </p>
-              </div>
-
-              {editingId && (
-                <button
-                  type="button"
-                  className="mochi-btn mochi-btn-outline mochi-btn-sm"
-                  onClick={resetForm}
-                  disabled={saving}
-                >
-                  Hủy sửa
-                </button>
-              )}
+        <section className="mochi-card mochi-card-padding admin-category-list-card">
+          <div className="admin-card-title-row">
+            <div>
+              <h2>Danh sách category</h2>
+              <p>Quản lý toàn bộ category của website.</p>
             </div>
 
-            <form className="mochi-form" onSubmit={handleSubmit}>
-              <div className="admin-category-image-picker">
-                <div className="admin-category-image-preview">
-                  {form.imagePreview ? (
-                    <img src={form.imagePreview} alt="Category preview" />
-                  ) : (
-                    <span>🖼️</span>
-                  )}
-                </div>
-
-                <div className="admin-category-image-actions">
-                  <label className="mochi-btn mochi-btn-soft">
-                    Chọn ảnh
-                    <input
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={handleImageChange}
-                    />
-                  </label>
-
-                  {(form.imagePreview || form.imageFile) && (
-                    <button
-                      type="button"
-                      className="mochi-btn mochi-btn-outline"
-                      onClick={removeImage}
-                    >
-                      Xóa ảnh
-                    </button>
-                  )}
-
-                  <small>JPEG, PNG, WEBP hoặc GIF. Tối đa 2MB.</small>
-                </div>
-              </div>
-
-              <div className="mochi-form-group">
-                <label className="mochi-label">Tên category</label>
-                <input
-                  className="mochi-input"
-                  value={form.name}
-                  onChange={(event) => handleNameChange(event.target.value)}
-                  placeholder="Ví dụ: Gấu bông"
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="mochi-form-row">
-                <div className="mochi-form-group">
-                  <label className="mochi-label">Slug</label>
-                  <input
-                    className="mochi-input"
-                    value={form.slug}
-                    onChange={(event) =>
-                      updateForm('slug', normalizeSlug(event.target.value))
-                    }
-                    placeholder="gau-bong"
-                    disabled={saving}
-                  />
-                </div>
-
-                <div className="mochi-form-group">
-                  <label className="mochi-label">Thứ tự</label>
-                  <input
-                    className="mochi-input"
-                    type="number"
-                    value={form.sortOrder}
-                    onChange={(event) =>
-                      updateForm('sortOrder', event.target.value)
-                    }
-                    disabled={saving}
-                  />
-                </div>
-              </div>
-
-              <div className="mochi-form-row">
-                <div className="mochi-form-group">
-                  <label className="mochi-label">Category cha</label>
-                  <select
-                    className="mochi-select"
-                    value={form.parentId}
-                    onChange={(event) =>
-                      updateForm('parentId', event.target.value)
-                    }
-                    disabled={saving}
-                  >
-                    <option value="">Danh mục gốc</option>
-                    {parentOptions.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mochi-form-group">
-                  <label className="mochi-label">Trạng thái</label>
-                  <select
-                    className="mochi-select"
-                    value={String(form.isActive)}
-                    onChange={(event) =>
-                      updateForm('isActive', event.target.value === 'true')
-                    }
-                    disabled={saving}
-                  >
-                    <option value="true">Đang hiển thị</option>
-                    <option value="false">Đang ẩn</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mochi-form-group">
-                <label className="mochi-label">Mô tả</label>
-                <textarea
-                  className="mochi-textarea"
-                  value={form.description}
-                  onChange={(event) =>
-                    updateForm('description', event.target.value)
-                  }
-                  placeholder="Mô tả ngắn cho category..."
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="admin-category-form-actions">
-                <button
-                  type="submit"
-                  className="mochi-btn mochi-btn-primary"
-                  disabled={saving}
-                >
-                  {saving
-                    ? 'Đang lưu...'
-                    : editingId
-                      ? 'Lưu thay đổi'
-                      : 'Thêm category'}
-                </button>
-
-                <button
-                  type="button"
-                  className="mochi-btn mochi-btn-outline"
-                  onClick={resetForm}
-                  disabled={saving}
-                >
-                  Làm mới form
-                </button>
-              </div>
-            </form>
-          </section>
-
-          {/* Danh sách category */}
-          <section className="mochi-card mochi-card-padding admin-category-list-card">
-            <div className="admin-card-title-row">
-              <div>
-                <h2>Danh sách category</h2>
-                <p>Quản lý category đang dùng ở MainLayout.</p>
-              </div>
+            <div className="admin-category-title-actions">
+              <button
+                type="button"
+                className="mochi-btn mochi-btn-primary mochi-btn-sm"
+                onClick={openCreateModal}
+                disabled={loading || saving}
+              >
+                + Tạo category mới
+              </button>
 
               <button
                 type="button"
@@ -503,106 +379,279 @@ export default function AdminCategoriesPage() {
                 Tải lại
               </button>
             </div>
+          </div>
 
-            <div className="admin-category-toolbar">
-              <input
-                className="mochi-input"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder="Tìm theo tên, slug hoặc ID..."
-              />
+          <div className="admin-category-toolbar">
+            <input
+              className="mochi-input"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Tìm theo tên, slug hoặc ID..."
+            />
+          </div>
+
+          {loading ? (
+            <div className="mochi-empty">
+              <h3 className="mochi-empty-title">Đang tải category...</h3>
+              <p className="mochi-empty-desc">Vui lòng chờ trong giây lát.</p>
             </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="mochi-empty">
+              <h3 className="mochi-empty-title">Chưa có category</h3>
+              <p className="mochi-empty-desc">
+                Hãy bấm “Tạo category mới” để thêm category đầu tiên.
+              </p>
+            </div>
+          ) : (
+            <div className="admin-category-table-wrap">
+              <table className="admin-category-table">
+                <thead>
+                  <tr>
+                    <th>Ảnh</th>
+                    <th>Thông tin</th>
+                    <th>Category cha</th>
+                    <th>Thứ tự</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
 
-            {loading ? (
-              <div className="mochi-empty">
-                <h3 className="mochi-empty-title">Đang tải category...</h3>
-                <p className="mochi-empty-desc">Vui lòng chờ trong giây lát.</p>
-              </div>
-            ) : filteredCategories.length === 0 ? (
-              <div className="mochi-empty">
-                <h3 className="mochi-empty-title">Chưa có category</h3>
-                <p className="mochi-empty-desc">
-                  Hãy tạo category đầu tiên cho website.
-                </p>
-              </div>
-            ) : (
-              <div className="admin-category-table-wrap">
-                <table className="admin-category-table">
-                  <thead>
-                    <tr>
-                      <th>Ảnh</th>
-                      <th>Thông tin</th>
-                      <th>Category cha</th>
-                      <th>Thứ tự</th>
-                      <th>Trạng thái</th>
-                      <th>Thao tác</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredCategories.map((category) => (
-                      <tr key={category.id}>
-                        <td>
-                          <div className="admin-category-thumb">
-                            {category.imageUrl ? (
-                              <img src={category.imageUrl} alt={category.name} />
-                            ) : (
-                              <span>🐰</span>
-                            )}
-                          </div>
-                        </td>
-
-                        <td>
-                          <strong>{category.name}</strong>
-                          <small>/{category.slug}</small>
-                          {category.description && (
-                            <p>{category.description}</p>
+                <tbody>
+                  {filteredCategories.map((category) => (
+                    <tr key={category.id}>
+                      <td>
+                        <div className="admin-category-thumb">
+                          {category.imageUrl ? (
+                            <img src={category.imageUrl} alt={category.name} />
+                          ) : (
+                            <span>🐰</span>
                           )}
-                        </td>
+                        </div>
+                      </td>
 
-                        <td>{getParentName(category.parentId)}</td>
+                      <td>
+                        <strong>{category.name}</strong>
+                        <small>/{category.slug}</small>
+                        {category.description && <p>{category.description}</p>}
+                      </td>
 
-                        <td>{category.sortOrder ?? 0}</td>
+                      <td>{getParentName(category.parentId)}</td>
 
-                        <td>
-                          <span
-                            className={`admin-category-status ${
-                              category.isActive ? 'active' : 'inactive'
-                            }`}
+                      <td>{category.sortOrder ?? 0}</td>
+
+                      <td>
+                        <span
+                          className={`admin-category-status ${
+                            category.isActive ? 'active' : 'inactive'
+                          }`}
+                        >
+                          {category.isActive ? 'Hiển thị' : 'Đang ẩn'}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="admin-category-row-actions">
+                          <button
+                            type="button"
+                            className="mochi-btn mochi-btn-soft mochi-btn-sm"
+                            onClick={() => openEditModal(category)}
+                            disabled={saving}
                           >
-                            {category.isActive ? 'Hiển thị' : 'Đang ẩn'}
-                          </span>
-                        </td>
+                            Sửa
+                          </button>
 
-                        <td>
-                          <div className="admin-category-row-actions">
-                            <button
-                              type="button"
-                              className="mochi-btn mochi-btn-soft mochi-btn-sm"
-                              onClick={() => handleEdit(category)}
-                              disabled={saving}
-                            >
-                              Sửa
-                            </button>
+                          <button
+                            type="button"
+                            className="mochi-btn mochi-btn-danger mochi-btn-sm"
+                            onClick={() => handleDelete(category)}
+                            disabled={saving}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
-                            <button
-                              type="button"
-                              className="mochi-btn mochi-btn-danger mochi-btn-sm"
-                              onClick={() => handleDelete(category)}
-                              disabled={saving}
-                            >
-                              Xóa
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        {modalMode && (
+          <div className="admin-category-modal-backdrop">
+            <div className="admin-category-modal">
+              <div className="admin-category-modal-header">
+                <div>
+                  <h2>
+                    {isEditMode
+                      ? `Cập nhật category #${editingId}`
+                      : 'Tạo category mới'}
+                  </h2>
+                  <p>
+                    Ảnh sẽ được gửi lên backend, sau đó backend upload lên
+                    Cloudinary.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="admin-category-modal-close"
+                  onClick={() => closeModal()}
+                  disabled={saving}
+                >
+                  ×
+                </button>
               </div>
-            )}
-          </section>
-        </div>
+
+              <form className="admin-category-modal-form" onSubmit={handleSubmit}>
+                <div className="admin-category-image-picker">
+                  <div className="admin-category-image-preview">
+                    {form.imagePreview ? (
+                      <img src={form.imagePreview} alt="Category preview" />
+                    ) : (
+                      <span>🖼️</span>
+                    )}
+                  </div>
+
+                  <div className="admin-category-image-actions">
+                    <label className="mochi-btn mochi-btn-soft">
+                      Chọn ảnh
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={handleImageChange}
+                      />
+                    </label>
+
+                    {(form.imagePreview || form.imageFile) && (
+                      <button
+                        type="button"
+                        className="mochi-btn mochi-btn-outline"
+                        onClick={removeImage}
+                        disabled={saving}
+                      >
+                        Xóa ảnh
+                      </button>
+                    )}
+
+                    <small>JPEG, PNG, WEBP hoặc GIF. Tối đa 2MB.</small>
+                  </div>
+                </div>
+
+                <div className="admin-category-modal-grid">
+                  <div className="mochi-form-group">
+                    <label className="mochi-label">Tên category</label>
+                    <input
+                      className="mochi-input"
+                      value={form.name}
+                      onChange={(event) => handleNameChange(event.target.value)}
+                      placeholder="Ví dụ: Gấu bông"
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div className="mochi-form-group">
+                    <label className="mochi-label">Slug</label>
+                    <input
+                      className="mochi-input"
+                      value={form.slug}
+                      onChange={(event) =>
+                        updateForm('slug', normalizeSlug(event.target.value))
+                      }
+                      placeholder="gau-bong"
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div className="mochi-form-group">
+                    <label className="mochi-label">Category cha</label>
+                    <select
+                      className="mochi-select"
+                      value={form.parentId}
+                      onChange={(event) =>
+                        updateForm('parentId', event.target.value)
+                      }
+                      disabled={saving}
+                    >
+                      <option value="">Danh mục gốc</option>
+                      {parentOptions.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mochi-form-group">
+                    <label className="mochi-label">Thứ tự</label>
+                    <input
+                      className="mochi-input"
+                      type="number"
+                      value={form.sortOrder}
+                      onChange={(event) =>
+                        updateForm('sortOrder', event.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div className="mochi-form-group">
+                    <label className="mochi-label">Trạng thái</label>
+                    <select
+                      className="mochi-select"
+                      value={String(form.isActive)}
+                      onChange={(event) =>
+                        updateForm('isActive', event.target.value === 'true')
+                      }
+                      disabled={saving}
+                    >
+                      <option value="true">Đang hiển thị</option>
+                      <option value="false">Đang ẩn</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mochi-form-group">
+                  <label className="mochi-label">Mô tả</label>
+                  <textarea
+                    className="mochi-textarea"
+                    value={form.description}
+                    onChange={(event) =>
+                      updateForm('description', event.target.value)
+                    }
+                    placeholder="Mô tả ngắn cho category..."
+                    disabled={saving}
+                  />
+                </div>
+
+                <div className="admin-category-modal-actions">
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-outline"
+                    onClick={() => closeModal()}
+                    disabled={saving}
+                  >
+                    Hủy bỏ
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="mochi-btn mochi-btn-primary"
+                    disabled={saving}
+                  >
+                    {saving
+                      ? 'Đang lưu...'
+                      : isEditMode
+                        ? 'Lưu thay đổi'
+                        : 'Tạo category'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  FiBox,
+  FiGrid,
   FiLock,
+  FiRefreshCw,
   FiShoppingBag,
   FiShield,
   FiUser,
@@ -12,6 +15,8 @@ import {
   getAdminShopStats,
   type AdminShopStats,
 } from '../../api/shop.api';
+import { getAdminProducts } from '../../api/products.api';
+import { getAdminCategories } from '../../api/categories.api';
 import type { User } from '../../api/types';
 
 import './HomePageAdmin.css';
@@ -23,21 +28,103 @@ const emptyShopStats: AdminShopStats = {
   suspended: 0,
 };
 
+const emptyProductStats = {
+  total: 0,
+  active: 0,
+  locked: 0,
+  outOfStock: 0,
+};
+
 function unwrapData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
+}
+
+function getPaginatedTotal(response: any): number {
+  return Number(
+    response?.data?.total ??
+      response?.data?.data?.total ??
+      response?.data?.meta?.total ??
+      response?.data?.data?.meta?.total ??
+      response?.meta?.total ??
+      response?.total ??
+      0,
+  );
+}
+
+function getCategoryTotal(response: any): number {
+  return Number(
+    response?.data?.meta?.total ??
+      response?.data?.data?.meta?.total ??
+      response?.meta?.total ??
+      response?.total ??
+      0,
+  );
 }
 
 export default function HomePageAdmin() {
   const [users, setUsers] = useState<User[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+
   const [shopStats, setShopStats] = useState<AdminShopStats>(emptyShopStats);
+  const [productStats, setProductStats] = useState(emptyProductStats);
+  const [totalCategories, setTotalCategories] = useState(0);
+
   const [loading, setLoading] = useState(true);
+
+  async function fetchProductStats() {
+    const [allRes, activeRes, lockedRes, outRes] = await Promise.all([
+      getAdminProducts({
+        page: 1,
+        limit: 1,
+      }),
+      getAdminProducts({
+        page: 1,
+        limit: 1,
+        status: 'ACTIVE',
+      }),
+      getAdminProducts({
+        page: 1,
+        limit: 1,
+        status: 'LOCKED',
+      }),
+      getAdminProducts({
+        page: 1,
+        limit: 1,
+        status: 'OUT_OF_STOCK',
+      }),
+    ]);
+
+    return {
+      total: getPaginatedTotal(allRes),
+      active: getPaginatedTotal(activeRes),
+      locked: getPaginatedTotal(lockedRes),
+      outOfStock: getPaginatedTotal(outRes),
+    };
+  }
+
+  async function fetchCategoryStats() {
+    const res = await getAdminCategories({
+      page: 1,
+      limit: 1,
+      sortBy: 'sortOrder',
+      sortOrder: 'ASC',
+    });
+
+    return {
+      total: getCategoryTotal(res),
+    };
+  }
 
   async function fetchOverview() {
     try {
       setLoading(true);
 
-      const [usersData, shopsStatsResponse] = await Promise.all([
+      const [
+        usersData,
+        shopsStatsResponse,
+        productsStatsData,
+        categoriesStatsData,
+      ] = await Promise.all([
         getUsers({
           page: 1,
           limit: 100,
@@ -45,6 +132,8 @@ export default function HomePageAdmin() {
           sortOrder: 'DESC',
         }),
         getAdminShopStats(),
+        fetchProductStats(),
+        fetchCategoryStats(),
       ]);
 
       const statsData = unwrapData<AdminShopStats>(shopsStatsResponse);
@@ -58,6 +147,9 @@ export default function HomePageAdmin() {
         active: Number(statsData?.active ?? 0),
         suspended: Number(statsData?.suspended ?? 0),
       });
+
+      setProductStats(productsStatsData);
+      setTotalCategories(categoriesStatsData.total);
     } finally {
       setLoading(false);
     }
@@ -85,6 +177,59 @@ export default function HomePageAdmin() {
           <p>Thống kê nhanh hệ thống Mochi Admin</p>
         </div>
       </div>
+
+      <section className="admin-home-section">
+        <div className="admin-home-section-title">
+          <h2>Sản phẩm</h2>
+          <p>Thống kê trạng thái sản phẩm trong hệ thống</p>
+        </div>
+
+        <div className="admin-home-stats admin-home-shop-stats">
+          <AdminHomeStatCard
+            icon={<FiShield />}
+            label="Tổng sản phẩm"
+            value={productStats.total}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiBox />}
+            label="Đang bán"
+            value={productStats.active}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiLock />}
+            label="Đã khóa"
+            value={productStats.locked}
+            loading={loading}
+          />
+
+          <AdminHomeStatCard
+            icon={<FiRefreshCw />}
+            label="Hết hàng"
+            value={productStats.outOfStock}
+            loading={loading}
+          />
+        </div>
+      </section>
+
+      <section className="admin-home-section">
+        <div className="admin-home-section-title">
+          <h2>Danh mục</h2>
+          <p>Thống kê category sản phẩm trong hệ thống</p>
+        </div>
+
+        <div className="admin-home-stats admin-home-shop-stats">
+          <AdminHomeStatCard
+            icon={<FiGrid />}
+            label="Tổng category"
+            value={totalCategories}
+            loading={loading}
+          />
+        </div>
+      </section>
 
       <section className="admin-home-section">
         <div className="admin-home-section-title">
@@ -165,14 +310,6 @@ export default function HomePageAdmin() {
             loading={loading}
           />
         </div>
-      </section>
-
-      <section className="admin-home-empty">
-        <h2>Trang tổng quan đang được xây dựng</h2>
-        <p>
-          Hiện tại đã có thống kê người dùng và shop. Sau này có API sản phẩm,
-          đơn hàng thì gắn thêm vào đây.
-        </p>
       </section>
     </div>
   );

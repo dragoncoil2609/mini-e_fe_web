@@ -9,6 +9,16 @@ export type ApiResponse<T> = {
   statusCode?: number;
 };
 
+export type PaginatedData<T> = {
+  items: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export type Category = {
   id: number;
   name: string;
@@ -16,18 +26,33 @@ export type Category = {
   description?: string | null;
   imageUrl?: string | null;
   parentId?: number | null;
+  parent?: Category | null;
+  children?: Category[];
   isActive: boolean;
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
-  children?: Category[];
+};
+
+export type SellerCategoryOption = {
+  id: number;
+  name: string;
+  slug: string;
+  parentId?: number | null;
+  imageUrl?: string | null;
+  sortOrder: number;
+  fullName: string;
 };
 
 export type SearchCategoriesParams = {
   q?: string;
   parentId?: number;
   isActive?: boolean;
+  page?: number;
+  limit?: number;
+  sortBy?: 'id' | 'name' | 'slug' | 'sortOrder' | 'createdAt' | 'updatedAt';
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
 };
 
 export type CategoryFormPayload = {
@@ -38,9 +63,6 @@ export type CategoryFormPayload = {
   parentId?: number | null;
   sortOrder?: number;
   isActive?: boolean;
-
-  // FE dùng imageFile để truyền ảnh category.
-  // Controller BE đang nhận field file tên là: image
   imageFile?: File | null;
 };
 
@@ -64,6 +86,22 @@ function cleanSearchParams(params?: SearchCategoriesParams): SearchCategoriesPar
     clean.isActive = params.isActive;
   }
 
+  if (typeof params?.page === 'number') {
+    clean.page = params.page;
+  }
+
+  if (typeof params?.limit === 'number') {
+    clean.limit = params.limit;
+  }
+
+  if (params?.sortBy) {
+    clean.sortBy = params.sortBy;
+  }
+
+  if (params?.sortOrder) {
+    clean.sortOrder = params.sortOrder;
+  }
+
   return clean;
 }
 
@@ -72,11 +110,8 @@ function appendFormValue(
   key: string,
   value: string | number | boolean | null | undefined,
 ) {
-  if (value === undefined) {
-    return;
-  }
+  if (value === undefined) return;
 
-  // BE update-category.dto đã xử lý chuỗi rỗng thành null.
   if (value === null) {
     formData.append(key, '');
     return;
@@ -85,7 +120,7 @@ function appendFormValue(
   formData.append(key, String(value));
 }
 
-function buildCategoryFormData(payload: CategoryFormPayload) {
+function buildCategoryFormData(payload: Partial<CategoryFormPayload>) {
   const formData = new FormData();
 
   appendFormValue(formData, 'name', payload.name);
@@ -103,57 +138,48 @@ function buildCategoryFormData(payload: CategoryFormPayload) {
   return formData;
 }
 
-// GET /categories
-export async function getPublicCategories(
-  params?: SearchCategoriesParams,
-): Promise<ApiResponse<Category[]>> {
-  const res = await http.get<ApiResponse<Category[]>>('/categories', {
-    params: cleanSearchParams(params),
-  });
-
+// Trang home / MainLayout: chỉ category cha active
+export async function getHomeCategories(): Promise<ApiResponse<Category[]>> {
+  const res = await http.get<ApiResponse<Category[]>>('/categories/home');
   return res.data;
 }
 
-// Admin cần thấy cả category active và inactive.
-// Vì BE hiện tại GET /categories mặc định chỉ trả active nếu không truyền isActive,
-// nên FE gọi 2 lần rồi merge lại.
-export async function getAdminCategories(): Promise<ApiResponse<Category[]>> {
-  const [activeRes, inactiveRes] = await Promise.all([
-    getPublicCategories({ isActive: true }),
-    getPublicCategories({ isActive: false }),
-  ]);
-
-  const map = new Map<number, Category>();
-
-  for (const item of activeRes.data ?? []) {
-    map.set(item.id, item);
-  }
-
-  for (const item of inactiveRes.data ?? []) {
-    map.set(item.id, item);
-  }
-
-  const data = Array.from(map.values()).sort((a, b) => {
-    if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) {
-      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-    }
-
-    return a.name.localeCompare(b.name, 'vi');
-  });
-
-  return {
-    success: true,
-    data,
-  };
+// Alias nếu code cũ đang dùng getPublicCategories
+export async function getPublicCategories(): Promise<ApiResponse<Category[]>> {
+  return getHomeCategories();
 }
 
-// GET /categories/tree
+// Public tree nếu sau này cần menu dạng cây
 export async function getPublicCategoryTree(): Promise<ApiResponse<Category[]>> {
   const res = await http.get<ApiResponse<Category[]>>('/categories/tree');
   return res.data;
 }
 
-// GET /categories/:id
+// Seller/Admin thêm hoặc sửa sản phẩm: lấy tất cả category active
+export async function getSellerCategoryOptions(): Promise<
+  ApiResponse<SellerCategoryOption[]>
+> {
+  const res = await http.get<ApiResponse<SellerCategoryOption[]>>(
+    '/categories/seller-options',
+  );
+
+  return res.data;
+}
+
+// Admin quản lý category: lấy cả active/inactive, có phân trang/search/lọc
+export async function getAdminCategories(
+  params: SearchCategoriesParams = {},
+): Promise<ApiResponse<PaginatedData<Category>>> {
+  const res = await http.get<ApiResponse<PaginatedData<Category>>>(
+    '/categories/admin',
+    {
+      params: cleanSearchParams(params),
+    },
+  );
+
+  return res.data;
+}
+
 export async function getCategoryDetail(
   id: number,
 ): Promise<ApiResponse<Category>> {
@@ -161,8 +187,6 @@ export async function getCategoryDetail(
   return res.data;
 }
 
-// POST /categories
-// Gửi multipart/form-data để upload ảnh lên Cloudinary bên BE.
 export async function createCategory(
   payload: CategoryFormPayload,
 ): Promise<ApiResponse<Category>> {
@@ -173,13 +197,11 @@ export async function createCategory(
   return res.data;
 }
 
-// PATCH /categories/:id
-// Gửi multipart/form-data để update text + ảnh.
 export async function updateCategory(
   id: number,
   payload: Partial<CategoryFormPayload>,
 ): Promise<ApiResponse<Category>> {
-  const formData = buildCategoryFormData(payload as CategoryFormPayload);
+  const formData = buildCategoryFormData(payload);
 
   const res = await http.patch<ApiResponse<Category>>(
     `/categories/${id}`,
@@ -189,7 +211,6 @@ export async function updateCategory(
   return res.data;
 }
 
-// DELETE /categories/:id
 export async function deleteCategory(
   id: number,
 ): Promise<ApiResponse<DeleteCategoryResponse>> {
@@ -199,4 +220,3 @@ export async function deleteCategory(
 
   return res.data;
 }
-

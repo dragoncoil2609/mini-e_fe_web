@@ -22,9 +22,6 @@ const menu = [
   { to: '/admin/orders', label: 'Đơn hàng', icon: <FiShoppingCart /> },
   { to: '/admin/categories', label: 'Danh mục', icon: <FiGrid /> },
   { to: '/admin/reviews', label: 'Đánh giá', icon: <FiStar /> },
-  { to: '/admin/vouchers', label: 'Voucher', icon: <FiTag /> },
-  { to: '/admin/reports', label: 'Báo cáo', icon: <FiBarChart2 /> },
-  { to: '/admin/settings', label: 'Cài đặt', icon: <FiSettings /> },
 ];
 
 export default function AdminSidebar() {
@@ -32,6 +29,7 @@ export default function AdminSidebar() {
     <aside className="admin-sidebar">
       <div className="admin-sidebar-logo">
         <img src={bunny} alt="Mochi" />
+
         <div>
           <strong>Mochi</strong>
           <span>Admin</span>

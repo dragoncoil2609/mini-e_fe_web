@@ -16,7 +16,7 @@ import { getMe } from '../../api/users.api';
 import { CartApi } from '../../api/cart.api';
 import { OrdersApi } from '../../api/orders.api';
 import {
-  getPublicCategoryTree,
+  getHomeCategories,
   type Category,
 } from '../../api/categories.api';
 
@@ -44,7 +44,7 @@ function getShortName(name?: string | null) {
   return parts[parts.length - 1];
 }
 
-function getParentCategories(categories: Category[]) {
+function getHomeCategoryLimit(categories: Category[]) {
   return categories.slice(0, 10);
 }
 
@@ -86,14 +86,14 @@ export default function MainLayout() {
 
   const isLoggedIn = Boolean(getFallbackToken());
 
-  const parentCategories = useMemo(() => {
-    return getParentCategories(categories);
+  const homeCategories = useMemo(() => {
+    return getHomeCategoryLimit(categories);
   }, [categories]);
 
-  const activeCategorySlug = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('category') ?? '';
-  }, [location.search]);
+  const activeCategoryId = useMemo(() => {
+    const match = location.pathname.match(/^\/products\/category\/(\d+)/);
+    return match ? Number(match[1]) : null;
+  }, [location.pathname]);
 
   const accountPath = isLoggedIn ? '/me' : '/login';
 
@@ -237,7 +237,7 @@ export default function MainLayout() {
         setCategoryLoading(true);
         setCategoryError('');
 
-        const res = await getPublicCategoryTree();
+        const res = await getHomeCategories();
 
         if (!mounted) return;
 
@@ -295,6 +295,7 @@ export default function MainLayout() {
         <div className="mochi-container mochi-header-inner">
           <Link to="/home" className="mochi-logo" aria-label="Mochi home">
             <img src={logoImg} alt="Mochi" />
+
             <div>
               <strong>Mochi</strong>
               <span>Cute things for you ♡</span>
@@ -386,18 +387,16 @@ export default function MainLayout() {
             {!categoryLoading && categoryError && <small>{categoryError}</small>}
           </div>
 
-          {!categoryLoading && parentCategories.length > 0 && (
+          {!categoryLoading && homeCategories.length > 0 && (
             <div className="mochi-category-scroll">
-              {parentCategories.map((category) => {
-                const isActive = activeCategorySlug === category.slug;
+              {homeCategories.map((category) => {
+                const isActive = activeCategoryId === category.id;
                 const categoryImage = category.imageUrl || '';
 
                 return (
                   <Link
                     key={category.id}
-                    to={`/products?category=${encodeURIComponent(
-                      category.slug,
-                    )}`}
+                    to={`/products/category/${category.id}`}
                     className={`mochi-category-pill ${
                       isActive ? 'active' : ''
                     }`}
@@ -430,6 +429,7 @@ export default function MainLayout() {
           <div className="mochi-footer-brand">
             <Link to="/home" className="mochi-footer-logo">
               <img src={logoImg} alt="Mochi" />
+
               <div>
                 <strong>Mochi</strong>
                 <span>Cute things for you ♡</span>
