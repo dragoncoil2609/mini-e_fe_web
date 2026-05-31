@@ -83,6 +83,14 @@ function unwrapAdminCategories(responseData: any): Category[] {
   return [];
 }
 
+function getAdminCategoriesTotal(responseData: any): number {
+  return Number(responseData?.meta?.total ?? 0);
+}
+
+function getAdminCategoriesTotalPages(responseData: any): number {
+  return Math.max(Number(responseData?.meta?.totalPages ?? 1), 1);
+}
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<CategoryFormState>(emptyForm);
@@ -91,6 +99,13 @@ export default function AdminCategoriesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [keyword, setKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -103,22 +118,6 @@ export default function AdminCategoriesPage() {
     return categories.filter((category) => category.id !== editingId);
   }, [categories, editingId]);
 
-  const filteredCategories = useMemo(() => {
-    const q = keyword.trim().toLowerCase();
-
-    if (!q) {
-      return categories;
-    }
-
-    return categories.filter((category) => {
-      return (
-        category.name.toLowerCase().includes(q) ||
-        category.slug.toLowerCase().includes(q) ||
-        String(category.id).includes(q)
-      );
-    });
-  }, [categories, keyword]);
-
   const categoryById = useMemo(() => {
     const map = new Map<number, Category>();
 
@@ -130,22 +129,28 @@ export default function AdminCategoriesPage() {
   }, [categories]);
 
   useEffect(() => {
-    void loadCategories();
-  }, []);
+    void loadCategories(page, searchKeyword);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchKeyword]);
 
-  async function loadCategories() {
+  async function loadCategories(nextPage = page, q = searchKeyword) {
     try {
       setLoading(true);
       setError('');
 
       const res = await getAdminCategories({
-        page: 1,
-        limit: 100,
+        q,
+        page: nextPage,
+        limit,
         sortBy: 'sortOrder',
         sortOrder: 'ASC',
       });
 
-      setCategories(unwrapAdminCategories(res.data));
+      const data = res.data;
+
+      setCategories(unwrapAdminCategories(data));
+      setTotal(getAdminCategoriesTotal(data));
+      setTotalPages(getAdminCategoriesTotalPages(data));
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -169,6 +174,19 @@ export default function AdminCategoriesPage() {
       name: value,
       slug: modalMode === 'create' ? normalizeSlug(value) : prev.slug,
     }));
+  }
+
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setPage(1);
+    setSearchKeyword(keyword.trim());
+  }
+
+  function clearSearch() {
+    setKeyword('');
+    setSearchKeyword('');
+    setPage(1);
   }
 
   function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
@@ -286,7 +304,9 @@ export default function AdminCategoriesPage() {
       }
 
       closeModal({ keepMessage: true });
-      await loadCategories();
+
+      setPage(1);
+      await loadCategories(1, searchKeyword);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -315,7 +335,14 @@ export default function AdminCategoriesPage() {
         closeModal({ keepMessage: true });
       }
 
-      await loadCategories();
+      const shouldGoPreviousPage = categories.length === 1 && page > 1;
+      const nextPage = shouldGoPreviousPage ? page - 1 : page;
+
+      if (shouldGoPreviousPage) {
+        setPage(nextPage);
+      } else {
+        await loadCategories(nextPage, searchKeyword);
+      }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -345,7 +372,7 @@ export default function AdminCategoriesPage() {
           </div>
 
           <div className="admin-categories-hero-card">
-            <strong>{categories.length}</strong>
+            <strong>{loading ? '...' : total}</strong>
             <span>Tổng category</span>
           </div>
         </div>
@@ -373,7 +400,7 @@ export default function AdminCategoriesPage() {
               <button
                 type="button"
                 className="mochi-btn mochi-btn-soft mochi-btn-sm"
-                onClick={loadCategories}
+                onClick={() => loadCategories(page, searchKeyword)}
                 disabled={loading || saving}
               >
                 Tải lại
@@ -381,21 +408,40 @@ export default function AdminCategoriesPage() {
             </div>
           </div>
 
-          <div className="admin-category-toolbar">
+          <form className="admin-category-toolbar" onSubmit={handleSearchSubmit}>
             <input
               className="mochi-input"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               placeholder="Tìm theo tên, slug hoặc ID..."
             />
-          </div>
+
+            <button
+              type="submit"
+              className="mochi-btn mochi-btn-primary mochi-btn-sm"
+              disabled={loading || saving}
+            >
+              Tìm kiếm
+            </button>
+
+            {searchKeyword && (
+              <button
+                type="button"
+                className="mochi-btn mochi-btn-outline mochi-btn-sm"
+                onClick={clearSearch}
+                disabled={loading || saving}
+              >
+                Xóa lọc
+              </button>
+            )}
+          </form>
 
           {loading ? (
             <div className="mochi-empty">
               <h3 className="mochi-empty-title">Đang tải category...</h3>
               <p className="mochi-empty-desc">Vui lòng chờ trong giây lát.</p>
             </div>
-          ) : filteredCategories.length === 0 ? (
+          ) : categories.length === 0 ? (
             <div className="mochi-empty">
               <h3 className="mochi-empty-title">Chưa có category</h3>
               <p className="mochi-empty-desc">
@@ -403,78 +449,110 @@ export default function AdminCategoriesPage() {
               </p>
             </div>
           ) : (
-            <div className="admin-category-table-wrap">
-              <table className="admin-category-table">
-                <thead>
-                  <tr>
-                    <th>Ảnh</th>
-                    <th>Thông tin</th>
-                    <th>Category cha</th>
-                    <th>Thứ tự</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filteredCategories.map((category) => (
-                    <tr key={category.id}>
-                      <td>
-                        <div className="admin-category-thumb">
-                          {category.imageUrl ? (
-                            <img src={category.imageUrl} alt={category.name} />
-                          ) : (
-                            <span>🐰</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td>
-                        <strong>{category.name}</strong>
-                        <small>/{category.slug}</small>
-                        {category.description && <p>{category.description}</p>}
-                      </td>
-
-                      <td>{getParentName(category.parentId)}</td>
-
-                      <td>{category.sortOrder ?? 0}</td>
-
-                      <td>
-                        <span
-                          className={`admin-category-status ${
-                            category.isActive ? 'active' : 'inactive'
-                          }`}
-                        >
-                          {category.isActive ? 'Hiển thị' : 'Đang ẩn'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="admin-category-row-actions">
-                          <button
-                            type="button"
-                            className="mochi-btn mochi-btn-soft mochi-btn-sm"
-                            onClick={() => openEditModal(category)}
-                            disabled={saving}
-                          >
-                            Sửa
-                          </button>
-
-                          <button
-                            type="button"
-                            className="mochi-btn mochi-btn-danger mochi-btn-sm"
-                            onClick={() => handleDelete(category)}
-                            disabled={saving}
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      </td>
+            <>
+              <div className="admin-category-table-wrap">
+                <table className="admin-category-table">
+                  <thead>
+                    <tr>
+                      <th>Ảnh</th>
+                      <th>Thông tin</th>
+                      <th>Category cha</th>
+                      <th>Thứ tự</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody>
+                    {categories.map((category) => (
+                      <tr key={category.id}>
+                        <td>
+                          <div className="admin-category-thumb">
+                            {category.imageUrl ? (
+                              <img src={category.imageUrl} alt={category.name} />
+                            ) : (
+                              <span>🐰</span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td>
+                          <strong>{category.name}</strong>
+                          <small>/{category.slug}</small>
+                          {category.description && <p>{category.description}</p>}
+                        </td>
+
+                        <td>{getParentName(category.parentId)}</td>
+
+                        <td>{category.sortOrder ?? 0}</td>
+
+                        <td>
+                          <span
+                            className={`admin-category-status ${
+                              category.isActive ? 'active' : 'inactive'
+                            }`}
+                          >
+                            {category.isActive ? 'Hiển thị' : 'Đang ẩn'}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="admin-category-row-actions">
+                            <button
+                              type="button"
+                              className="mochi-btn mochi-btn-soft mochi-btn-sm"
+                              onClick={() => openEditModal(category)}
+                              disabled={saving}
+                            >
+                              Sửa
+                            </button>
+
+                            <button
+                              type="button"
+                              className="mochi-btn mochi-btn-danger mochi-btn-sm"
+                              onClick={() => handleDelete(category)}
+                              disabled={saving}
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="admin-category-pagination">
+                <span>
+                  Hiển thị {categories.length} / {total} category
+                </span>
+
+                <div>
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-outline mochi-btn-sm"
+                    disabled={page <= 1 || loading || saving}
+                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  >
+                    ‹ Trước
+                  </button>
+
+                  <strong>
+                    Trang {page} / {totalPages}
+                  </strong>
+
+                  <button
+                    type="button"
+                    className="mochi-btn mochi-btn-outline mochi-btn-sm"
+                    disabled={page >= totalPages || loading || saving}
+                    onClick={() => setPage((prev) => prev + 1)}
+                  >
+                    Sau ›
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </section>
 

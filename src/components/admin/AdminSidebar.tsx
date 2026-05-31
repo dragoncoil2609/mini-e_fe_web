@@ -1,14 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import {
-  FiBarChart2,
   FiBox,
   FiGrid,
   FiHome,
-  FiSettings,
   FiShoppingBag,
   FiShoppingCart,
   FiStar,
-  FiTag,
   FiUsers,
 } from 'react-icons/fi';
 
