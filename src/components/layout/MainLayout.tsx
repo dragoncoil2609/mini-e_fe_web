@@ -22,6 +22,8 @@ import {
 
 import './MainLayout.css';
 
+const CATEGORY_PAGE_SIZE = 10;
+
 function getFallbackToken() {
   return (
     getAccessToken?.() ||
@@ -42,10 +44,6 @@ function getShortName(name?: string | null) {
 
   const parts = cleanName.split(/\s+/);
   return parts[parts.length - 1];
-}
-
-function getHomeCategoryLimit(categories: Category[]) {
-  return categories.slice(0, 10);
 }
 
 function getSafeCartQuantity(cart: any): number {
@@ -83,17 +81,26 @@ export default function MainLayout() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
+  const [categoryPage, setCategoryPage] = useState(0);
 
   const isLoggedIn = Boolean(getFallbackToken());
-
-  const homeCategories = useMemo(() => {
-    return getHomeCategoryLimit(categories);
-  }, [categories]);
 
   const activeCategoryId = useMemo(() => {
     const match = location.pathname.match(/^\/products\/category\/(\d+)/);
     return match ? Number(match[1]) : null;
   }, [location.pathname]);
+
+  const categoryTotalPages = useMemo(() => {
+    return Math.max(Math.ceil(categories.length / CATEGORY_PAGE_SIZE), 1);
+  }, [categories.length]);
+
+  const visibleCategories = useMemo(() => {
+    const start = categoryPage * CATEGORY_PAGE_SIZE;
+    return categories.slice(start, start + CATEGORY_PAGE_SIZE);
+  }, [categories, categoryPage]);
+
+  const canPrevCategory = categoryPage > 0;
+  const canNextCategory = categoryPage < categoryTotalPages - 1;
 
   const accountPath = isLoggedIn ? '/me' : '/login';
 
@@ -111,6 +118,12 @@ export default function MainLayout() {
     const params = new URLSearchParams(location.search);
     setKeyword(params.get('q') ?? '');
   }, [location.search]);
+
+  useEffect(() => {
+    if (categoryPage > categoryTotalPages - 1) {
+      setCategoryPage(Math.max(categoryTotalPages - 1, 0));
+    }
+  }, [categoryPage, categoryTotalPages]);
 
   useEffect(() => {
     let mounted = true;
@@ -243,10 +256,12 @@ export default function MainLayout() {
 
         const data = unwrapApiData<Category[]>(res);
         setCategories(Array.isArray(data) ? data : []);
+        setCategoryPage(0);
       } catch {
         if (!mounted) return;
 
         setCategories([]);
+        setCategoryPage(0);
         setCategoryError('Không tải được danh mục');
       } finally {
         if (mounted) {
@@ -275,6 +290,14 @@ export default function MainLayout() {
     navigate(`/products?q=${encodeURIComponent(q)}`);
   };
 
+  function goPrevCategoryPage() {
+    setCategoryPage((prev) => Math.max(prev - 1, 0));
+  }
+
+  function goNextCategoryPage() {
+    setCategoryPage((prev) => Math.min(prev + 1, categoryTotalPages - 1));
+  }
+
   return (
     <div className="main-layout">
       <div className="mochi-topbar">
@@ -295,7 +318,6 @@ export default function MainLayout() {
         <div className="mochi-container mochi-header-inner">
           <Link to="/home" className="mochi-logo" aria-label="Mochi home">
             <img src={logoImg} alt="Mochi" />
-
             <div>
               <strong>Mochi</strong>
               <span>Cute things for you ♡</span>
@@ -381,15 +403,49 @@ export default function MainLayout() {
       <section className="mochi-category-bar">
         <div className="mochi-container">
           <div className="mochi-category-header">
-            <span>Danh mục nổi bật</span>
+            <div className="mochi-category-title">
+              <span>Danh mục nổi bật</span>
 
-            {categoryLoading && <small>Đang tải...</small>}
-            {!categoryLoading && categoryError && <small>{categoryError}</small>}
+              {categories.length > CATEGORY_PAGE_SIZE && !categoryLoading && (
+                <small>
+                  Trang {categoryPage + 1}/{categoryTotalPages}
+                </small>
+              )}
+            </div>
+
+            <div className="mochi-category-header-right">
+              {categoryLoading && <small>Đang tải...</small>}
+              {!categoryLoading && categoryError && <small>{categoryError}</small>}
+
+              {!categoryLoading && categories.length > CATEGORY_PAGE_SIZE && (
+                <div className="mochi-category-controls">
+                  <button
+                    type="button"
+                    className="mochi-category-nav-btn"
+                    onClick={goPrevCategoryPage}
+                    disabled={!canPrevCategory}
+                    aria-label="Danh mục trước"
+                  >
+                    ‹
+                  </button>
+
+                  <button
+                    type="button"
+                    className="mochi-category-nav-btn"
+                    onClick={goNextCategoryPage}
+                    disabled={!canNextCategory}
+                    aria-label="Danh mục tiếp theo"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {!categoryLoading && homeCategories.length > 0 && (
+          {!categoryLoading && visibleCategories.length > 0 && (
             <div className="mochi-category-scroll">
-              {homeCategories.map((category) => {
+              {visibleCategories.map((category) => {
                 const isActive = activeCategoryId === category.id;
                 const categoryImage = category.imageUrl || '';
 
@@ -429,7 +485,6 @@ export default function MainLayout() {
           <div className="mochi-footer-brand">
             <Link to="/home" className="mochi-footer-logo">
               <img src={logoImg} alt="Mochi" />
-
               <div>
                 <strong>Mochi</strong>
                 <span>Cute things for you ♡</span>
