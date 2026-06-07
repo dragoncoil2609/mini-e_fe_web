@@ -45,6 +45,51 @@ export type SellerCategoryOption = {
   fullName: string;
 };
 
+export type CategorySuggestionLevel = 'strong' | 'medium' | 'weak';
+
+export type CategorySuggestionItem = {
+  categoryId: number;
+  parentId: number | null;
+  parentName: string | null;
+  categoryName: string;
+  score: number;
+  confidence: number;
+  level: CategorySuggestionLevel;
+  matchedKeywords: string[];
+  matchedStrongKeywords: string[];
+};
+
+export type CategoryParentFallback = {
+  parentId: number;
+  parentName: string;
+  score: number;
+  confidence: number;
+  matchedKeywords: string[];
+  children: Array<{
+    categoryId: number;
+    categoryName: string;
+  }>;
+};
+
+export type CategorySuggestionPayload = {
+  title?: string;
+  description?: string;
+  optionText?: string;
+  optionSchema?: unknown;
+  variantText?: string;
+  variants?: unknown;
+  limit?: number;
+};
+
+export type CategorySuggestionData = {
+  success: boolean;
+  inputText: string;
+  normalizedText: string;
+  items: CategorySuggestionItem[];
+  parentFallbacks: CategoryParentFallback[];
+  message: string;
+};
+
 export type SearchCategoriesParams = {
   q?: string;
   parentId?: number;
@@ -161,6 +206,18 @@ export async function getSellerCategoryOptions(): Promise<
 > {
   const res = await http.get<ApiResponse<SellerCategoryOption[]>>(
     '/categories/seller-options',
+  );
+
+  return res.data;
+}
+
+// Seller/Admin: gợi ý category theo tên/mô tả sản phẩm
+export async function suggestProductCategories(
+  payload: CategorySuggestionPayload,
+): Promise<ApiResponse<CategorySuggestionData>> {
+  const res = await http.post<ApiResponse<CategorySuggestionData>>(
+    '/categories/suggestions',
+    payload,
   );
 
   return res.data;

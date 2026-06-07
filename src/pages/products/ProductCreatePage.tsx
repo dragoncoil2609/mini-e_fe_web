@@ -10,6 +10,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createProduct } from '../../api/products.api';
 import {
   getSellerCategoryOptions,
+  suggestProductCategories,
+  type CategoryParentFallback,
+  type CategorySuggestionData,
+  type CategorySuggestionItem,
   type SellerCategoryOption,
 } from '../../api/categories.api';
 
@@ -47,6 +51,12 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '');
 }
 
+function getSuggestionLevelText(level: string) {
+  if (level === 'strong') return 'Rất phù hợp';
+  if (level === 'medium') return 'Có thể phù hợp';
+  return 'Tham khảo';
+}
+
 export default function ProductCreatePage() {
   const navigate = useNavigate();
 
@@ -61,6 +71,16 @@ export default function ProductCreatePage() {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
 
+  const [categorySuggestions, setCategorySuggestions] = useState<
+    CategorySuggestionItem[]
+  >([]);
+  const [parentFallbacks, setParentFallbacks] = useState<
+    CategoryParentFallback[]
+  >([]);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [suggestionError, setSuggestionError] = useState('');
+  const [suggestionMessage, setSuggestionMessage] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -71,6 +91,13 @@ export default function ProductCreatePage() {
       label: category.fullName || category.name,
     }));
   }, [categories]);
+
+  const selectedCategoryLabel = useMemo(() => {
+    return (
+      categoryOptions.find((category) => String(category.id) === categoryId)
+        ?.label ?? ''
+    );
+  }, [categoryOptions, categoryId]);
 
   const previewUrls = useMemo(() => {
     return images.map((file) => URL.createObjectURL(file));
@@ -112,12 +139,75 @@ export default function ProductCreatePage() {
     };
   }, []);
 
+  useEffect(() => {
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    const searchText = `${cleanTitle} ${cleanDescription}`.trim();
+
+    if (searchText.length < 3) {
+      setCategorySuggestions([]);
+      setParentFallbacks([]);
+      setSuggestionMessage('');
+      setSuggestionError('');
+      setSuggestionLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setSuggestionLoading(true);
+        setSuggestionError('');
+
+        const response = await suggestProductCategories({
+          title: cleanTitle,
+          description: cleanDescription,
+          limit: 5,
+        });
+
+        if (!active) return;
+
+        const data = unwrapApiData<CategorySuggestionData>(response);
+
+        setCategorySuggestions(data.items ?? []);
+        setParentFallbacks(data.parentFallbacks ?? []);
+        setSuggestionMessage(data.message ?? '');
+      } catch (err: any) {
+        if (!active) return;
+
+        setCategorySuggestions([]);
+        setParentFallbacks([]);
+        setSuggestionMessage('');
+        setSuggestionError(
+          err?.response?.data?.message ||
+            err?.message ||
+            'Không gợi ý được danh mục.',
+        );
+      } finally {
+        if (active) {
+          setSuggestionLoading(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [title, description]);
+
   function handleTitleChange(value: string) {
     setTitle(value);
 
     if (!slug.trim()) {
       setSlug(slugify(value));
     }
+  }
+
+  function handleSelectCategory(nextCategoryId: number) {
+    setCategoryId(String(nextCategoryId));
+    setCategoryError('');
   }
 
   function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
@@ -213,7 +303,7 @@ export default function ProductCreatePage() {
                     className="mochi-input"
                     value={title}
                     onChange={(event) => handleTitleChange(event.target.value)}
-                    placeholder="Ví dụ: Gấu bông thỏ Mochi"
+                    placeholder="Ví dụ: Tã Bỉm Gooby Hàn Quốc size M"
                     maxLength={180}
                   />
                 </div>
@@ -224,7 +314,7 @@ export default function ProductCreatePage() {
                     className="mochi-input"
                     value={slug}
                     onChange={(event) => setSlug(slugify(event.target.value))}
-                    placeholder="gau-bong-tho-mochi"
+                    placeholder="ta-bim-gooby-han-quoc-size-m"
                     maxLength={200}
                   />
                 </div>
@@ -263,11 +353,98 @@ export default function ProductCreatePage() {
                       ))}
                     </select>
 
+                    {selectedCategoryLabel ? (
+                      <small className="product-category-message success">
+                        Đã chọn: {selectedCategoryLabel}
+                      </small>
+                    ) : null}
+
                     {categoryError ? (
                       <small className="product-category-message error">
                         {categoryError}
                       </small>
                     ) : null}
+
+                    <div className="product-category-suggestion-box">
+                      <div className="product-category-suggestion-head">
+                        <strong>Gợi ý danh mục</strong>
+                        {suggestionLoading ? <span>Đang phân tích...</span> : null}
+                      </div>
+
+                      {suggestionError ? (
+                        <small className="product-category-message error">
+                          {suggestionError}
+                        </small>
+                      ) : null}
+
+                      {!suggestionLoading && suggestionMessage ? (
+                        <small className="product-category-message">
+                          {suggestionMessage}
+                        </small>
+                      ) : null}
+
+                      {categorySuggestions.length > 0 ? (
+                        <div className="product-category-suggestion-list">
+                          {categorySuggestions.map((suggestion) => (
+                            <button
+                              type="button"
+                              key={suggestion.categoryId}
+                              className={
+                                String(suggestion.categoryId) === categoryId
+                                  ? 'product-category-suggestion-item active'
+                                  : 'product-category-suggestion-item'
+                              }
+                              onClick={() =>
+                                handleSelectCategory(suggestion.categoryId)
+                              }
+                            >
+                              <span>
+                                {suggestion.parentName
+                                  ? `${suggestion.parentName} > `
+                                  : ''}
+                                {suggestion.categoryName}
+                              </span>
+
+                              <small>
+                                {getSuggestionLevelText(suggestion.level)} ·{' '}
+                                {suggestion.confidence}%
+                              </small>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {categorySuggestions.length === 0 &&
+                      parentFallbacks.length > 0 ? (
+                        <div className="product-category-parent-fallbacks">
+                          {parentFallbacks.map((parent) => (
+                            <div
+                              className="product-category-parent-fallback"
+                              key={parent.parentId}
+                            >
+                              <p>
+                                Có vẻ sản phẩm thuộc nhóm{' '}
+                                <b>{parent.parentName}</b>. Chọn cụ thể hơn:
+                              </p>
+
+                              <div>
+                                {parent.children.map((child) => (
+                                  <button
+                                    type="button"
+                                    key={child.categoryId}
+                                    onClick={() =>
+                                      handleSelectCategory(child.categoryId)
+                                    }
+                                  >
+                                    {child.categoryName}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
@@ -338,7 +515,7 @@ export default function ProductCreatePage() {
               to="/shops/me/products"
               className="mochi-btn mochi-btn-outline product-submit-btn"
             >
-              Hủy
+              Hủy 
             </Link>
           </aside>
         </form>

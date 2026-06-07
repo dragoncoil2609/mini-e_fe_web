@@ -5,6 +5,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getProductDetail, updateProduct } from '../../api/products.api';
 import {
   getSellerCategoryOptions,
+  suggestProductCategories,
+  type CategoryParentFallback,
+  type CategorySuggestionData,
+  type CategorySuggestionItem,
   type SellerCategoryOption,
 } from '../../api/categories.api';
 
@@ -52,6 +56,12 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '');
 }
 
+function getSuggestionLevelText(level: string) {
+  if (level === 'strong') return 'Rất phù hợp';
+  if (level === 'medium') return 'Có thể phù hợp';
+  return 'Tham khảo';
+}
+
 export default function ProductEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -69,6 +79,16 @@ export default function ProductEditPage() {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
 
+  const [categorySuggestions, setCategorySuggestions] = useState<
+    CategorySuggestionItem[]
+  >([]);
+  const [parentFallbacks, setParentFallbacks] = useState<
+    CategoryParentFallback[]
+  >([]);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [suggestionError, setSuggestionError] = useState('');
+  const [suggestionMessage, setSuggestionMessage] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -84,6 +104,13 @@ export default function ProductEditPage() {
       label: category.fullName || category.name,
     }));
   }, [categories]);
+
+  const selectedCategoryLabel = useMemo(() => {
+    return (
+      categoryOptions.find((category) => String(category.id) === categoryId)
+        ?.label ?? ''
+    );
+  }, [categoryOptions, categoryId]);
 
   async function loadProduct() {
     if (!productId) {
@@ -131,6 +158,69 @@ export default function ProductEditPage() {
     } finally {
       setCategoryLoading(false);
     }
+  }
+
+  useEffect(() => {
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    const searchText = `${cleanTitle} ${cleanDescription}`.trim();
+
+    if (isLocked || isDeleted || searchText.length < 3) {
+      setCategorySuggestions([]);
+      setParentFallbacks([]);
+      setSuggestionMessage('');
+      setSuggestionError('');
+      setSuggestionLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setSuggestionLoading(true);
+        setSuggestionError('');
+
+        const response = await suggestProductCategories({
+          title: cleanTitle,
+          description: cleanDescription,
+          limit: 5,
+        });
+
+        if (!active) return;
+
+        const data = unwrapApiData<CategorySuggestionData>(response);
+
+        setCategorySuggestions(data.items ?? []);
+        setParentFallbacks(data.parentFallbacks ?? []);
+        setSuggestionMessage(data.message ?? '');
+      } catch (err: any) {
+        if (!active) return;
+
+        setCategorySuggestions([]);
+        setParentFallbacks([]);
+        setSuggestionMessage('');
+        setSuggestionError(
+          err?.response?.data?.message ||
+            err?.message ||
+            'Không gợi ý được danh mục.',
+        );
+      } finally {
+        if (active) {
+          setSuggestionLoading(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [title, description, isLocked, isDeleted]);
+
+  function handleSelectCategory(nextCategoryId: number) {
+    setCategoryId(String(nextCategoryId));
+    setCategoryError('');
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -320,10 +410,101 @@ export default function ProductEditPage() {
                       ))}
                     </select>
 
+                    {selectedCategoryLabel ? (
+                      <small className="product-category-message success">
+                        Đã chọn: {selectedCategoryLabel}
+                      </small>
+                    ) : null}
+
                     {categoryError ? (
                       <small className="product-category-message error">
                         {categoryError}
                       </small>
+                    ) : null}
+
+                    {!isLocked && !isDeleted ? (
+                      <div className="product-category-suggestion-box">
+                        <div className="product-category-suggestion-head">
+                          <strong>Gợi ý danh mục</strong>
+                          {suggestionLoading ? (
+                            <span>Đang phân tích...</span>
+                          ) : null}
+                        </div>
+
+                        {suggestionError ? (
+                          <small className="product-category-message error">
+                            {suggestionError}
+                          </small>
+                        ) : null}
+
+                        {!suggestionLoading && suggestionMessage ? (
+                          <small className="product-category-message">
+                            {suggestionMessage}
+                          </small>
+                        ) : null}
+
+                        {categorySuggestions.length > 0 ? (
+                          <div className="product-category-suggestion-list">
+                            {categorySuggestions.map((suggestion) => (
+                              <button
+                                type="button"
+                                key={suggestion.categoryId}
+                                className={
+                                  String(suggestion.categoryId) === categoryId
+                                    ? 'product-category-suggestion-item active'
+                                    : 'product-category-suggestion-item'
+                                }
+                                onClick={() =>
+                                  handleSelectCategory(suggestion.categoryId)
+                                }
+                              >
+                                <span>
+                                  {suggestion.parentName
+                                    ? `${suggestion.parentName} > `
+                                    : ''}
+                                  {suggestion.categoryName}
+                                </span>
+
+                                <small>
+                                  {getSuggestionLevelText(suggestion.level)} ·{' '}
+                                  {suggestion.confidence}%
+                                </small>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {categorySuggestions.length === 0 &&
+                        parentFallbacks.length > 0 ? (
+                          <div className="product-category-parent-fallbacks">
+                            {parentFallbacks.map((parent) => (
+                              <div
+                                className="product-category-parent-fallback"
+                                key={parent.parentId}
+                              >
+                                <p>
+                                  Có vẻ sản phẩm thuộc nhóm{' '}
+                                  <b>{parent.parentName}</b>. Chọn cụ thể hơn:
+                                </p>
+
+                                <div>
+                                  {parent.children.map((child) => (
+                                    <button
+                                      type="button"
+                                      key={child.categoryId}
+                                      onClick={() =>
+                                        handleSelectCategory(child.categoryId)
+                                      }
+                                    >
+                                      {child.categoryName}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </div>
