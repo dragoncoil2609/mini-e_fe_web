@@ -177,14 +177,18 @@ export default function AppRoutes() {
         <Route path="/shops/:id" element={<ShopDetailsPage />} />
 
         <Route path="/products" element={<ProductsListPage />} />
+        <Route path="/products/trend" element={<ProductsListPage />} />
+
         <Route
           path="/products/category/:categoryId"
           element={<ProductCategoryPage />}
         />
+
         <Route
           path="/products/create"
           element={<Navigate to="/shops/me/products/create" replace />}
         />
+
         <Route path="/products/:id/edit" element={<ProductEditAlias />} />
         <Route path="/products/:id/variants" element={<ProductVariantsAlias />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />

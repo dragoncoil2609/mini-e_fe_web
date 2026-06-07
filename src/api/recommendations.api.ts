@@ -55,13 +55,20 @@ export type RecommendedProduct = {
 export type RecommendationResponse = {
   page: number;
   limit: number;
+  total?: number;
+  pageCount?: number;
 
   categoryId?: number | null;
   categoryIds?: number[];
 
-  source: 'personalized' | 'fallback' | 'category_not_found' | string;
-  message?: string;
+  source:
+    | 'personalized'
+    | 'fallback'
+    | 'category_not_found'
+    | 'trending'
+    | string;
 
+  message?: string;
   formula?: Record<string, any>;
 
   items: RecommendedProduct[];
@@ -84,6 +91,17 @@ export async function getRecommendedProducts(
 ) {
   const res = await http.get<RecommendationResponse>(
     '/recommendations/products',
+    { params },
+  );
+
+  return res.data;
+}
+
+export async function getTrendingProducts(
+  params?: GetRecommendedProductsParams,
+) {
+  const res = await http.get<RecommendationResponse>(
+    '/recommendations/trending-products',
     { params },
   );
 

@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { getPublicProducts } from '../../api/products.api';
 import {
   getRecommendedProducts,
+  getTrendingProducts,
   type RecommendedProduct,
 } from '../../api/recommendations.api';
-import type { ProductListItem } from '../../api/types';
 
 import ProductGrid from '../../components/product/ProductGrid';
 import type { ProductCardItem } from '../../components/product/ProductCard';
@@ -16,26 +15,14 @@ import basketChick from '../../assets/brand/basket_chick.png';
 
 import './HomePage.css';
 
-type HomeProduct = ProductListItem &
-  ProductCardItem & {
-    id: number;
-    title?: string;
-    name?: string;
-    price?: number | string;
-    compareAtPrice?: number | string | null;
-    mainImageUrl?: string | null;
-    imageUrl?: string | null;
-    sold?: number;
-    stock?: number;
-    status?: string;
-  };
+type RecommendationSource =
+  | 'personalized'
+  | 'fallback'
+  | 'public'
+  | 'guest';
 
-type RecommendationSource = 'personalized' | 'fallback' | 'public';
-
-function toNumber(value: unknown): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
+const TRENDING_HOME_LIMIT = 6;
+const RECOMMENDED_HOME_LIMIT = 30;
 
 function normalizeRecommendationSource(source: unknown): RecommendationSource {
   if (source === 'personalized' || source === 'fallback') {
@@ -45,52 +32,56 @@ function normalizeRecommendationSource(source: unknown): RecommendationSource {
   return 'public';
 }
 
+function isAuthError(error: any) {
+  const status = Number(error?.response?.status);
+  return status === 401 || status === 403;
+}
+
 export default function HomePage() {
-  const [products, setProducts] = useState<HomeProduct[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<RecommendedProduct[]>(
+    [],
+  );
+
   const [recommendedProducts, setRecommendedProducts] = useState<
     RecommendedProduct[]
   >([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
   const [errorMessage, setErrorMessage] = useState('');
   const [recommendationSource, setRecommendationSource] =
     useState<RecommendationSource>('public');
 
+  const [recommendedTotal, setRecommendedTotal] = useState(0);
+
   useEffect(() => {
     let mounted = true;
 
-    async function loadHomeProducts() {
+    async function loadTrendingProducts() {
       try {
-        setLoading(true);
+        setLoadingTrending(true);
         setErrorMessage('');
 
-        const res = await getPublicProducts({
+        const response = await getTrendingProducts({
           page: 1,
-          limit: 60,
+          limit: TRENDING_HOME_LIMIT,
         });
-
-        const items = (res.data?.items ?? []) as HomeProduct[];
 
         if (!mounted) return;
 
-        const visibleItems = items.filter((item) => {
-          if (!item.status) return true;
-          return item.status === 'ACTIVE' || item.status === 'OUT_OF_STOCK';
-        });
-
-        setProducts(visibleItems);
+        setTrendingProducts(response.items ?? []);
       } catch (error: any) {
         if (!mounted) return;
 
+        setTrendingProducts([]);
         setErrorMessage(
           error?.response?.data?.message ||
-            'Không thể tải sản phẩm trang chủ. Vui lòng thử lại sau.',
+            'Không thể tải sản phẩm đang hot. Vui lòng thử lại sau.',
         );
       } finally {
         if (mounted) {
-          setLoading(false);
+          setLoadingTrending(false);
         }
       }
     }
@@ -99,26 +90,27 @@ export default function HomePage() {
       try {
         setLoadingRecommendations(true);
 
-        const recommendations = await getRecommendedProducts({
+        const response = await getRecommendedProducts({
           page: 1,
-          limit: 18,
+          limit: RECOMMENDED_HOME_LIMIT + 1,
         });
 
         if (!mounted) return;
 
-        setRecommendedProducts(recommendations.items ?? []);
-        setRecommendationSource(
-          normalizeRecommendationSource(recommendations.source),
-        );
-      } catch {
+        setRecommendedProducts(response.items ?? []);
+        setRecommendedTotal(Number(response.total ?? 0));
+        setRecommendationSource(normalizeRecommendationSource(response.source));
+      } catch (error: any) {
         if (!mounted) return;
 
-        /**
-         * Không fallback sang getPublicProducts nữa.
-         * Nếu lỗi hoặc chưa đăng nhập thì phần gợi ý để trống.
-         */
         setRecommendedProducts([]);
-        setRecommendationSource('public');
+        setRecommendedTotal(0);
+
+        if (isAuthError(error)) {
+          setRecommendationSource('guest');
+        } else {
+          setRecommendationSource('public');
+        }
       } finally {
         if (mounted) {
           setLoadingRecommendations(false);
@@ -126,7 +118,7 @@ export default function HomePage() {
       }
     }
 
-    void loadHomeProducts();
+    void loadTrendingProducts();
     void loadRecommendedProducts();
 
     return () => {
@@ -134,11 +126,26 @@ export default function HomePage() {
     };
   }, []);
 
-  const bestSellingProducts = useMemo(() => {
-    return [...products]
-      .sort((a, b) => toNumber(b.sold) - toNumber(a.sold))
-      .slice(0, 6);
-  }, [products]);
+  const visibleTrendingProducts = useMemo(() => {
+    return trendingProducts.slice(0, TRENDING_HOME_LIMIT);
+  }, [trendingProducts]);
+
+  const visibleRecommendedProducts = useMemo(() => {
+    return recommendedProducts.slice(0, RECOMMENDED_HOME_LIMIT);
+  }, [recommendedProducts]);
+
+  const hasMoreRecommendedProducts =
+    recommendedTotal > RECOMMENDED_HOME_LIMIT ||
+    recommendedProducts.length > RECOMMENDED_HOME_LIMIT;
+
+  const recommendedSubtitle =
+    recommendationSource === 'personalized'
+      ? 'Dựa trên sản phẩm bạn đã xem, click, thêm giỏ hoặc yêu thích.'
+      : recommendationSource === 'fallback'
+        ? 'Gợi ý phổ biến từ hệ thống recommendation.'
+        : recommendationSource === 'guest'
+          ? 'Vui lòng đăng nhập để xem sản phẩm gợi ý dành riêng cho bạn.'
+          : 'Đăng nhập và tương tác với sản phẩm để nhận gợi ý phù hợp hơn.';
 
   return (
     <div className="home-page">
@@ -227,18 +234,24 @@ export default function HomePage() {
 
         <section className="mochi-section">
           <div className="mochi-section-header">
-            <h2 className="mochi-section-title">Sản phẩm bán chạy 🌟</h2>
-            <Link to="/products" className="mochi-section-link">
+            <div>
+              <h2 className="mochi-section-title">Sản phẩm đang hot 🔥</h2>
+              <p className="home-section-subtitle">
+                Những sản phẩm đang được tương tác nhiều trong 7 ngày gần nhất.
+              </p>
+            </div>
+
+            <Link to="/products/trend" className="mochi-section-link">
               Xem tất cả →
             </Link>
           </div>
 
           <ProductGrid
-            products={bestSellingProducts}
-            loading={loading}
+            products={visibleTrendingProducts as ProductCardItem[]}
+            loading={loadingTrending}
             columns={6}
-            emptyTitle="Chưa có sản phẩm bán chạy"
-            emptyDescription="Khi có sản phẩm được bán, hệ thống sẽ hiển thị tại đây."
+            emptyTitle="Chưa có sản phẩm đang hot"
+            emptyDescription="Khi có dữ liệu tương tác, hệ thống sẽ hiển thị sản phẩm trend tại đây."
           />
         </section>
 
@@ -246,28 +259,49 @@ export default function HomePage() {
           <div className="mochi-section-header">
             <div>
               <h2 className="mochi-section-title">Sản phẩm gợi ý 💕</h2>
-
-              <p className="home-section-subtitle">
-                {recommendationSource === 'personalized'
-                  ? 'Dựa trên sản phẩm bạn đã xem, click, thêm giỏ hoặc yêu thích.'
-                  : recommendationSource === 'fallback'
-                    ? 'Gợi ý phổ biến từ hệ thống recommendation.'
-                    : 'Đăng nhập và tương tác với sản phẩm để nhận gợi ý phù hợp hơn.'}
-              </p>
+              <p className="home-section-subtitle">{recommendedSubtitle}</p>
             </div>
 
-            <Link to="/products" className="mochi-section-link">
-              Xem tất cả →
-            </Link>
+            {recommendationSource === 'guest' ? (
+              <Link to="/login" className="mochi-section-link">
+                Đăng nhập →
+              </Link>
+            ) : (
+              <Link to="/products" className="mochi-section-link">
+                Xem tất cả →
+              </Link>
+            )}
           </div>
 
           <ProductGrid
-            products={recommendedProducts as ProductCardItem[]}
+            products={visibleRecommendedProducts as ProductCardItem[]}
             loading={loadingRecommendations}
             columns={6}
-            emptyTitle="Chưa có sản phẩm gợi ý"
-            emptyDescription="Hãy đăng nhập và xem thêm sản phẩm để hệ thống gợi ý chính xác hơn."
+            emptyTitle={
+              recommendationSource === 'guest'
+                ? 'Vui lòng đăng nhập'
+                : 'Chưa có sản phẩm gợi ý'
+            }
+            emptyDescription={
+              recommendationSource === 'guest'
+                ? 'Bạn cần đăng nhập để hệ thống hiển thị sản phẩm gợi ý theo sở thích cá nhân.'
+                : 'Hãy đăng nhập và xem thêm sản phẩm để hệ thống gợi ý chính xác hơn.'
+            }
           />
+
+          {recommendationSource === 'guest' ? (
+            <div className="home-load-more-wrap">
+              <Link to="/login" className="home-load-more-btn">
+                Đăng nhập để xem gợi ý
+              </Link>
+            </div>
+          ) : hasMoreRecommendedProducts ? (
+            <div className="home-load-more-wrap">
+              <Link to="/products?page=2" className="home-load-more-btn">
+                Xem thêm
+              </Link>
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

@@ -298,6 +298,22 @@ export default function MainLayout() {
     setCategoryPage((prev) => Math.min(prev + 1, categoryTotalPages - 1));
   }
 
+  function handleLogout() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('refresh_token');
+
+    setAccountName('');
+    setAccountAvatar('');
+    setCartQuantity(0);
+    setOrdersTotal(0);
+
+    window.dispatchEvent(new Event('storage'));
+    navigate('/login');
+  }
+
   return (
     <div className="main-layout">
       <div className="mochi-topbar">
@@ -338,30 +354,45 @@ export default function MainLayout() {
           </form>
 
           <div className="mochi-header-actions">
-            <Link to={accountPath} className="header-action account-action">
-              <span className="header-avatar-wrap">
-                <img
-                  src={
-                    isLoggedIn
-                      ? accountAvatar || defaultAvatarImg
-                      : defaultAvatarImg
-                  }
-                  alt="Avatar"
-                  className="header-avatar"
-                />
-              </span>
+            {isLoggedIn ? (
+              <div className="header-account-menu">
+                <Link to={accountPath} className="header-action account-action">
+                  <span className="header-avatar-wrap">
+                    <img
+                      src={accountAvatar || defaultAvatarImg}
+                      alt="Avatar"
+                      className="header-avatar"
+                    />
+                  </span>
 
-              <span className="header-action-text">
-                {isLoggedIn ? (
-                  <>
+                  <span className="header-action-text">
                     <small>Tài khoản</small>
                     <strong>{accountLabel}</strong>
-                  </>
-                ) : (
-                  <strong>Đăng nhập</strong>
-                )}
-              </span>
-            </Link>
+                  </span>
+                </Link>
+
+                <div className="account-dropdown">
+                  <span className="account-dropdown-arrow" />
+
+                  <Link to="/me">Tài Khoản Của Tôi</Link>
+                  <Link to="/orders">Đơn Mua</Link>
+
+                  <button type="button" onClick={handleLogout}>
+                    Đăng Xuất
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="auth-actions">
+                <Link to="/login" className="auth-btn auth-btn-login">
+                  Đăng nhập
+                </Link>
+
+                <Link to="/register" className="auth-btn auth-btn-register">
+                  Đăng ký
+                </Link>
+              </div>
+            )}
 
             <Link to="/cart" className="header-action cart-header-action">
               <span className="header-action-icon">🛒</span>
@@ -402,75 +433,66 @@ export default function MainLayout() {
 
       <section className="mochi-category-bar">
         <div className="mochi-container">
-          <div className="mochi-category-header">
-            <div className="mochi-category-title">
-              <span>Danh mục nổi bật</span>
-
-              {categories.length > CATEGORY_PAGE_SIZE && !categoryLoading && (
-                <small>
-                  Trang {categoryPage + 1}/{categoryTotalPages}
-                </small>
-              )}
+          {categoryLoading || categoryError ? (
+            <div className="mochi-category-state">
+              {categoryLoading ? 'Đang tải danh mục...' : categoryError}
             </div>
-
-            <div className="mochi-category-header-right">
-              {categoryLoading && <small>Đang tải...</small>}
-              {!categoryLoading && categoryError && <small>{categoryError}</small>}
-
-              {!categoryLoading && categories.length > CATEGORY_PAGE_SIZE && (
-                <div className="mochi-category-controls">
-                  <button
-                    type="button"
-                    className="mochi-category-nav-btn"
-                    onClick={goPrevCategoryPage}
-                    disabled={!canPrevCategory}
-                    aria-label="Danh mục trước"
-                  >
-                    ‹
-                  </button>
-
-                  <button
-                    type="button"
-                    className="mochi-category-nav-btn"
-                    onClick={goNextCategoryPage}
-                    disabled={!canNextCategory}
-                    aria-label="Danh mục tiếp theo"
-                  >
-                    ›
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          ) : null}
 
           {!categoryLoading && visibleCategories.length > 0 && (
-            <div className="mochi-category-scroll">
-              {visibleCategories.map((category) => {
-                const isActive = activeCategoryId === category.id;
-                const categoryImage = category.imageUrl || '';
+            <div className="mochi-category-carousel">
+              {categories.length > CATEGORY_PAGE_SIZE && (
+                <button
+                  type="button"
+                  className="mochi-category-nav-btn mochi-category-nav-prev"
+                  onClick={goPrevCategoryPage}
+                  disabled={!canPrevCategory}
+                  aria-label="Danh mục trước"
+                >
+                  ‹
+                </button>
+              )}
 
-                return (
-                  <Link
-                    key={category.id}
-                    to={`/products/category/${category.id}`}
-                    className={`mochi-category-pill ${
-                      isActive ? 'active' : ''
-                    }`}
-                  >
-                    <span className="mochi-category-thumb">
-                      {categoryImage ? (
-                        <img src={categoryImage} alt={category.name} />
-                      ) : (
-                        <span>🐰</span>
-                      )}
-                    </span>
+              <div className="mochi-category-scroll">
+                {visibleCategories.map((category) => {
+                  const isActive = activeCategoryId === category.id;
+                  const categoryImage = category.imageUrl || '';
 
-                    <span className="mochi-category-name">
-                      {category.name}
-                    </span>
-                  </Link>
-                );
-              })}
+                  return (
+                    <Link
+                      key={category.id}
+                      to={`/products/category/${category.id}`}
+                      className={`mochi-category-pill ${
+                        isActive ? 'active' : ''
+                      }`}
+                    >
+                      <span className="mochi-category-thumb">
+                        {categoryImage ? (
+                          <img src={categoryImage} alt={category.name} />
+                        ) : (
+                          <span>🐰</span>
+                        )}
+                      </span>
+
+                      <span className="mochi-category-name">
+                        {category.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {categories.length > CATEGORY_PAGE_SIZE && (
+                <button
+                  type="button"
+                  className="mochi-category-nav-btn mochi-category-nav-next"
+                  onClick={goNextCategoryPage}
+                  disabled={!canNextCategory}
+                  aria-label="Danh mục tiếp theo"
+                >
+                  ›
+                </button>
+              )}
             </div>
           )}
         </div>
