@@ -33,6 +33,15 @@ function getFallbackToken() {
   );
 }
 
+function clearAuthStorage() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+}
+
 function unwrapApiData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
 }
@@ -73,8 +82,11 @@ export default function MainLayout() {
   const location = useLocation();
 
   const [keyword, setKeyword] = useState('');
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountName, setAccountName] = useState('');
   const [accountAvatar, setAccountAvatar] = useState('');
+
   const [cartQuantity, setCartQuantity] = useState(0);
   const [ordersTotal, setOrdersTotal] = useState(0);
 
@@ -82,8 +94,6 @@ export default function MainLayout() {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
   const [categoryPage, setCategoryPage] = useState(0);
-
-  const isLoggedIn = Boolean(getFallbackToken());
 
   const activeCategoryId = useMemo(() => {
     const match = location.pathname.match(/^\/products\/category\/(\d+)/);
@@ -102,17 +112,13 @@ export default function MainLayout() {
   const canPrevCategory = categoryPage > 0;
   const canNextCategory = categoryPage < categoryTotalPages - 1;
 
-  const accountPath = isLoggedIn ? '/me' : '/login';
-
   const accountLabel = useMemo(() => {
-    if (!isLoggedIn) return 'Đăng nhập';
-
     const shortName = getShortName(accountName);
 
     if (shortName) return shortName;
 
     return 'Tài khoản';
-  }, [accountName, isLoggedIn]);
+  }, [accountName]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -134,6 +140,7 @@ export default function MainLayout() {
       if (!currentToken) {
         if (!mounted) return;
 
+        setIsLoggedIn(false);
         setAccountName('');
         setAccountAvatar('');
         return;
@@ -145,11 +152,21 @@ export default function MainLayout() {
 
         if (!mounted) return;
 
+        if (!user?.id && !user?.email && !user?.phone && !user?.name) {
+          setIsLoggedIn(false);
+          setAccountName('');
+          setAccountAvatar('');
+          return;
+        }
+
+        setIsLoggedIn(true);
         setAccountName(user?.name || user?.email || user?.phone || '');
-        setAccountAvatar(user?.avatarUrl || '');
+        setAccountAvatar(user?.avatarUrl || user?.avatar || '');
       } catch {
         if (!mounted) return;
 
+        clearAuthStorage();
+        setIsLoggedIn(false);
         setAccountName('');
         setAccountAvatar('');
       }
@@ -168,7 +185,7 @@ export default function MainLayout() {
     async function loadCartQuantity() {
       const currentToken = getFallbackToken();
 
-      if (!currentToken) {
+      if (!currentToken || !isLoggedIn) {
         if (mounted) {
           setCartQuantity(0);
         }
@@ -200,7 +217,7 @@ export default function MainLayout() {
       window.removeEventListener('mochi-cart-updated', loadCartQuantity);
       window.removeEventListener('storage', loadCartQuantity);
     };
-  }, [location.pathname]);
+  }, [location.pathname, isLoggedIn]);
 
   useEffect(() => {
     let mounted = true;
@@ -208,7 +225,7 @@ export default function MainLayout() {
     async function loadOrdersTotal() {
       const currentToken = getFallbackToken();
 
-      if (!currentToken) {
+      if (!currentToken || !isLoggedIn) {
         if (mounted) {
           setOrdersTotal(0);
         }
@@ -240,7 +257,7 @@ export default function MainLayout() {
       window.removeEventListener('mochi-orders-updated', loadOrdersTotal);
       window.removeEventListener('storage', loadOrdersTotal);
     };
-  }, [location.pathname]);
+  }, [location.pathname, isLoggedIn]);
 
   useEffect(() => {
     let mounted = true;
@@ -299,18 +316,14 @@ export default function MainLayout() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('refresh_token');
+    clearAuthStorage();
 
+    setIsLoggedIn(false);
     setAccountName('');
     setAccountAvatar('');
     setCartQuantity(0);
     setOrdersTotal(0);
 
-    window.dispatchEvent(new Event('storage'));
     navigate('/login');
   }
 
@@ -355,8 +368,8 @@ export default function MainLayout() {
 
           <div className="mochi-header-actions">
             {isLoggedIn ? (
-              <div className="header-account-menu">
-                <Link to={accountPath} className="header-action account-action">
+              <div className="account-menu-wrap">
+                <Link to="/me" className="header-action account-action">
                   <span className="header-avatar-wrap">
                     <img
                       src={accountAvatar || defaultAvatarImg}
@@ -372,8 +385,6 @@ export default function MainLayout() {
                 </Link>
 
                 <div className="account-dropdown">
-                  <span className="account-dropdown-arrow" />
-
                   <Link to="/me">Tài Khoản Của Tôi</Link>
                   <Link to="/orders">Đơn Mua</Link>
 
@@ -383,12 +394,15 @@ export default function MainLayout() {
                 </div>
               </div>
             ) : (
-              <div className="auth-actions">
-                <Link to="/login" className="auth-btn auth-btn-login">
+              <div className="guest-auth-actions">
+                <Link to="/login" className="guest-auth-btn guest-auth-login">
                   Đăng nhập
                 </Link>
 
-                <Link to="/register" className="auth-btn auth-btn-register">
+                <Link
+                  to="/register"
+                  className="guest-auth-btn guest-auth-register"
+                >
                   Đăng ký
                 </Link>
               </div>
@@ -440,18 +454,18 @@ export default function MainLayout() {
           ) : null}
 
           {!categoryLoading && visibleCategories.length > 0 && (
-            <div className="mochi-category-carousel">
-              {categories.length > CATEGORY_PAGE_SIZE && (
+            <div className="mochi-category-row">
+              {categories.length > CATEGORY_PAGE_SIZE ? (
                 <button
                   type="button"
-                  className="mochi-category-nav-btn mochi-category-nav-prev"
+                  className="mochi-category-side-btn"
                   onClick={goPrevCategoryPage}
                   disabled={!canPrevCategory}
                   aria-label="Danh mục trước"
                 >
                   ‹
                 </button>
-              )}
+              ) : null}
 
               <div className="mochi-category-scroll">
                 {visibleCategories.map((category) => {
@@ -482,17 +496,17 @@ export default function MainLayout() {
                 })}
               </div>
 
-              {categories.length > CATEGORY_PAGE_SIZE && (
+              {categories.length > CATEGORY_PAGE_SIZE ? (
                 <button
                   type="button"
-                  className="mochi-category-nav-btn mochi-category-nav-next"
+                  className="mochi-category-side-btn"
                   onClick={goNextCategoryPage}
                   disabled={!canNextCategory}
                   aria-label="Danh mục tiếp theo"
                 >
                   ›
                 </button>
-              )}
+              ) : null}
             </div>
           )}
         </div>

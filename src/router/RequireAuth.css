@@ -1,0 +1,76 @@
+/* src/routes/RequireAuth.css */
+
+.require-auth-page {
+  min-height: 520px;
+  padding: 70px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 143, 179, 0.18), transparent 36%),
+    #fff7fa;
+}
+
+.require-auth-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 38px 30px;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid #ffd6e3;
+  box-shadow: 0 22px 60px rgba(255, 79, 135, 0.14);
+  text-align: center;
+}
+
+.require-auth-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff1f6;
+  font-size: 34px;
+}
+
+.require-auth-card h2 {
+  margin: 0;
+  color: var(--mochi-text);
+  font-size: 28px;
+  font-weight: 950;
+}
+
+.require-auth-card p {
+  margin: 12px 0 26px;
+  color: var(--mochi-text-soft);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.require-auth-btn {
+  height: 46px;
+  padding: 0 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--mochi-primary), var(--mochi-primary-dark));
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 14px 28px rgba(255, 79, 135, 0.25);
+}
+
+.require-auth-btn:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.require-auth-back {
+  margin-top: 16px;
+  display: block;
+  color: var(--mochi-primary);
+  font-size: 14px;
+  font-weight: 850;
+}

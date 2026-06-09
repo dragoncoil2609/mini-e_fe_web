@@ -13,7 +13,6 @@ import './styles/theme.css';
 import './styles/global.css';
 import './styles/page.css';
 import './styles/form.css';
-import './styles/table.css';
 import './styles/responsive.css';
 
 /**

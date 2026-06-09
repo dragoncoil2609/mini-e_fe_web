@@ -21,6 +21,8 @@ import bunnyImg from '../../assets/brand/bunny_bear_original.png';
 
 import './style/ProductCreatePage.css';
 
+const MAX_PRODUCT_IMAGES = 10;
+
 type CategorySelectOption = {
   id: number;
   name: string;
@@ -57,6 +59,20 @@ function getSuggestionLevelText(level: string) {
   return 'Tham khảo';
 }
 
+function moveMainImageToFirst(files: File[], mainIndex: number) {
+  if (!files.length) return [];
+
+  const safeIndex =
+    mainIndex >= 0 && mainIndex < files.length ? mainIndex : 0;
+
+  const mainFile = files[safeIndex];
+
+  return [
+    mainFile,
+    ...files.filter((_, index) => index !== safeIndex),
+  ];
+}
+
 export default function ProductCreatePage() {
   const navigate = useNavigate();
 
@@ -66,6 +82,7 @@ export default function ProductCreatePage() {
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [images, setImages] = useState<File[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState(0);
 
   const [categories, setCategories] = useState<SellerCategoryOption[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -102,6 +119,12 @@ export default function ProductCreatePage() {
   const previewUrls = useMemo(() => {
     return images.map((file) => URL.createObjectURL(file));
   }, [images]);
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
 
   useEffect(() => {
     let mounted = true;
@@ -214,12 +237,40 @@ export default function ProductCreatePage() {
     const files = Array.from(event.target.files ?? []);
     const validFiles = files.filter((file) => file.type.startsWith('image/'));
 
-    if (validFiles.length > 6) {
-      setImages(validFiles.slice(0, 6));
+    event.target.value = '';
+
+    if (!validFiles.length) {
       return;
     }
 
-    setImages(validFiles);
+    const nextImages = [...images, ...validFiles].slice(0, MAX_PRODUCT_IMAGES);
+
+    if (images.length + validFiles.length > MAX_PRODUCT_IMAGES) {
+      setError(`Sản phẩm chỉ được tối đa ${MAX_PRODUCT_IMAGES} ảnh.`);
+    } else {
+      setError('');
+    }
+
+    setImages(nextImages);
+
+    if (!nextImages[mainImageIndex]) {
+      setMainImageIndex(0);
+    }
+  }
+
+  function handleRemoveImage(index: number) {
+    setImages((prev) => {
+      const next = prev.filter((_, itemIndex) => itemIndex !== index);
+
+      setMainImageIndex((currentMain) => {
+        if (!next.length) return 0;
+        if (currentMain === index) return 0;
+        if (currentMain > index) return currentMain - 1;
+        return currentMain >= next.length ? 0 : currentMain;
+      });
+
+      return next;
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -238,17 +289,24 @@ export default function ProductCreatePage() {
       return;
     }
 
+    if (images.length > MAX_PRODUCT_IMAGES) {
+      setError(`Sản phẩm chỉ được tối đa ${MAX_PRODUCT_IMAGES} ảnh.`);
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
     try {
+      const orderedImages = moveMainImageToFirst(images, mainImageIndex);
+
       const response = await createProduct({
         title: cleanTitle,
         slug: slug.trim() || undefined,
         description: description.trim() || undefined,
         price: numericPrice,
         categoryId: categoryId ? Number(categoryId) : null,
-        images,
+        images: orderedImages,
       });
 
       const product = unwrapApiData<any>(response);
@@ -474,18 +532,67 @@ export default function ProductCreatePage() {
 
                 <span className="product-upload-icon">📷</span>
                 <strong>Chọn ảnh sản phẩm</strong>
-                <small>Tối đa 6 ảnh, nên dùng ảnh vuông hoặc nền sáng.</small>
+                <small>
+                  Tối đa {MAX_PRODUCT_IMAGES} ảnh, mỗi ảnh tối đa 2MB. Bấm vào
+                  ảnh để chọn ảnh chính.
+                </small>
               </label>
 
               {previewUrls.length > 0 ? (
-                <div className="product-preview-grid">
-                  {previewUrls.map((url, index) => (
-                    <div className="product-preview-item" key={url}>
-                      <img src={url} alt={`Ảnh ${index + 1}`} />
-                      {index === 0 ? <span>Ảnh chính</span> : null}
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <small className="product-upload-note">
+                    Đã chọn {images.length}/{MAX_PRODUCT_IMAGES} ảnh. Ảnh chính
+                    sẽ được gửi lên BE đầu tiên để tránh chọn sai ảnh main.
+                  </small>
+
+                  <div className="product-preview-grid">
+                    {previewUrls.map((url, index) => {
+                      const isMain = index === mainImageIndex;
+
+                      return (
+                        <div
+                          className={
+                            isMain
+                              ? 'product-preview-item is-main'
+                              : 'product-preview-item'
+                          }
+                          key={`${url}-${index}`}
+                        >
+                          <button
+                            type="button"
+                            className="product-preview-image-button"
+                            onClick={() => setMainImageIndex(index)}
+                            title="Chọn làm ảnh chính"
+                          >
+                            <img src={url} alt={`Ảnh ${index + 1}`} />
+                          </button>
+
+                          {isMain ? <span>Ảnh chính</span> : null}
+
+                          <div className="product-preview-actions">
+                            {!isMain ? (
+                              <button
+                                type="button"
+                                className="product-preview-action"
+                                onClick={() => setMainImageIndex(index)}
+                              >
+                                Đặt chính
+                              </button>
+                            ) : null}
+
+                            <button
+                              type="button"
+                              className="product-preview-action danger"
+                              onClick={() => handleRemoveImage(index)}
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
                 <div className="product-empty-preview">
                   <img src={bunnyImg} alt="Preview" />
@@ -515,7 +622,7 @@ export default function ProductCreatePage() {
               to="/shops/me/products"
               className="mochi-btn mochi-btn-outline product-submit-btn"
             >
-              Hủy 
+              Hủy
             </Link>
           </aside>
         </form>

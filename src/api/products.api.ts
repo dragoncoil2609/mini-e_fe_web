@@ -288,6 +288,67 @@ export async function updateProductVariant(
   return res.data;
 }
 
+// POST /products/:id/images
+export async function addProductImages(
+  productId: number | string,
+  images: File[],
+): Promise<ApiResponse<ProductDetail>> {
+  const formData = new FormData();
+
+  images.forEach((file) => {
+    formData.append('images', file);
+  });
+
+  const res = await http.post<ApiResponse<ProductDetail>>(
+    `/products/${productId}/images`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  );
+
+  return res.data;
+}
+
+// DELETE /products/:id/images/:imageId
+export async function deleteProductImage(
+  productId: number | string,
+  imageId: number | string,
+): Promise<ApiResponse<ProductDetail>> {
+  const res = await http.delete<ApiResponse<ProductDetail>>(
+    `/products/${productId}/images/${imageId}`,
+  );
+
+  return res.data;
+}
+
+// PATCH /products/:id/images/:imageId/main
+export async function setMainProductImage(
+  productId: number | string,
+  imageId: number | string,
+): Promise<ApiResponse<ProductDetail>> {
+  const res = await http.patch<ApiResponse<ProductDetail>>(
+    `/products/${productId}/images/${imageId}/main`,
+  );
+
+  return res.data;
+}
+
+// PATCH /products/:id/images/reorder
+export async function reorderProductImages(
+  productId: number | string,
+  imageIds: number[],
+): Promise<ApiResponse<ProductDetail>> {
+  const res = await http.patch<ApiResponse<ProductDetail>>(
+    `/products/${productId}/images/reorder`,
+    { imageIds },
+  );
+
+  return res.data;
+}
+
 /**
  * 5) PUBLIC BY SHOP
  */

@@ -1,8 +1,20 @@
 // src/pages/products/ProductEditPage.tsx
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { getProductDetail, updateProduct } from '../../api/products.api';
+import {
+  addProductImages,
+  deleteProductImage,
+  getProductDetail,
+  setMainProductImage,
+  updateProduct,
+} from '../../api/products.api';
 import {
   getSellerCategoryOptions,
   suggestProductCategories,
@@ -14,6 +26,15 @@ import {
 
 import './style/ProductEditPage.css';
 
+const MAX_PRODUCT_IMAGES = 10;
+
+type ProductFormImage = {
+  id?: number;
+  url: string;
+  isMain?: boolean;
+  position?: number;
+};
+
 type ProductFormData = {
   id: number;
   title?: string;
@@ -23,7 +44,7 @@ type ProductFormData = {
   categoryId?: number | null;
   status?: string;
   deletedAt?: string | null;
-  images?: { id?: number; url: string; isMain?: boolean }[];
+  images?: ProductFormImage[];
 };
 
 type CategorySelectOption = {
@@ -62,6 +83,17 @@ function getSuggestionLevelText(level: string) {
   return 'Tham khảo';
 }
 
+function normalizeImages(images?: ProductFormImage[]) {
+  return [...(images ?? [])].sort((a, b) => {
+    const posA = Number(a.position ?? 0);
+    const posB = Number(b.position ?? 0);
+
+    if (posA !== posB) return posA - posB;
+
+    return Number(a.id ?? 0) - Number(b.id ?? 0);
+  });
+}
+
 export default function ProductEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -91,11 +123,16 @@ export default function ProductEditPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageActionId, setImageActionId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const productId = Number(id);
   const isLocked = status === 'LOCKED';
   const isDeleted = Boolean(product?.deletedAt);
+  const currentImages = normalizeImages(product?.images);
+  const remainingImageSlots = Math.max(0, MAX_PRODUCT_IMAGES - currentImages.length);
+  const imageActionsDisabled = isLocked || isDeleted || imageUploading || Boolean(imageActionId);
 
   const categoryOptions = useMemo<CategorySelectOption[]>(() => {
     return categories.map((category) => ({
@@ -270,6 +307,108 @@ export default function ProductEditPage() {
     }
   }
 
+  async function handleAddImages(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    const validFiles = files.filter((file) => file.type.startsWith('image/'));
+
+    event.target.value = '';
+
+    if (isLocked || isDeleted) {
+      setError('Sản phẩm không thể chỉnh sửa ảnh.');
+      return;
+    }
+
+    if (!validFiles.length) {
+      return;
+    }
+
+    if (remainingImageSlots <= 0) {
+      setError(`Sản phẩm chỉ được tối đa ${MAX_PRODUCT_IMAGES} ảnh.`);
+      return;
+    }
+
+    const uploadFiles = validFiles.slice(0, remainingImageSlots);
+
+    if (validFiles.length > remainingImageSlots) {
+      setError(
+        `Sản phẩm chỉ còn được thêm ${remainingImageSlots} ảnh. Hệ thống sẽ lấy ${remainingImageSlots} ảnh đầu tiên.`,
+      );
+    } else {
+      setError('');
+    }
+
+    setImageUploading(true);
+
+    try {
+      const response = await addProductImages(productId, uploadFiles);
+      const data = unwrapApiData<ProductFormData>(response);
+
+      setProduct(data);
+    } catch (err: any) {
+      setError(getApiMessage(err));
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
+  async function handleSetMainImage(image: ProductFormImage) {
+    if (!image.id) {
+      setError('Ảnh không hợp lệ.');
+      return;
+    }
+
+    if (isLocked || isDeleted) {
+      setError('Sản phẩm không thể chỉnh sửa ảnh.');
+      return;
+    }
+
+    setImageActionId(image.id);
+    setError('');
+
+    try {
+      const response = await setMainProductImage(productId, image.id);
+      const data = unwrapApiData<ProductFormData>(response);
+
+      setProduct(data);
+    } catch (err: any) {
+      setError(getApiMessage(err));
+    } finally {
+      setImageActionId(null);
+    }
+  }
+
+  async function handleDeleteImage(image: ProductFormImage) {
+    if (!image.id) {
+      setError('Ảnh không hợp lệ.');
+      return;
+    }
+
+    if (isLocked || isDeleted) {
+      setError('Sản phẩm không thể chỉnh sửa ảnh.');
+      return;
+    }
+
+    const ok = window.confirm(
+      'Bạn có chắc muốn xóa ảnh này không? Nếu biến thể đang dùng ảnh này thì ảnh biến thể sẽ bị bỏ liên kết.',
+    );
+
+    if (!ok) return;
+
+    setImageActionId(image.id);
+    setError('');
+
+    try {
+      const response = await deleteProductImage(productId, image.id);
+      const data = unwrapApiData<ProductFormData>(response);
+
+      setProduct(data);
+    } catch (err: any) {
+      setError(getApiMessage(err));
+    } finally {
+      setImageActionId(null);
+    }
+  }
+
   useEffect(() => {
     void loadProduct();
     void loadCategories();
@@ -323,7 +462,8 @@ export default function ProductEditPage() {
               <div>
                 <h1>Sửa sản phẩm</h1>
                 <p>
-                  Cập nhật thông tin cơ bản và trạng thái bán hàng của sản phẩm.
+                  Cập nhật thông tin cơ bản, trạng thái bán hàng và hình ảnh của
+                  sản phẩm.
                 </p>
               </div>
 
@@ -535,25 +675,84 @@ export default function ProductEditPage() {
               </div>
             </div>
 
-            {product?.images?.length ? (
-              <div className="product-form-section">
-                <h2>Ảnh hiện tại</h2>
-
-                <div className="product-preview-grid">
-                  {product.images.map((image, index) => (
-                    <div
-                      className="product-preview-item"
-                      key={image.id ?? image.url}
-                    >
-                      <img src={image.url} alt={`Ảnh ${index + 1}`} />
-                      {image.isMain || index === 0 ? (
-                        <span>Ảnh chính</span>
-                      ) : null}
-                    </div>
-                  ))}
+            <div className="product-form-section">
+              <div className="product-image-manager-head">
+                <div>
+                  <h2>Ảnh sản phẩm</h2>
+                  <p>
+                    Đã có {currentImages.length}/{MAX_PRODUCT_IMAGES} ảnh.
+                    Chọn ảnh chính để hiển thị trên card sản phẩm.
+                  </p>
                 </div>
+
+                {!isLocked && !isDeleted && remainingImageSlots > 0 ? (
+                  <label className="mochi-btn mochi-btn-outline product-image-add-btn">
+                    {imageUploading
+                      ? 'Đang tải ảnh...'
+                      : `Thêm ảnh (${remainingImageSlots} còn lại)`}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      multiple
+                      disabled={imageUploading}
+                      onChange={handleAddImages}
+                    />
+                  </label>
+                ) : null}
               </div>
-            ) : null}
+
+              {currentImages.length > 0 ? (
+                <div className="product-preview-grid">
+                  {currentImages.map((image, index) => {
+                    const isMain = Boolean(image.isMain) || (
+                      !currentImages.some((item) => item.isMain) && index === 0
+                    );
+                    const isActionLoading = imageActionId === image.id;
+
+                    return (
+                      <div
+                        className={
+                          isMain
+                            ? 'product-preview-item is-main'
+                            : 'product-preview-item'
+                        }
+                        key={image.id ?? image.url}
+                      >
+                        <img src={image.url} alt={`Ảnh ${index + 1}`} />
+
+                        {isMain ? <span>Ảnh chính</span> : null}
+
+                        <div className="product-preview-actions">
+                          {!isMain ? (
+                            <button
+                              type="button"
+                              className="product-preview-action"
+                              disabled={imageActionsDisabled || !image.id}
+                              onClick={() => handleSetMainImage(image)}
+                            >
+                              {isActionLoading ? '...' : 'Đặt chính'}
+                            </button>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            className="product-preview-action danger"
+                            disabled={imageActionsDisabled || !image.id}
+                            onClick={() => handleDeleteImage(image)}
+                          >
+                            {isActionLoading ? '...' : 'Xóa'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="product-empty-preview">
+                  <p>Chưa có ảnh sản phẩm</p>
+                </div>
+              )}
+            </div>
           </main>
 
           <aside className="product-form-side mochi-card">

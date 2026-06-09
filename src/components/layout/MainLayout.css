@@ -7,6 +7,8 @@
    ========================================================= */
 
 .mochi-topbar {
+  position: relative;
+  z-index: 100;
   height: 36px;
   background: linear-gradient(90deg, #ffe0ea, #fff3f7);
   border-bottom: 1px solid var(--mochi-border-soft);
@@ -42,16 +44,22 @@
    ========================================================= */
 
 .mochi-header {
-  background: rgba(255, 255, 255, 0.92);
+  position: relative;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(10px);
+  overflow: visible;
 }
 
 .mochi-header-inner {
-  height: 96px;
+  position: relative;
+  z-index: 9999;
+  height: 104px;
   display: grid;
-  grid-template-columns: 240px 1fr 260px;
+  grid-template-columns: 240px minmax(360px, 1fr) 320px;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
+  overflow: visible;
 }
 
 .mochi-logo {
@@ -82,10 +90,14 @@
   color: #9b4b5f;
 }
 
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
 .mochi-search {
-  max-width: 520px;
+  max-width: 680px;
   width: 100%;
-  height: 48px;
+  height: 56px;
   margin: 0 auto;
   display: flex;
   overflow: hidden;
@@ -100,8 +112,9 @@
   min-width: 0;
   border: none;
   outline: none;
-  padding: 0 20px;
-  font-size: 14px;
+  padding: 0 26px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--mochi-text);
 }
 
@@ -110,11 +123,12 @@
 }
 
 .mochi-search button {
-  width: 58px;
+  width: 72px;
   border: none;
   color: #fff;
   background: linear-gradient(135deg, var(--mochi-primary), var(--mochi-primary-dark));
-  font-size: 18px;
+  font-size: 20px;
+  cursor: pointer;
 }
 
 .mochi-search button:hover {
@@ -122,10 +136,13 @@
 }
 
 .mochi-header-actions {
+  position: relative;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 22px;
+  overflow: visible;
 }
 
 .header-action {
@@ -155,8 +172,65 @@
 }
 
 /* =========================================================
-   ACCOUNT AVATAR
+   GUEST AUTH BUTTONS
    ========================================================= */
+
+.guest-auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guest-auth-btn {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.guest-auth-login {
+  color: var(--mochi-primary);
+  background: #ffffff;
+  border: 1px solid var(--mochi-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.guest-auth-register {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--mochi-primary), var(--mochi-primary-dark));
+  border: 1px solid transparent;
+  box-shadow: 0 12px 24px rgba(255, 79, 135, 0.24);
+}
+
+.guest-auth-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.guest-auth-login:hover {
+  color: #ffffff;
+  background: var(--mochi-primary);
+}
+
+/* =========================================================
+   ACCOUNT AVATAR + DROPDOWN
+   ========================================================= */
+
+.account-menu-wrap {
+  position: relative;
+  z-index: 100000;
+  overflow: visible;
+}
 
 .account-action {
   min-width: 128px;
@@ -164,8 +238,8 @@
 }
 
 .header-avatar-wrap {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-pill);
   padding: 2px;
   background:
@@ -218,6 +292,70 @@
   color: var(--mochi-primary);
 }
 
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 100001;
+  width: 230px;
+  padding: 10px 0;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #ffd6e3;
+  box-shadow: 0 24px 60px rgba(70, 20, 35, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast),
+    visibility var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.account-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 38px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-left: 1px solid #ffd6e3;
+  border-top: 1px solid #ffd6e3;
+  transform: rotate(45deg);
+}
+
+.account-menu-wrap:hover .account-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.account-dropdown a,
+.account-dropdown button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 22px;
+  border: none;
+  background: transparent;
+  color: var(--mochi-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 850;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  color: var(--mochi-primary);
+  background: #fff1f6;
+}
+
 /* =========================================================
    CART BADGE
    ========================================================= */
@@ -249,6 +387,8 @@
    ========================================================= */
 
 .mochi-nav {
+  position: relative;
+  z-index: 200;
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid var(--mochi-border-soft);
 }
@@ -289,41 +429,73 @@
    ========================================================= */
 
 .mochi-category-bar {
+  position: relative;
+  z-index: 1;
   background: linear-gradient(180deg, #fff, #fff7fa);
   border-bottom: 1px solid var(--mochi-border-soft);
 }
 
-.mochi-category-header {
-  padding: 14px 0 10px;
-  display: flex;
+.mochi-category-state {
+  padding: 14px 0 4px;
+  color: var(--mochi-text-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mochi-category-row {
+  position: relative;
+  padding: 18px 0 22px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
-.mochi-category-header span {
-  color: var(--mochi-text);
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.mochi-category-header small {
-  color: var(--mochi-text-soft);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .mochi-category-scroll {
-  padding: 0 0 16px;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 14px;
-  overflow-x: auto;
+  justify-content: center;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.mochi-category-side-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--mochi-border-soft);
+  background: #ffffff;
+  color: var(--mochi-primary);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  display: grid;
+  place-items: center;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.mochi-category-side-btn:hover:not(:disabled) {
+  background: var(--mochi-primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.mochi-category-side-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .mochi-category-pill {
-  min-width: 118px;
-  max-width: 140px;
+  width: 120px;
+  min-width: 120px;
+  height: 104px;
   padding: 10px;
   border: 1px solid var(--mochi-border-soft);
   border-radius: 18px;
@@ -331,6 +503,7 @@
   box-shadow: var(--shadow-xs);
   display: grid;
   justify-items: center;
+  align-content: center;
   gap: 8px;
   transition:
     transform var(--transition-fast),
@@ -369,7 +542,7 @@
   width: 100%;
   color: var(--mochi-text);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 850;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -508,8 +681,12 @@
 
 @media (max-width: 1180px) {
   .mochi-header-inner {
-    grid-template-columns: 220px 1fr 240px;
+    grid-template-columns: 220px 1fr 280px;
     gap: 20px;
+  }
+
+  .mochi-search {
+    max-width: 100%;
   }
 
   .mochi-footer-inner {
@@ -562,6 +739,21 @@
   .mochi-footer-brand {
     grid-column: 1 / -1;
   }
+
+  .mochi-category-row {
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 8px;
+  }
+
+  .mochi-category-side-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .mochi-category-pill {
+    width: 104px;
+    min-width: 104px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -571,6 +763,18 @@
 
   .mochi-header-actions {
     gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .guest-auth-actions {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .guest-auth-btn {
+    height: 40px;
+    padding: 0 16px;
   }
 
   .account-action {
@@ -600,7 +804,23 @@
     right: -10px;
   }
 
+  .account-dropdown {
+    right: -20px;
+    width: 210px;
+  }
+
+  .mochi-category-scroll {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mochi-category-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
   .mochi-category-pill {
+    width: 96px;
     min-width: 96px;
   }
 
@@ -616,323 +836,5 @@
 
   .mochi-footer-bottom {
     padding: 14px 22px 18px;
-  }
-}
-
-
-/* =========================================================
-   CATEGORY PAGINATION BUTTONS
-   ========================================================= */
-
-.mochi-category-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.mochi-category-title small {
-  padding: 4px 9px;
-  border-radius: var(--radius-pill);
-  background: var(--mochi-primary-soft);
-  color: var(--mochi-primary);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.mochi-category-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mochi-category-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mochi-category-nav-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--mochi-border-soft);
-  background: #fff;
-  color: var(--mochi-primary);
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast),
-    transform var(--transition-fast),
-    opacity var(--transition-fast);
-}
-
-.mochi-category-nav-btn:hover:not(:disabled) {
-  background: var(--mochi-primary);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-.mochi-category-nav-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-@media (max-width: 640px) {
-  .mochi-category-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .mochi-category-header-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-/* =========================================================
-   HOME HEADER POLISH - UPDATED
-   ========================================================= */
-
-.mochi-header-inner {
-  grid-template-columns: 240px minmax(460px, 1fr) 300px;
-}
-
-.mochi-search {
-  max-width: 680px;
-  height: 56px;
-  border-width: 2px;
-  box-shadow: 0 12px 32px rgba(255, 79, 135, 0.12);
-}
-
-.mochi-search input {
-  padding: 0 24px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.mochi-search button {
-  width: 68px;
-  cursor: pointer;
-}
-
-.header-account-menu {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.header-account-menu:hover .account-dropdown,
-.header-account-menu:focus-within .account-dropdown {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.account-dropdown {
-  position: absolute;
-  top: calc(100% + 14px);
-  right: 0;
-  z-index: 50;
-  width: 210px;
-  padding: 10px 0;
-  border: 1px solid rgba(255, 79, 135, 0.14);
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 18px 48px rgba(78, 31, 51, 0.18);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(10px);
-  pointer-events: none;
-  transition:
-    opacity var(--transition-fast),
-    visibility var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.account-dropdown::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -18px;
-  height: 18px;
-}
-
-.account-dropdown-arrow {
-  position: absolute;
-  top: -9px;
-  right: 50px;
-  width: 18px;
-  height: 18px;
-  background: #fff;
-  border-left: 1px solid rgba(255, 79, 135, 0.14);
-  border-top: 1px solid rgba(255, 79, 135, 0.14);
-  transform: rotate(45deg);
-}
-
-.account-dropdown a,
-.account-dropdown button {
-  width: 100%;
-  min-height: 42px;
-  padding: 0 22px;
-  border: none;
-  background: transparent;
-  color: var(--mochi-text);
-  display: flex;
-  align-items: center;
-  text-align: left;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.account-dropdown a:hover,
-.account-dropdown button:hover {
-  color: var(--mochi-primary);
-  background: var(--mochi-primary-extra-soft);
-}
-
-.auth-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.auth-btn {
-  height: 42px;
-  padding: 0 18px;
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 900;
-  white-space: nowrap;
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.auth-btn:hover {
-  transform: translateY(-1px);
-}
-
-.auth-btn-login {
-  color: var(--mochi-primary);
-  background: var(--mochi-primary-soft);
-}
-
-.auth-btn-register {
-  color: #fff;
-  background: linear-gradient(135deg, var(--mochi-primary), var(--mochi-primary-dark));
-  box-shadow: 0 10px 22px rgba(255, 79, 135, 0.22);
-}
-
-/* =========================================================
-   CATEGORY CAROUSEL - UPDATED
-   ========================================================= */
-
-.mochi-category-bar {
-  padding: 18px 0 22px;
-}
-
-.mochi-category-header,
-.mochi-category-title,
-.mochi-category-header-right,
-.mochi-category-controls {
-  display: none;
-}
-
-.mochi-category-state {
-  padding: 10px 0;
-  color: var(--mochi-text-soft);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.mochi-category-carousel {
-  position: relative;
-  padding: 0 54px;
-}
-
-.mochi-category-scroll {
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 14px;
-  overflow: visible;
-}
-
-.mochi-category-pill {
-  min-width: 0;
-  max-width: none;
-  min-height: 112px;
-}
-
-.mochi-category-nav-btn {
-  position: absolute;
-  top: 50%;
-  z-index: 3;
-  width: 40px;
-  height: 40px;
-  font-size: 28px;
-  transform: translateY(-50%);
-}
-
-.mochi-category-nav-btn:hover:not(:disabled) {
-  transform: translateY(-50%) scale(1.04);
-}
-
-.mochi-category-nav-prev {
-  left: 0;
-}
-
-.mochi-category-nav-next {
-  right: 0;
-}
-
-@media (max-width: 1180px) {
-  .mochi-header-inner {
-    grid-template-columns: 220px minmax(360px, 1fr) 270px;
-  }
-
-  .mochi-category-scroll {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1024px) {
-  .mochi-header-inner {
-    grid-template-columns: 1fr;
-  }
-
-  .mochi-search {
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 640px) {
-  .mochi-category-carousel {
-    padding: 0 44px;
-  }
-
-  .mochi-category-scroll {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .auth-actions {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .auth-btn {
-    flex: 1;
   }
 }
