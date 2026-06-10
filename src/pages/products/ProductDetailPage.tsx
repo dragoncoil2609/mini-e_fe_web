@@ -50,8 +50,8 @@ type ProductView = {
   description?: string | null;
   price?: number | string;
   compareAtPrice?: number | string | null;
-  stock?: number;
-  sold?: number;
+  stock?: number | string;
+  sold?: number | string;
   status?: string;
   shopId?: number;
   categoryId?: number | null;
@@ -68,19 +68,33 @@ type ProductView = {
   mainImageUrl?: string | null;
   imageUrl?: string | null;
   isFavorite?: boolean | 0 | 1 | "0" | "1";
+  variants?: VariantRow[];
 };
 
 type VariantRow = {
   id: number;
+  productId?: number;
   sku?: string;
   name?: string;
   price?: string | number | null;
-  stock?: number;
+  stock?: number | string;
   imageId?: number | null;
   options?: {
     option: string;
     value: string | null;
   }[];
+
+  optionName1?: string | null;
+  optionName2?: string | null;
+  optionName3?: string | null;
+  optionName4?: string | null;
+  optionName5?: string | null;
+
+  value1?: string | null;
+  value2?: string | null;
+  value3?: string | null;
+  value4?: string | null;
+  value5?: string | null;
 };
 
 type ReviewSummary = {
@@ -92,6 +106,20 @@ const REVIEW_LIMIT = 5;
 
 function unwrapApiData<T>(response: any): T {
   return response?.data?.data ?? response?.data ?? response;
+}
+
+function unwrapApiList<T>(response: any): T[] {
+  const data = unwrapApiData<any>(response);
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+
+  return [];
+}
+
+function goLoginPath() {
+  return "/auth/login";
 }
 
 function getApiMessage(error: any) {
@@ -193,8 +221,28 @@ function getReviewAvatar(review: ProductReview) {
 function getVariantOptionMap(variant?: VariantRow | null) {
   const map: Record<string, string> = {};
 
-  variant?.options?.forEach((item) => {
-    if (item.option && item.value) {
+  if (!variant) return map;
+
+  if (Array.isArray(variant.options) && variant.options.length > 0) {
+    variant.options.forEach((item) => {
+      if (item.option && item.value) {
+        map[item.option] = item.value;
+      }
+    });
+
+    return map;
+  }
+
+  const legacyOptions = [
+    { option: variant.optionName1 || "Phân loại 1", value: variant.value1 },
+    { option: variant.optionName2 || "Phân loại 2", value: variant.value2 },
+    { option: variant.optionName3 || "Phân loại 3", value: variant.value3 },
+    { option: variant.optionName4 || "Phân loại 4", value: variant.value4 },
+    { option: variant.optionName5 || "Phân loại 5", value: variant.value5 },
+  ];
+
+  legacyOptions.forEach((item) => {
+    if (item.value) {
       map[item.option] = item.value;
     }
   });
@@ -219,14 +267,6 @@ function beautifyOptionName(name: string) {
   if (lower.includes("material") || lower.includes("chất")) return "Chất liệu";
 
   return name;
-}
-
-function getToken() {
-  return (
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("token")
-  );
 }
 
 export default function ProductDetailPage() {
@@ -279,14 +319,16 @@ export default function ProductDetailPage() {
     const groups = new Map<string, Set<string>>();
 
     variants.forEach((variant) => {
-      variant.options?.forEach((item) => {
-        if (!item.option || !item.value) return;
+      const optionMap = getVariantOptionMap(variant);
 
-        if (!groups.has(item.option)) {
-          groups.set(item.option, new Set<string>());
+      Object.entries(optionMap).forEach(([option, value]) => {
+        if (!option || !value) return;
+
+        if (!groups.has(option)) {
+          groups.set(option, new Set<string>());
         }
 
-        groups.get(item.option)?.add(item.value);
+        groups.get(option)?.add(value);
       });
     });
 
@@ -316,11 +358,17 @@ export default function ProductDetailPage() {
       ? selectedVariant.stock
       : (product?.stock ?? 0);
 
+  const isProductLocked = product?.status === "LOCKED";
+
   const isOutOfStock =
     product?.status === "OUT_OF_STOCK" || toNumber(displayStock) <= 0;
 
   const canAddToCart =
-    Boolean(selectedVariantId) && !isOutOfStock && !addingCart;
+    Boolean(product?.id) &&
+    Boolean(selectedVariantId) &&
+    !isProductLocked &&
+    !isOutOfStock &&
+    !addingCart;
 
   const discountPercent = getDiscountPercent(product);
   const hasMoreReviews = reviews.length < reviewSummary.count;
@@ -381,11 +429,17 @@ export default function ProductDetailPage() {
       ]);
 
       const productData = unwrapApiData<ProductView>(productResponse);
-      const variantData = variantsResponse
-        ? unwrapApiData<VariantRow[]>(variantsResponse)
+
+      const variantsFromApi = variantsResponse
+        ? unwrapApiList<VariantRow>(variantsResponse)
         : [];
 
-      const safeVariants = Array.isArray(variantData) ? variantData : [];
+      const variantsFromDetail = Array.isArray(productData?.variants)
+        ? productData.variants
+        : [];
+
+      const safeVariants =
+        variantsFromApi.length > 0 ? variantsFromApi : variantsFromDetail;
       const images = getProductImages(productData);
 
       setProduct(productData);
@@ -489,7 +543,7 @@ export default function ProductDetailPage() {
   }
 
   function goToRequireAuth() {
-    navigate("/cart", {
+    navigate(goLoginPath(), {
       state: {
         from: `/products/${productId}`,
       },
@@ -497,16 +551,23 @@ export default function ProductDetailPage() {
   }
 
   async function handleAddToCart(): Promise<boolean> {
-    if (!getToken()) {
-      goToRequireAuth();
-      return false;
-    }
-
     if (!product) return false;
 
     if (!selectedVariantId) {
       setCartMessageType("error");
       setCartMessage("Vui lòng chọn phân loại trước khi thêm vào giỏ hàng.");
+      return false;
+    }
+
+    if (isProductLocked) {
+      setCartMessageType("error");
+      setCartMessage("Sản phẩm này hiện đang bị khóa.");
+      return false;
+    }
+
+    if (isOutOfStock) {
+      setCartMessageType("error");
+      setCartMessage("Sản phẩm này hiện đã hết hàng.");
       return false;
     }
 
@@ -537,6 +598,8 @@ export default function ProductDetailPage() {
       return true;
     } catch (err: any) {
       if (err?.response?.status === 401) {
+        setCartMessageType("error");
+        setCartMessage("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
         goToRequireAuth();
         return false;
       }
@@ -550,11 +613,6 @@ export default function ProductDetailPage() {
   }
 
   async function handleBuyNow() {
-    if (!getToken()) {
-      goToRequireAuth();
-      return;
-    }
-
     const added = await handleAddToCart();
 
     if (added) {
@@ -563,15 +621,6 @@ export default function ProductDetailPage() {
   }
 
   async function handleToggleFavorite() {
-    if (!getToken()) {
-      navigate("/me", {
-        state: {
-          from: `/products/${productId}`,
-        },
-      });
-      return;
-    }
-
     if (!product || favoriteLoading) return;
 
     const previous = isFavorite;
@@ -579,23 +628,44 @@ export default function ProductDetailPage() {
     try {
       setFavoriteLoading(true);
       setIsFavorite(!previous);
+      setCartMessage("");
 
       if (previous) {
         await removeFavoriteProduct(product.id);
+
+        recordProductEvent({
+          productId: product.id,
+          eventType: "UNFAVORITE",
+          metadata: {
+            source: "product_detail",
+          },
+        }).catch(() => {});
       } else {
         await addFavoriteProduct(product.id);
-      }
-    } catch (err: any) {
-      if (err?.response?.status === 401) {
-        navigate("/me", {
-          state: {
-            from: `/products/${productId}`,
+
+        recordProductEvent({
+          productId: product.id,
+          eventType: "FAVORITE",
+          metadata: {
+            source: "product_detail",
           },
-        });
+        }).catch(() => {});
+      }
+
+      setCartMessageType("success");
+      setCartMessage(
+        previous ? "Đã bỏ yêu thích sản phẩm." : "Đã thêm vào yêu thích.",
+      );
+    } catch (err: any) {
+      setIsFavorite(previous);
+
+      if (err?.response?.status === 401) {
+        setCartMessageType("error");
+        setCartMessage("Bạn cần đăng nhập để yêu thích sản phẩm.");
+        goToRequireAuth();
         return;
       }
 
-      setIsFavorite(previous);
       setCartMessageType("error");
       setCartMessage(getApiMessage(err));
     } finally {
@@ -889,7 +959,7 @@ export default function ProductDetailPage() {
 
             <div className="product-detail-voucher">
               <FiGift />
-              <span>Mua 2 giảm 10% - Mua 3 giảm 15%</span>
+              <span>Ưu đãi đặc biệt: Miễn phí vận chuyển cho đơn từ 300k</span>
             </div>
 
             {optionGroups.length > 0 ? (

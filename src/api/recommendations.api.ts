@@ -1,5 +1,10 @@
 import { http } from './http';
 
+function canTryFallback(error: any) {
+  const status = error?.response?.status;
+  return status === 404 || status === 405;
+}
+
 export type InteractionEvent =
   | 'CLICK'
   | 'VIEW_DETAIL'
@@ -118,13 +123,39 @@ export async function recordProductEvent(payload: {
 }
 
 export async function addFavoriteProduct(productId: number) {
-  const res = await http.post(`/recommendations/favorites/${productId}`);
-  return res.data;
+  try {
+    const res = await http.post(`/recommendations/favorites/${productId}`);
+    return res.data;
+  } catch (error: any) {
+    if (canTryFallback(error)) {
+      const res = await http.post('/recommendations/favorites', {
+        productId,
+      });
+
+      return res.data;
+    }
+
+    throw error;
+  }
 }
 
 export async function removeFavoriteProduct(productId: number) {
-  const res = await http.delete(`/recommendations/favorites/${productId}`);
-  return res.data;
+  try {
+    const res = await http.delete(`/recommendations/favorites/${productId}`);
+    return res.data;
+  } catch (error: any) {
+    if (canTryFallback(error)) {
+      const res = await http.delete('/recommendations/favorites', {
+        data: {
+          productId,
+        },
+      });
+
+      return res.data;
+    }
+
+    throw error;
+  }
 }
 
 export async function getFavoriteProducts(params?: {
@@ -143,4 +174,3 @@ export async function getMyCategoryPreferences() {
   const res = await http.get('/recommendations/preferences');
   return res.data;
 }
-

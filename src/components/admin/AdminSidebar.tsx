@@ -16,9 +16,7 @@ const menu = [
   { to: '/admin/users', label: 'Người dùng', icon: <FiUsers /> },
   { to: '/admin/shops', label: 'Shop', icon: <FiShoppingBag /> },
   { to: '/admin/products', label: 'Sản phẩm', icon: <FiBox /> },
-  { to: '/admin/orders', label: 'Đơn hàng', icon: <FiShoppingCart /> },
   { to: '/admin/categories', label: 'Danh mục', icon: <FiGrid /> },
-  { to: '/admin/reviews', label: 'Đánh giá', icon: <FiStar /> },
 ];
 
 export default function AdminSidebar() {

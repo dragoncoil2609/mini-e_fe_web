@@ -221,3 +221,34 @@
     display: none;
   }
 }
+
+.admin-topbar-logout {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #ffd1df;
+  border-radius: 999px;
+  background: #fff5f8;
+  color: #e83f78;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.admin-topbar-logout:hover {
+  background: #ef4b83;
+  color: #fff;
+  border-color: #ef4b83;
+}
+
+.admin-topbar-logout:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-topbar-logout svg {
+  width: 18px;
+  height: 18px;
+}

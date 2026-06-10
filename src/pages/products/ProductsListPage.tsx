@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
+import { getPublicProducts } from '../../api/products.api';
 import {
   getRecommendedProducts,
   getTrendingProducts,
@@ -28,6 +29,43 @@ function getApiMessage(error: any) {
     error?.message ||
     'Không thể tải danh sách sản phẩm.'
   );
+}
+
+function unwrapPublicData(response: any) {
+  return response?.data?.data ?? response?.data ?? response;
+}
+
+function getPublicItems(response: any): ProductListViewItem[] {
+  const data = unwrapPublicData(response);
+  const items = data?.items ?? [];
+
+  return Array.isArray(items) ? (items as ProductListViewItem[]) : [];
+}
+
+function getPublicTotal(
+  response: any,
+  itemsLength: number,
+  currentPage: number,
+) {
+  const data = unwrapPublicData(response);
+  const rawTotal = Number(data?.total);
+
+  if (Number.isFinite(rawTotal) && rawTotal >= 0) {
+    return rawTotal;
+  }
+
+  return (currentPage - 1) * PAGE_LIMIT + itemsLength;
+}
+
+function getPublicPage(response: any, fallbackPage: number) {
+  const data = unwrapPublicData(response);
+  const rawPage = Number(data?.page);
+
+  if (Number.isFinite(rawPage) && rawPage > 0) {
+    return rawPage;
+  }
+
+  return fallbackPage;
 }
 
 function getResponseItems(response: RecommendationResponse): ProductListViewItem[] {
@@ -97,10 +135,19 @@ export default function ProductsListPage() {
 
   const isTrendingPage = location.pathname === '/products/trend';
 
+  const urlQ = searchParams.get('q') ?? '';
+  const urlStatus = searchParams.get('status') ?? '';
+  const urlSort = searchParams.get('sort') ?? '';
   const urlPageRaw = Number(searchParams.get('page') ?? 1);
+
   const initialPage =
     Number.isFinite(urlPageRaw) && urlPageRaw > 0 ? urlPageRaw : 1;
 
+  const isSearchMode =
+    !isTrendingPage &&
+    Boolean(urlQ.trim() || urlStatus || urlSort);
+
+  const [keyword, setKeyword] = useState(urlQ);
   const [products, setProducts] = useState<ProductListViewItem[]>([]);
   const [page, setPage] = useState(initialPage);
   const [total, setTotal] = useState(0);
@@ -123,15 +170,44 @@ export default function ProductsListPage() {
     setNeedLogin(false);
 
     try {
-      const response = isTrendingPage
-        ? await getTrendingProducts({
-            page: nextPage,
-            limit: PAGE_LIMIT,
-          })
-        : await getRecommendedProducts({
-            page: nextPage,
-            limit: PAGE_LIMIT,
-          });
+      if (isTrendingPage) {
+        const response = await getTrendingProducts({
+          page: nextPage,
+          limit: PAGE_LIMIT,
+        });
+
+        const items = getResponseItems(response);
+
+        setProducts(items);
+        setTotal(getResponseTotal(response, items.length, nextPage));
+        setPage(getResponsePage(response, nextPage));
+        return;
+      }
+
+      if (isSearchMode) {
+        const response = await getPublicProducts({
+          page: nextPage,
+          limit: PAGE_LIMIT,
+          q: urlQ.trim() || undefined,
+          status: urlStatus || undefined,
+          sort:
+            urlSort === 'best_selling'
+              ? 'best_selling'
+              : 'latest',
+        } as any);
+
+        const items = getPublicItems(response);
+
+        setProducts(items);
+        setTotal(getPublicTotal(response, items.length, nextPage));
+        setPage(getPublicPage(response, nextPage));
+        return;
+      }
+
+      const response = await getRecommendedProducts({
+        page: nextPage,
+        limit: PAGE_LIMIT,
+      });
 
       const items = getResponseItems(response);
 
@@ -142,7 +218,7 @@ export default function ProductsListPage() {
       setProducts([]);
       setTotal(0);
 
-      if (!isTrendingPage && isAuthError(err)) {
+      if (!isTrendingPage && !isSearchMode && isAuthError(err)) {
         setNeedLogin(true);
         setError('');
       } else {
@@ -154,17 +230,93 @@ export default function ProductsListPage() {
     }
   }
 
-  function updatePage(nextPage: number) {
-    const safePage = Math.max(1, nextPage);
+  function buildParams(next: {
+    page?: number;
+    q?: string;
+    status?: string;
+    sort?: string;
+  }) {
+    const safePage = Math.max(1, Number(next.page ?? page));
+    const nextQ = next.q ?? urlQ;
+    const nextStatus = next.status ?? urlStatus;
+    const nextSort = next.sort ?? urlSort;
+
     const params = new URLSearchParams();
+
+    if (nextQ.trim()) {
+      params.set('q', nextQ.trim());
+    }
+
+    if (nextStatus) {
+      params.set('status', nextStatus);
+    }
+
+    if (nextSort) {
+      params.set('sort', nextSort);
+    }
 
     if (safePage > 1) {
       params.set('page', String(safePage));
     }
 
-    setSearchParams(params);
+    return params;
+  }
+
+  function updatePage(nextPage: number) {
+    const safePage = Math.max(1, nextPage);
+
+    if (isTrendingPage) {
+      const params = new URLSearchParams();
+
+      if (safePage > 1) {
+        params.set('page', String(safePage));
+      }
+
+      setSearchParams(params);
+    } else {
+      setSearchParams(buildParams({ page: safePage }));
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setSearchParams(
+      buildParams({
+        q: keyword,
+        page: 1,
+      }),
+    );
+  }
+
+  function handleClearFilter() {
+    setKeyword('');
+    setSearchParams(new URLSearchParams());
+  }
+
+  function handleChangeStatus(nextStatus: string) {
+    setSearchParams(
+      buildParams({
+        status: nextStatus,
+        page: 1,
+      }),
+    );
+  }
+
+  function handleChangeSort(nextSort: string) {
+    setSearchParams(
+      buildParams({
+        sort: nextSort,
+        page: 1,
+      }),
+    );
+  }
+
+  useEffect(() => {
+    setKeyword(urlQ);
+  }, [urlQ]);
 
   useEffect(() => {
     const nextPageRaw = Number(searchParams.get('page') ?? 1);
@@ -175,17 +327,27 @@ export default function ProductsListPage() {
 
     void loadProducts(nextPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isTrendingPage]);
+  }, [searchParams, isTrendingPage, isSearchMode, urlQ, urlStatus, urlSort]);
 
   const pageTitle = isTrendingPage
     ? 'Sản phẩm đang trend'
-    : 'Sản phẩm gợi ý cho bạn';
+    : isSearchMode
+      ? urlQ
+        ? `Kết quả tìm kiếm "${urlQ}"`
+        : 'Tất cả sản phẩm'
+      : 'Sản phẩm gợi ý cho bạn';
 
   const pageDescription = isTrendingPage
     ? 'Danh sách sản phẩm đang được quan tâm nhiều trong 7 ngày gần nhất.'
-    : 'Danh sách sản phẩm được hệ thống gợi ý dựa trên hành vi xem, click, thêm giỏ và yêu thích của bạn.';
+    : isSearchMode
+      ? 'Danh sách sản phẩm phù hợp với bộ lọc và từ khóa tìm kiếm của bạn.'
+      : 'Danh sách sản phẩm được hệ thống gợi ý dựa trên hành vi xem, click, thêm giỏ và yêu thích của bạn.';
 
-  const breadcrumbTitle = isTrendingPage ? 'Sản phẩm trend' : 'Sản phẩm gợi ý';
+  const breadcrumbTitle = isTrendingPage
+    ? 'Sản phẩm trend'
+    : isSearchMode
+      ? 'Tìm kiếm sản phẩm'
+      : 'Sản phẩm gợi ý';
 
   return (
     <div className="mochi-page products-list-page">
@@ -199,7 +361,11 @@ export default function ProductsListPage() {
         <section className="products-list-hero mochi-card">
           <div>
             <span className="products-list-kicker">
-              {isTrendingPage ? '🔥 Mochi trending' : '♡ Mochi recommend'}
+              {isTrendingPage
+                ? '🔥 Mochi trending'
+                : isSearchMode
+                  ? '🔎 Mochi search'
+                  : '♡ Mochi recommend'}
             </span>
 
             <h1>{pageTitle}</h1>
@@ -207,6 +373,51 @@ export default function ProductsListPage() {
             <p>{pageDescription}</p>
           </div>
         </section>
+
+        {!isTrendingPage ? (
+          <section className="products-list-filter mochi-card">
+            <form className="products-list-form" onSubmit={handleSearch}>
+              <input
+                className="mochi-input"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="Tìm kiếm sản phẩm..."
+              />
+
+              <select
+                className="mochi-select"
+                value={urlStatus}
+                onChange={(event) => handleChangeStatus(event.target.value)}
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="ACTIVE">Đang bán</option>
+                <option value="OUT_OF_STOCK">Hết hàng</option>
+              </select>
+
+              <select
+                className="mochi-select"
+                value={urlSort}
+                onChange={(event) => handleChangeSort(event.target.value)}
+              >
+                <option value="">Gợi ý cá nhân</option>
+                <option value="latest">Mới nhất</option>
+                <option value="best_selling">Bán chạy</option>
+              </select>
+
+              <button type="submit" className="mochi-btn mochi-btn-primary">
+                Tìm kiếm
+              </button>
+
+              <button
+                type="button"
+                className="mochi-btn mochi-btn-outline"
+                onClick={handleClearFilter}
+              >
+                Xóa lọc
+              </button>
+            </form>
+          </section>
+        ) : null}
 
         {error ? <div className="products-list-error">{error}</div> : null}
 
@@ -245,12 +456,16 @@ export default function ProductsListPage() {
               emptyTitle={
                 isTrendingPage
                   ? 'Chưa có sản phẩm đang trend'
-                  : 'Chưa có sản phẩm gợi ý'
+                  : isSearchMode
+                    ? 'Không tìm thấy sản phẩm'
+                    : 'Chưa có sản phẩm gợi ý'
               }
               emptyDescription={
                 isTrendingPage
                   ? 'Khi có dữ liệu tương tác, hệ thống sẽ hiển thị sản phẩm trend tại đây.'
-                  : 'Hãy xem thêm sản phẩm để hệ thống gợi ý chính xác hơn.'
+                  : isSearchMode
+                    ? 'Bạn thử đổi từ khóa tìm kiếm hoặc xóa bộ lọc hiện tại.'
+                    : 'Hãy xem thêm sản phẩm để hệ thống gợi ý chính xác hơn.'
               }
             />
 

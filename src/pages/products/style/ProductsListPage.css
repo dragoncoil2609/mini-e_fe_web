@@ -233,3 +233,31 @@
     width: 100%;
   }
 }
+
+.products-list-filter {
+  margin-top: 22px;
+  padding: 18px;
+}
+
+.products-list-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 170px auto auto;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 1100px) {
+  .products-list-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .products-list-form .mochi-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .products-list-form {
+    grid-template-columns: 1fr;
+  }
+}
