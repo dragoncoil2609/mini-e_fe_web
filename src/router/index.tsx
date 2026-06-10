@@ -38,6 +38,7 @@ import HomePage from '../pages/home/HomePage';
 import MeProfilePage from '../pages/me/MeProfilePage';
 import ChangePasswordPage from '../pages/me/ChangePasswordPage';
 import AddressesPage from '../pages/addresses/AddressesPage';
+import FavoriteProductsPage from '../pages/favorites/FavoriteProductsPage';
 
 /* =========================
    CART / CHECKOUT / ORDERS
@@ -404,6 +405,7 @@ export default function AppRoutes() {
         <Route path="/home" element={<HomePage />} />
 
         <Route path="/products" element={<ProductsListPage />} />
+        <Route path="/products/trend" element={<ProductsListPage />} />
         <Route
           path="/products/category/:categoryId"
           element={<ProductCategoryPage />}
@@ -437,6 +439,12 @@ export default function AppRoutes() {
           <Route
             path="/my-addresses"
             element={<Navigate to="/addresses" replace />}
+          />
+
+          <Route path="/favorites" element={<FavoriteProductsPage />} />
+          <Route
+            path="/me/favorites"
+            element={<Navigate to="/favorites" replace />}
           />
 
           {/* CART / CHECKOUT */}

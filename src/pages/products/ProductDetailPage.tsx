@@ -221,6 +221,14 @@ function beautifyOptionName(name: string) {
   return name;
 }
 
+function getToken() {
+  return (
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("token")
+  );
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -480,7 +488,20 @@ export default function ProductDetailPage() {
     setActiveImageUrl(productImages[nextIndex]?.url || bunnyImg);
   }
 
+  function goToRequireAuth() {
+    navigate("/cart", {
+      state: {
+        from: `/products/${productId}`,
+      },
+    });
+  }
+
   async function handleAddToCart(): Promise<boolean> {
+    if (!getToken()) {
+      goToRequireAuth();
+      return false;
+    }
+
     if (!product) return false;
 
     if (!selectedVariantId) {
@@ -515,6 +536,11 @@ export default function ProductDetailPage() {
       window.dispatchEvent(new Event("mochi-cart-updated"));
       return true;
     } catch (err: any) {
+      if (err?.response?.status === 401) {
+        goToRequireAuth();
+        return false;
+      }
+
       setCartMessageType("error");
       setCartMessage(getApiMessage(err));
       return false;
@@ -524,6 +550,11 @@ export default function ProductDetailPage() {
   }
 
   async function handleBuyNow() {
+    if (!getToken()) {
+      goToRequireAuth();
+      return;
+    }
+
     const added = await handleAddToCart();
 
     if (added) {
@@ -532,6 +563,15 @@ export default function ProductDetailPage() {
   }
 
   async function handleToggleFavorite() {
+    if (!getToken()) {
+      navigate("/me", {
+        state: {
+          from: `/products/${productId}`,
+        },
+      });
+      return;
+    }
+
     if (!product || favoriteLoading) return;
 
     const previous = isFavorite;
@@ -546,13 +586,18 @@ export default function ProductDetailPage() {
         await addFavoriteProduct(product.id);
       }
     } catch (err: any) {
+      if (err?.response?.status === 401) {
+        navigate("/me", {
+          state: {
+            from: `/products/${productId}`,
+          },
+        });
+        return;
+      }
+
       setIsFavorite(previous);
       setCartMessageType("error");
-      setCartMessage(
-        err?.response?.status === 401
-          ? "Bạn cần đăng nhập để yêu thích sản phẩm."
-          : getApiMessage(err),
-      );
+      setCartMessage(getApiMessage(err));
     } finally {
       setFavoriteLoading(false);
     }

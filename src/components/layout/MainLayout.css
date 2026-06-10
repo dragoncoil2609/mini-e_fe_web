@@ -838,3 +838,116 @@
     padding: 14px 22px 18px;
   }
 }
+
+/* =========================================================
+   FIX ACCOUNT DROPDOWN HOVER
+   ========================================================= */
+
+.mochi-header {
+  position: relative;
+  z-index: 9999;
+  overflow: visible;
+}
+
+.mochi-header-inner,
+.mochi-header-actions {
+  position: relative;
+  z-index: 9999;
+  overflow: visible;
+}
+
+.mochi-nav {
+  position: relative;
+  z-index: 200;
+}
+
+.mochi-category-bar {
+  position: relative;
+  z-index: 1;
+}
+
+.account-menu-wrap {
+  position: relative;
+  z-index: 100000;
+  overflow: visible;
+
+  /* Giữ vùng hover khi rê chuột từ avatar xuống dropdown */
+  padding-bottom: 18px;
+  margin-bottom: -18px;
+}
+
+.account-menu-wrap::after {
+  content: "";
+  position: absolute;
+  left: -14px;
+  right: -14px;
+  top: 100%;
+  height: 22px;
+  background: transparent;
+}
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100001;
+  width: 230px;
+  padding: 10px 0;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #ffd6e3;
+  box-shadow: 0 24px 60px rgba(70, 20, 35, 0.2);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  pointer-events: none;
+
+  transition:
+    opacity var(--transition-fast),
+    visibility var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.account-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 38px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-left: 1px solid #ffd6e3;
+  border-top: 1px solid #ffd6e3;
+  transform: rotate(45deg);
+}
+
+.account-menu-wrap:hover .account-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.account-dropdown a,
+.account-dropdown button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 22px;
+  border: none;
+  background: transparent;
+  color: var(--mochi-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 850;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  color: var(--mochi-primary);
+  background: #fff1f6;
+}

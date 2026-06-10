@@ -11,7 +11,11 @@ import {
 import logoImg from '../../assets/brand/bunny_bear_original.png';
 import defaultAvatarImg from '../../assets/brand/login_bunny_bear.png';
 
-import { getAccessToken } from '../../api/authToken';
+import {
+  getAccessToken,
+  clearAccessToken,
+} from '../../api/authToken';
+import { AuthApi } from '../../api/auth.api';
 import { getMe } from '../../api/users.api';
 import { CartApi } from '../../api/cart.api';
 import { OrdersApi } from '../../api/orders.api';
@@ -27,6 +31,7 @@ const CATEGORY_PAGE_SIZE = 10;
 function getFallbackToken() {
   return (
     getAccessToken?.() ||
+    localStorage.getItem('mini_e_access_token') ||
     localStorage.getItem('accessToken') ||
     localStorage.getItem('access_token') ||
     localStorage.getItem('token')
@@ -34,12 +39,17 @@ function getFallbackToken() {
 }
 
 function clearAuthStorage() {
+  clearAccessToken();
+
+  localStorage.removeItem('mini_e_access_token');
   localStorage.removeItem('accessToken');
   localStorage.removeItem('access_token');
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
+
+  sessionStorage.removeItem('user');
 }
 
 function unwrapApiData<T>(response: any): T {
@@ -86,6 +96,7 @@ export default function MainLayout() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountName, setAccountName] = useState('');
   const [accountAvatar, setAccountAvatar] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const [cartQuantity, setCartQuantity] = useState(0);
   const [ordersTotal, setOrdersTotal] = useState(0);
@@ -153,6 +164,7 @@ export default function MainLayout() {
         if (!mounted) return;
 
         if (!user?.id && !user?.email && !user?.phone && !user?.name) {
+          clearAuthStorage();
           setIsLoggedIn(false);
           setAccountName('');
           setAccountAvatar('');
@@ -315,16 +327,36 @@ export default function MainLayout() {
     setCategoryPage((prev) => Math.min(prev + 1, categoryTotalPages - 1));
   }
 
-  function handleLogout() {
-    clearAuthStorage();
+  async function handleLogout() {
+    if (loggingOut) return;
 
-    setIsLoggedIn(false);
-    setAccountName('');
-    setAccountAvatar('');
-    setCartQuantity(0);
-    setOrdersTotal(0);
+    setLoggingOut(true);
 
-    navigate('/login');
+    try {
+      await AuthApi.logout();
+    } catch {
+      // Nếu API logout lỗi vẫn xóa token ở FE để user thoát được.
+    } finally {
+      clearAuthStorage();
+
+      setIsLoggedIn(false);
+      setAccountName('');
+      setAccountAvatar('');
+      setCartQuantity(0);
+      setOrdersTotal(0);
+      setLoggingOut(false);
+
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('mochi-cart-updated'));
+      window.dispatchEvent(new Event('mochi-orders-updated'));
+
+      navigate('/login', {
+        replace: true,
+        state: {
+          message: 'Bạn đã đăng xuất thành công.',
+        },
+      });
+    }
   }
 
   return (
@@ -388,8 +420,10 @@ export default function MainLayout() {
                   <Link to="/me">Tài Khoản Của Tôi</Link>
                   <Link to="/orders">Đơn Mua</Link>
 
-                  <button type="button" onClick={handleLogout}>
-                    Đăng Xuất
+                  <button
+                    onClick={handleLogout}  
+                  >
+                    {loggingOut ? 'Đang đăng xuất...' : 'Đăng Xuất'}
                   </button>
                 </div>
               </div>

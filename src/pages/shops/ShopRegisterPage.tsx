@@ -283,30 +283,6 @@ export default function ShopRegisterPage() {
                   onLatLngChange={handleLatLngChange}
                 />
 
-                <div className="shop-register-coordinate-row">
-                  <div className="mochi-form-group">
-                    <label className="mochi-label">Vĩ độ</label>
-
-                    <input
-                      className="mochi-input"
-                      value={form.shopLat}
-                      onChange={handleChange('shopLat')}
-                      placeholder="Latitude"
-                    />
-                  </div>
-
-                  <div className="mochi-form-group">
-                    <label className="mochi-label">Kinh độ</label>
-
-                    <input
-                      className="mochi-input"
-                      value={form.shopLng}
-                      onChange={handleChange('shopLng')}
-                      placeholder="Longitude"
-                    />
-                  </div>
-                </div>
-
                 <div className="shop-register-map-box">
                   <LocationPicker
                     address={form.shopAddress}

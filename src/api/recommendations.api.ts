@@ -143,3 +143,4 @@ export async function getMyCategoryPreferences() {
   const res = await http.get('/recommendations/preferences');
   return res.data;
 }
+
